@@ -1,0 +1,77 @@
+Transcript: Kyle Hillard.mp3
+
+0:01 Speaker A: Okay, so, um, director of IT for egginhow, um, what I do is all things technology there as far as epicor goes. Um, build views, reports, uh, produce stats out of the application, work with wms, you know, making sure inventory is right, you know, locations, making sure our new employees get trained.
+
+0:25 Speaker B: And now were you in the camp of like, this was given to you, you didn't want to go in this direction?
+
+0:32 Speaker A: I actually came to Eichenhout because they were using BizTrack and WMS.
+
+0:36 Speaker B: Okay, so when you think about, uh, you know, these guys are using something else to you, why do you view BizTrack and WMS as sort of the golden standard in what you do? Like, what makes it the best in your mind?
+
+0:52 Speaker A: They're constantly developing it, um, they're not sitting still, uh, always progressing forward, changing the technology, changing, you know, based on customer, uh, recommendations, um, making it easy to use, making it easy to manipulate and across all the platforms.
+
+1:10 Speaker B: When you like, what are some of the biggest challenges? Like what are some of the challenges you, you're having to do or goals or things are set? Like, how does that become or help you kind of manage those or overcome those?
+
+1:24 Speaker A: Usually Sean challenging me on those.
+
+1:26 Speaker B: But what would be a challenge? Like, what would be like, would it be like, would you be the guy? Be like, hey, we need to like tighten up our inventory. We need it. Like, what would be, what would be something that you've been tasked to do, a challenge that you've had and how has Epicor helped you do it? If there's one that's relevant, uh, I'm.
+
+1:45 Speaker A: Going to need some help on that.
+
+1:47 Speaker B: Um, and then, um, when you think about what you do as the IT director, how does Epicor make your life easier? What do you appreciate about it?
+
+2:00 Speaker A: I appreciate their responsiveness, um, ability to work with them, uh, change things around, uh, report more, uh, keep the software up and running, you know, being hosted, I don't have to worry about maintaining a server on site. Uh, they're taking the issues with that and we just have to use it.
+
+2:25 Speaker B: Why do you like, as an IT guy, you might be like, ah, uh, I don't, I don't want hosted because I want more responsibility. Or like you feel like something's going to take it from you, but it sounds like you're a fan of it. So why, if you were to talk to other IT people like that you met this weekend or at this event, why do you think hosted is a no brainer? Why is it like the right move?
+
+2:45 Speaker A: Do you think well, it makes.
+
+2:48 Speaker B: Hosting BizTrack. We do it, you know, say, why you think it's the way to go.
+
+2:53 Speaker A: Ah, hosting biztrak just is smart decision for us. Um, disaster recovery is there. Um, they maintain it. We just ask, you know, hey, can we have this? They say yes or no, and we develop it from there.
+
+3:12 Speaker B: Uh, so you said. So how? I think you said, I'm going to say what I thought I heard you say. But it's like you, you know, you have all this data in the system, right? And so clearly you're hearing from leadership. They want, you know, access to this or that, and then you have to figure out how to work with Epicor to kind of get the right data and present it in a way where people can make strategic decisions. Is that right?
+
+3:35 Speaker A: Yeah, they give me the tools to be able to build it on my own. So if I get asked from Sean or Joel, hey, I need this report. I need this smart view. Um, with a few parameters, I can pretty much make anything within the system.
+
+3:50 Speaker B: And how is that used? Like, what kind of impact does that. That have to stun the company? And what leadership's able to do, uh.
+
+3:58 Speaker A: Enables leadership to make decisions. You know, the data that I produce them makes, you know, they can either go one way or the other based on, hey, oh, this looks profitable. Or no, we're losing in this area.
+
+4:09 Speaker B: Um, what else? What else should we ask?
+
+4:13 Speaker C: Let's talk about, because you're more on the technical side. So let's talk about cloud benefits as well. Or hosted benefits. Actually, no, Jeff already asked you that question. WMS benefits. What have you seen? You know, what makes your life easier? The fact that WMS is there and kind of what's been your experience with it as a whole.
+
+4:38 Speaker A: Uh, with wms, it's made our training process super easy. We, uh, can onboard someone in a couple days, you know, with work on the scan gun, we, um, can find anything in the yard, you know, in the past, you know, hey, I got the special order item sitting. Only Joe knows where it's at now. Anybody can jump on a gun and find it.
+
+5:01 Speaker A: Yeah, Joe.
+
+5:02 Speaker B: Typical Joe.
+
+5:05 Speaker A: What else?
+
+5:06 Speaker C: And then I would like to know, like, from a technical perspective, if you're talking to another technical, like another director of it, someone in building supply industry as well. I'm like, yeah, I'm considering that. I'm considering hosted, I'm considering wms, but I'm not sure yet. What if you were to talk to them just like you were to talk, like anybody at this conference. What would you say are, like, the key highlights you have experienced that you would let them know, like, hey, this is my advice, or, hey, this is what you should expect, like, including bumps in the roads, because obviously not everything's perfect. What would you say to that person of like, this is how I would go about it. And if you recommend it or not, which I hope you do.
+
+5:54 Speaker A: So I came from an on premise previously, um, where I controlled everything. Uh, going to hosted has been a little bit of a struggle in that matter, but it's been beneficial just having someone else deal with all the problems. I don't have to be up at, you know, midnight on Saturday to do an upgrade. I'm able to sleep all night on the weekends and not have to worry about those things anymore. As far as going to WMS with BizTrack, it just makes your inventory super accurate, super easy use. Customer experience is great. Um, we can pull data from both and produce KPIs for management.
+
+6:33 Speaker B: What I'm kind of curious. What was the hard part of it? Just letting go of the control or what was the. What.
+
+6:38 Speaker A: What were you.
+
+6:38 Speaker B: Like, what was. What was the hard part?
+
+6:40 Speaker A: The hard part was letting go of that control. Exactly. Um, not having your hands on it to physically, hey, I can fix this like this real quick. And letting someone else do that.
+
+6:51 Speaker B: How did. How did Epicor put your mind at ease? Or did it just. It just. They just had to show you, like. But how did they help, like, address, like, your concern of not having control or being worried?
+
+7:01 Speaker A: Um, they, uh, did a great job keeping stuff up and running. You know, showed that it's gonna be up and running and not necessarily, you know, hey, we'll just put it off. They're on top of it. You know, they respond to the tickets quick. If you're priority one, you're priority one.
+
+7:20 Speaker B: Cool.
+
+7:22 Speaker C: That's it.
+
+7:22 Speaker B: All right, Cool.
+
+7:23 Speaker A: Good job.
+
+7:23 Speaker B: Thank you. Okay.

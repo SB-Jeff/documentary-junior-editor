@@ -1,0 +1,183 @@
+Transcript: Alan Krasne, Epicor Auto.mp3
+
+0:02 Speaker A: Provolone.
+
+0:03 Speaker B: Okay, that's what I thought.
+
+0:04 Speaker A: Yeah.
+
+0:04 Speaker B: He's gonna have more class than a wiz.
+
+0:06 Speaker A: Yeah.
+
+0:08 Speaker B: Um, okay, so just so we have it, can you just tell me your name?
+
+0:12 Speaker A: Sure.
+
+0:13 Speaker B: Um, your company and what do you do?
+
+0:15 Speaker A: So, my name is Alan Krasny. Um, our company is Alamo Auto Supply, and we upfit vehicles. So we distribute and, uh, install vehicle accessories.
+
+0:27 Speaker B: Like what. What kind of stuff? Any cool. Is it like.
+
+0:30 Speaker A: We do some of the. What you might consider. We install an upfit with. In our. In our area in El Paso, uh, pickup trucks are what we focus on for the retail segment of our business. And so that's truck bed covers, lift kits, grille guards, bumpers, things like that. And then we also, over the last probably 10 or 12 years, have really expanded into the fleet and commercial space. We are working with utility companies, public safety entities upfitting their vehicles.
+
+1:06 Speaker B: I've got to set this up, and you just give me a yes or nobody. Is the company pretty successful?
+
+1:12 Speaker A: I think we've done all right.
+
+1:13 Speaker B: And how long has it been around?
+
+1:15 Speaker A: We, uh, are launching our 77th anniversary sale next week.
+
+1:20 Speaker B: So can you just not get in the weeds? But can you give me just a sense of the history of the company and what do you think the success is based on?
+
+1:29 Speaker A: So we. The company was founded in 1949 as a standard transmission rebuilding shop and a glass shop. Um, when the owner passed away, my family, my parents moved to El Paso and bought the business, bought that business. And my dad early on recognized the opportunity in the pickup accessory market, um, that pursuing that, distributing it those days down into Mexico and through the area really launched our growth. Um, and then we evolved into installing and upfitting. We installed our first computer system in the late 70s, early 80s, which was a triad series 10, which we had, uh, for a long time. Then we went on a series 12, then we left the. This family and then came back in 2009 when we went on vision.
+
+2:22 Speaker B: So when you think about, um, but I'm just curious, how would you describe, like, the current state of the industry you're in? Like, where are you at with. Is it super competitive? Like, how would you just define what the industry looks like for you as someone in it competing?
+
+2:39 Speaker A: So I think the truck accessory business at the distribution level has gotten very competitive. It's interesting. The, the parts business used to be low margin, and the accessory business used to be considered high margin. And it's kind of flipped in the last, I don't know, quite a number of years, but where the truck accessory business is quite competitive and uh, so there's, there it is a challenging market. And so that's why we've diversified into doing the installation where there's some, some additional opportunities.
+
+3:13 Speaker B: So we were just up in Superior interviewing other uh, clients. Totally different, uh, industry different. But one of the things that one of the guys was talking about is just how in that industry a lot of like this, a lot of um, family owned, um, over the course and in that particular area, like very kind of slow to pick up technology, slow to change.
+
+3:37 Speaker A: Change.
+
+3:38 Speaker B: And so my question to you is, you know, how important in the role that you're in and what you're trying to do, how important is technology and how important is data? Uh, like how do you, where do those things hit you?
+
+3:50 Speaker A: I mean they're, they're absolutely, you just say what they are. Yeah, so they're absolutely key. Data.
+
+3:56 Speaker B: Okay.
+
+3:57 Speaker A: Data. Yeah. So data is absolutely key to us in our business and especially um, in our part of the industry, data is even more challenging than in the traditional replacement parts business. And so having the right data, both parts and fitment data, and the data about our transactional data, where we can review that is key to our business, it's key to our success.
+
+4:27 Speaker B: Do you like, because I said data and technology, do you view them as one and the same? Or if not like how is tech, uh, what is beyond data in terms of what else matters beyond just the data you're talking about in terms of the technology infrastructure or software?
+
+4:40 Speaker A: I mean I think the whole key to successfully competing in the world today is having both the data and the systems that align to meet our customers needs. And that's a challenge and it's an ongoing challenge and it's a changing challenge and we need to continue to invest in that as a company. We continue to invest in that because it's the only way we're going to be able to maintain profitability and succeed.
+
+5:13 Speaker B: You're doing awesome by the way. I don't know how, I don't know if you're feeling like you're up, you're now you're on stage or whatever. You're doing a great job.
+
+5:20 Speaker A: Thank you.
+
+5:21 Speaker B: So tell me about like when did you, what was, when did you, what was happening in your business that sort of led you to Epicor? Like what was the challenge and what were you trying to know? It was a while ago, but like what was your initial foray into Epicor and why did you kind of initially partner with them?
+
+5:38 Speaker A: I think we, the platform that we were on, which we had been on since 1986, was running out of Steam. Um, the company that had developed it was no longer in business. And it was very old technology at that point. And we recognized we needed to partner with a company that was going to be around, that was going to be able to partner with us and support us for a long time. And our business model is complex, as many are in this industry, and the Vision platform had the flexibility to allow it to be configured to support us in our business.
+
+6:16 Speaker B: What was it, what was the. I know again, I know it was a while ago, but what was the experience of, uh, there's always like, the sales part where it's, you know, you get the smiles.
+
+6:28 Speaker A: You're not going to want this.
+
+6:29 Speaker B: Okay, that's okay. But I'm curious. So what was it like once you agreed to go with Epicor? What was it like in terms of coming on board implementation? How did that go?
+
+6:38 Speaker A: It was painful. I mean, implementations are always painful. But we were early on in the evolution of Vision for the automotive segment and, and so it was a very painful process, um, for a couple of reasons. Vision didn't have all of the capabilities it has today, and our business is not necessarily standard. And so we then, and continuing to today, find the limits of what Vision can do and have to find ways to work through those things. Uh, I swore that I would never go through that again. It was challenging.
+
+7:22 Speaker B: So this is the interesting thing, because this is very similar to like another. A, uh, totally different story. But they had. The way they explained is like, listen, we got, uh, to the point where we put as many band aids and things on the system we were on and there was no, there was nowhere to go. And they said, you know, the implementations never, I don't care what is, it's never going to be easy. And then they talk about how, um, you know, we're on this new thing and they went from, like, feeling like, shit, we're getting almost every ounce of this thing, to now. They're like, we maybe only use 10, 15% of this thing. So my question is, how has it been being on the Epicor platform? And, like, how good a job have they done, um, in continuing to develop the platform and to be your partner through a pretty long period of time?
+
+8:13 Speaker A: So the Vision platform has absolutely matured in the time we've been on it. When we get updates, they're pretty solid. These days, the core functionality of Vision is super strong. I mean, its ability to track inventory and do kind of the core Basics is really good. And then over time, in the last few years, we've added Indigo and the warehouse management, which really allowed us to get past some of the core limitations that Vision has in warehouse management. And that's been very helpful to us. Um, we're in the process of implementing credit card management, which has been a long time coming, because, again, the way we do things in credit cards is different. So, again, working with Sue Ellen and the team to make sure that it would work for us has been a good process, taking longer than one would hope. Got it. Um.
+
+9:12 Speaker B: There'S also this. You said this earlier. You. You said, um, you know, technology is where it's at. You got to keep looking at it, you got to stay up to date. If you're not, you can be toast. It's kind of what you said.
+
+9:24 Speaker A: I'm kind of paraphrasing.
+
+9:26 Speaker B: Um, and I think that, like, more often than not, what I've noticed, both in my work with Epicor and just as a consumer of, like, software, is that you're not just. You're no longer buying a product, you're kind of buying into a technology partner. Like, you're trusting that, right? They're gonna be paying attention to that shit because you're not gonna always be able. So in terms of that, what do you. How do you. How would you rate Epicor in terms of a company having a pulse on not only what is needed now, but where things are going and feeling more like they're going to be putting stuff in play that you're going to need and it's going to take some stress off. How would you talk about beyond.
+
+10:05 Speaker A: No, no. I think Epicor has always been committed to the automotive space. One of the things. When Epicor bought Vision and bought the automotive business from Activant, there was a question in our minds about how committed are they to the automotive space. It's become very clear over the last several years that the automotive space is important to Epicor and they're continuing to invest in it, which, as a user of these products, that investment is key to us. Because if we had the feeling that Epicor was just going to ride this out, that's not what we want from a technology partner. We want someone who's looking forward and investing. And the all indications that we have is that Epicor is committed to do that, um, especially on the data side, which for our business is not as relevant because, unfortunately, the part of the business we're in is not the part where Epicor has the data. Um, but I'M also just as a technologist, as I look, there's significant investment there, there's value there, and I think it's a smart investment for Epicor to make.
+
+11:18 Speaker B: So there may be people watching this, um, in your space or much further behind you, or not really as forward thinking as you can. Just in broad strokes, can you give me a sense of like, what are all the things that Epicor does for you to run your business? Just in broad strokes, how does it plug into what you're doing and why is it sort of critical?
+
+11:37 Speaker A: I mean, Epicor Touch is the Vision platform runs our entire business. Um, everything that we do from purchasing and sales and accounting and invoicing and tracking our inventory, all of that happens in Vision and the related products that we use. And so it's one integrated platform. It's totally core to what we do. And, um, you know, it's what we rely on to make sure that we serve our customers and have the right data we need to manage our business. Um.
+
+12:18 Speaker B: Do you have a sense of like, how it helps you just in terms of competing? Like, do you have any metrics or anything? It doesn't have to be hardcore. It could be like customer satisfaction. Do you have any sense of like, what the impact of having that system.
+
+12:33 Speaker A: And the data and it's not something that I could really quantify. For us, what it means is that we can support all of our businesses on one platform. And so it allows us to have visibility across all of the different markets that we serve. Um, that being said, because we are in businesses that are divergent, um, the platform isn't specialized, any one of those things. Um, so it makes it. Those are the things that create the challenges for us.
+
+13:12 Speaker B: Um, when you think about, um, the current, you know, you said you're using three different things, right?
+
+13:24 Speaker A: Three different.
+
+13:25 Speaker B: You said you kind of laid out.
+
+13:27 Speaker A: Three different pieces of the vision. Well, we use Vision, we use Compass, we use Indigo, we're using credit card processing, we use Aconnex or epn, whatever it's called these days. There's a number of pieces of the software. There's a lot that we don't, that we continue to explore. Um, and at the scale of our business, it's just a matter of finding the things that are worth the investing the time and the money in to get the return.
+
+13:56 Speaker B: Okay, so I'm going to push a little bit because you're a Penn grad.
+
+13:59 Speaker A: Sure.
+
+14:04 Speaker A: Right.
+
+14:04 Speaker B: So I'm sure Epcor is not free. No so, and so how do you, how do you. What makes you feel good about the investment if you can't point to like, hey, we saved this many hours of this, or our sales went up or anything? How do you, how do you know what makes you feel like paying and having software is like a good investment for the business?
+
+14:24 Speaker A: I mean, I think there's not optional. It's not like we could choose to run our business and say, we don't need a technology partner. We have to have a technology partner. That's absolutely critical. It's table stakes. I mean, you cannot be at the table if you don't have a technology partner. And so Epicor is that partner for us, and we made that choice in 2009, and we continue to make that choice on an ongoing basis. And like all relationships, there are better and worse times. But what I know at the core is that Epicor is committed to being a good technology partner for us long term.
+
+15:11 Speaker B: Oh, fantastic. That's, uh, an interesting. I like how you kind of flip that. It's kind of, hey, man, do you think about what your ROI is on, like electricity or the Internet or rent?
+
+15:23 Speaker A: I mean, you can't, you know, uh, I look at what we spend on an annual basis on our support and on our costs with Epicor, and it's a significant amount of money. And. But when I look at what, what's part of that whole suite of products and the, you know, the continuing improvement, when I have an issue, I pick up the phone or I, you know, been doing it long enough, I know who to call and we get it resolved.
+
+15:57 Speaker B: Yeah, what.
+
+15:57 Speaker A: Tell me about.
+
+15:58 Speaker B: Because you said that. I mean, I think that's true. There's no, like, technology partner where it's like the honeymoon period. In fact, probably where you, where you figure out the most is when things are not going well.
+
+16:10 Speaker A: Right.
+
+16:11 Speaker B: But so, uh, for people who aren't working, how would you describe the value of the relationship? And without mentioning names and the people there, how would you describe that? Because obviously the people and the support are a big part of what the.
+
+16:25 Speaker A: Platform is, and that's the people in the support department and the people in the organization. One of the things I admire about epicorps is there's a huge number of people with long tenure people. We've been dealing with the same people in many cases since we went live in 2009 and even before. Um, and so that is critical in a partner because we know who we're dealing with. These conferences where we build these relationships allow me to have the relationships with the people who, when push comes to shove, I know I can get something handled.
+
+17:08 Speaker B: So you, I love that you called yourself a technologist. Um, so when you're. I'm just curious. This probably will not be in the video, but like you're in. There's what, 80 other people here or something like that?
+
+17:18 Speaker A: Yes.
+
+17:18 Speaker B: Some are a little less than 100. Where do you put yourself on. If you look at the peers around the room, uh, where do you put yourself in terms of technology adoption? Like, are you on the bleeding edge or the middle.
+
+17:32 Speaker A: It's kind of a strange place. I would say I am, um, not on the bleeding edge of implementation. I would say I probably have a. Because of the tenure and just my approach to things, I probably have a deeper understanding of what underlies vision and how it works than most of the time.
+
+17:55 Speaker B: People. What. So for people who are, who are less, um, who aren't as smart about it, for lack of a better word, um, what, what would you say? What do you think they need to understand that they're not understanding just in terms of how to think about the software, how to think about the investment, how to think about utilizing, like, what, what, what words of wisdom would you offer people who are a little like, further behind, uh, in terms of their knowledge or thinking of this?
+
+18:22 Speaker A: I think the main challenge in technology and in computer systems is understanding what users really need in their language, being able to, and then being able to deliver it to them. Because vision captures a ton of data and it's available in compass, it's available, but knowing how to really understand what those needs are and deliver back that information in a meaningful way. I think there are more tools in this platform that are underutilized because it's. The learning curve is steep.
+
+19:05 Speaker B: So what I, and I think many people struggle with that, that's with technologists, information, everything that's in front of space. Right?
+
+19:12 Speaker A: Sure.
+
+19:12 Speaker B: So what, what would you, what advice would you have for someone on, uh, how to figure out how to narrow down what is the data, uh, that you focus on and what is sort of the underlying theory or the reason that you pay attention to that? Because you just said probably there's so much of it.
+
+19:28 Speaker A: And I think what I have to remind myself, what I have to remind myself of often is what's the end goal? Because there's so much data, you can dive in and swim around in the data forever and not come out with anything meaningful. So really it's a matter of starting. When you go looking for data, really knowing what your goal is so that you stay focused on delivering that back and not just saying, oh, that's neat over there, and wow, look at this. But what do we need to actually do the job?
+
+19:59 Speaker B: Is that sort of discipline or skill that you've developed? Is that something that epicorps helps you with, or is that just something you intuitively figure out it out by yourself?
+
+20:09 Speaker A: That's. That's more me than Epicure.
+
+20:11 Speaker B: That's what I kind of thought that, hey, you never know. You got it. I'm just throwing up.
+
+20:17 Speaker A: You know, I use. I use Vision differently than anyone else. I access the data differently than anyone else that's on the system. No question.
+
+20:28 Speaker B: Um, when you think about, uh, where technology is head and where epic, are there things that you're excited about or thinking about pursuing what's sort of top of mind or next on your list?
+
+20:43 Speaker A: I'm excited about the new cataloging initiatives because I think the new cataloging platform may allow our industry to participate in some of those data initiatives where it hasn't in the past. Um, I'm excited that there's a focus on employee retention, recognizing that that's important and onboarding people. And I hope that. I would say that one of the big AI opportunities is to use it to create training materials and documentation, which is very difficult to do and very labor intensive without AI. And I'm hoping that those AI tools will allow Epicor to bring more to us in the way of training materials and resource materials that are up to date. Cool.
+
+21:39 Speaker B: Um, Vatican, do you have anything else?
+
+21:42 Speaker C: Overall, I think we hit all of the big topics. If it's okay, I would love to talk a little bit about, uh, Indago and then also your warehouse management, uh, and Compass, kind of like, what benefits are you seeing from it? Also, how does it integrate with Vision as well? Maybe just briefly touch on that.
+
+22:04 Speaker A: So Compass, we were the first Compass for Vision user. Um, we've used Compass a lot. And Compass is a super valuable tool that has incredible power. But again, you have to engage with it and you have to be willing to dig in to understand how to take advantage of what's there. Because it is an incredibly powerful tool that isn't always super intuitive. Um, I think one of the hopes with Compass had been that it would make it so data was available and exposed end users and they could kind of find it themselves. And that's not what we've found. We found it's a great rapid development tool for providing data from our IT department to users in a format that works for them and then delivering it regularly. But it's not as self service as we had hoped it would be. But it's super powerful and we use it all the time. Um, we're fairly new to Indigo and I think the integration between Indigo and Vision, uh, is robust at this point. When we looked at it and you know, early on that two way integration wasn't as strong as it is today. And so it's a very powerful tool for us to be able to take advantage of the space that we have and know what's happening and where things are in our warehouse and create some efficiencies there. Also.
+
+23:37 Speaker C: I don't know why isn't Indogo. I meant Indigo.
+
+23:40 Speaker A: Thank you.
+
+23:40 Speaker C: Thank you for reading my mind. I think the last question I'll ask is the just to kind of touch on what Jeff already asked about the partnership with us before.
+
+23:53 Speaker A: Right.
+
+23:55 Speaker C: You've been with us for so long.
+
+23:58 Speaker B: Why?
+
+24:01 Speaker A: Well, I mean, and the. Yeah, the relationship is one that we made very intentionally with the intention of it being long term. Changing systems is very painful. So choosing the right partner that you're going to want to work with for a long time is critical. And there have been better, as I said earlier, better and worse times in the relationship. But I know that Epicor is committed to being a leader in the automotive industry and software. So that partnership, um, I have confidence in because of that and because of the investment that continues to be made. Cool. Loved it.
+
+24:46 Speaker C: That was it.
+
+24:46 Speaker A: All right.
+
+24:47 Speaker B: You were great. I love that, uh, I love that they got you to do this. And you're not a pushover. You're, you're like a pretty, you're like, hey. I'm going to be honest, um.

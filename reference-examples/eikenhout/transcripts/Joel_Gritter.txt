@@ -1,0 +1,103 @@
+Transcript: Joel Gritter.mp3
+
+0:00 Speaker A: Is this collar okay? That's good. Double collar.
+
+0:04 Speaker B: Looks good.
+
+0:05 Speaker C: It looks good.
+
+0:08 Speaker A: How long have you been working with these guys or at the company?
+
+0:11 Speaker B: I have been working at? I can help. And I gotta remember to look at you. I've been working. Yeah. Pull your sleeves. Just straighten your sleeves out a little. Yeah.
+
+0:18 Speaker C: And I only call customer. Literally got mad at me.
+
+0:23 Speaker A: I just went for background.
+
+0:24 Speaker B: How long? Yeah, 29 years. In a month or so. Yep.
+
+0:29 Speaker A: And then. And then you've been with how many years? 20. 20.
+
+0:35 Speaker B: No, I mean, we were with Catalyst Falcon since, uh. Oh, boy. 2004.
+
+0:43 Speaker A: Okay. Okay.
+
+0:44 Speaker B: I believe so. Yeah. Different platforms. First, um, Catalyst, then it was Falcon, and, um. Yeah. Then on to Biz Track. Okay. Just change exposure so it's a little nicer. You can see a little better. Yeah.
+
+1:01 Speaker A: Looks great.
+
+1:02 Speaker C: I think that looks good.
+
+1:03 Speaker B: Okay, good. All right, we're still rolling.
+
+1:05 Speaker A: Um, all right, so for starters, can you just tell me what do you do and, um, where does Epicor sit in your role? Like, how does Epicor help you with what you're tasked to do in the company?
+
+1:15 Speaker B: Yeah, I'm Joel Gritter. Um, I'm the, uh, VP of Finance at Eichenhout. And, um, yeah, Epicor plays a big role, uh, in my day to day. Um, whether it's dealing with the financial package, um, working with what comes out of a lot of the packages that epicor supplies.
+
+1:38 Speaker A: So 21 years is a long time.
+
+1:40 Speaker B: Right.
+
+1:41 Speaker A: So it's always interesting. I think it's one thing to get a customer, but to keep a customer that long, you gotta be doing something. Right. So just for people who don't know, can you describe, can you tell me how long you've been partnering with Epicor and how have they evolved and changed to help you throughout the. In broad strokes, throughout.
+
+1:59 Speaker B: Yeah, we've been with Epicor for 21 years through several different software packages. And yeah, they put the money and the experience into their products. Uh, I feel like there are other packages out there, but they don't have the depth of and breadth of knowledge and don't have maybe the financial resources that Epicor has to put into their products. Um, one of the things we like and why we continue to stay with them is they do look at what's out there, what are their customers using and making sure those software packages are available. A lot of times they will go out and acquire that company and bring it into the fold. And yeah, they're always looking what's next on the horizon and if it, uh, is going to be A good fit for their customer base. They make sure it's available now.
+
+3:03 Speaker A: So the two products we've been talking about are, um, WMS and BizTrack. From like the finance perspective, how integral or how do those help you, or how do they help the company operate more efficiently?
+
+3:16 Speaker B: Yeah, wms, or warehouse management system, has been very instrumental in making good changes within our company. Inventory is our biggest asset, and even little improvements on an asset of that size has a big impact on the company. Um, you know, whether it's less handling of the product, being able to service customers quicker because they know where the product is, less damaged material. Inventory adjustments, you know, are, have been going down. Uh, not having to do annual cycle counts, um, whether it's those things or even being able to streamline our inventory and, you know, less money having to be spent on inventory. You know, it helps from an interest standpoint. Um.
+
+4:17 Speaker A: How do you like, in any way you can, like, how would you obviously, of course not give you the software for free.
+
+4:24 Speaker B: Right.
+
+4:25 Speaker A: So, um, how would you explain for someone another person was looking at, how would you explain, explain the ROI of working with Epicor and using their software?
+
+4:34 Speaker B: Yeah, the, uh, ROI on, um, the Epicor software, um, it's definitely there. Um, it is up front. It's a money investment, a time investment. Um, but there's so many things that you get out of BizTrack, whether it's the core product, the cubes, the dashboards, the smart views, or some of the other products that, um, integrate within it. Um, you can take 1, 2, 3, or all of them. And um, yeah, the ROI, um, especially with something like WMS, um, being, as I said before, inventory being our biggest asset, that comes back quite quickly.
+
+5:29 Speaker A: What else did you want to focus on this part?
+
+5:32 Speaker C: I want to talk about AP Automation a little bit.
+
+5:34 Speaker B: Sure.
+
+5:35 Speaker C: Maybe just highlight how you're using it. What's the benefits of it?
+
+5:39 Speaker B: Okay. Yeah, we use AP Automation. We implemented it fully about a year ago. Um, we're using it for both our stock invoices and our overhead invoices. Uh, we're using, um, the, uh, AP Automation tool through Innovate. Um, and again, that's made a huge impact on our business. Uh, just to give a little backstory, you know, we used to receive the invoices in. We would either put them in a bag, send them to the branches, or email them where they would print them out, match them up with their paperwork, send, stick them back in a bag, send them back to Grand Rapids. We would enter them in the system and then scan them into a document storage program. You can pretty much uh, wipe most of that out. Now it comes in as an electronic file. Um, it matches up the stock, uh, invoices to a stock receipt and shoots right over to ap. They handle any discrepancies, overhead invoices. We use a workflow system now, um, where everything is approved, signed digitally and um.
+
+6:58 Speaker A: Yeah, how many, I mean that sounds like a massive, like how many. Can you quantify the savings in that of your time?
+
+7:05 Speaker B: Um, it has allowed us um, to continue to add branches and not increase our staff. In fact, uh, due to some unforeseen circumstances, our staff has actually decreased in accounts payable. We're able to still keep up with the increase as we continue to grow year after year. And um, yeah, it allows the staff to focus on problems instead of just the grind of typing, typing, typing, scanning, scanning, scanning. That's gone away.
+
+7:45 Speaker A: How does Epicor play into you guys growing? Like how does it help you grow? How does it um, make growth easier? Like how does it factor into your guys growth?
+
+7:55 Speaker B: Yeah, epicore has definitely helped with our growth. Not um, only from as we add branches coming alongside us, helping us get that branch set up but you know, it's allowed us to, to grow organically and not add a lot of overhead expense while doing so. Uh, especially from the corporate side with the tools we're provided. Um, as I mentioned with AP Automation, you know, the number of invoices we have coming in continues to increase but we're able to handle them efficiently and uh, with the same amount of staff also with AP Automation, uh, that efficiency, we're able to turn around the invoices quicker. We're able to take advantage of vendor discounts uh, for prompt pay. Um, so even in a year where maybe our purchases aren't as high, you know, we'll still see an increase in the amount of discounts we're taking advantage of from our vendors.
+
+8:59 Speaker A: Um, when you think about, you know, obviously here it's learning about new stuff and what's on the horizon. But when you think about the future, like what are you excited about with your partnership with Epicorn? How do you think they're going to continue to help you moving forward?
+
+9:13 Speaker B: Yeah, I'm excited about the future. One thing I'm especially excited about is the uh, Epicor Financials package. Uh, we're currently using Microsoft Dynamics gp. Um, but hopefully within a year we'll move over to the Epicor Financials. Uh, I feel it'll be a much nicer integration into the Core product. Um, there's a lot of features about it, especially the reporting, uh, an updated interface. Microsoft Dynamics is old, um, and it looks like it. Ah. Um, very excited about that. I think that's going to bring a lot more efficiencies the table.
+
+9:57 Speaker A: Cool.
+
+9:59 Speaker C: To piggyback on that, one question. What's next? Do you want to mention the E Commerce kind of what y' all are bringing to your business? I know we. I think Sean mentioned it briefly, but.
+
+10:12 Speaker B: If you mention it as well. Yeah, I think E Commerce is going to be a big thing for Iken. How? Uh, give our customers the ability to place orders, um, you know, to more efficiently manage their account, whether it's pulling statements, pulling invoices, looking at past orders, um, you know, making payments, which we like, uh, easier. They can get us money happier. I am. Um. So, yeah, E Commerce is going to be a good thing for us.
+
+10:46 Speaker A: Is that something like you guys are like, hell bent on getting to do, or is it something where you're like. Well, it. Was it partially like, you know, we love. We trust Epicorm.
+
+10:54 Speaker B: We love what they do.
+
+10:55 Speaker A: And like this no brainer, like, just like, how did it.
+
+10:59 Speaker B: How.
+
+10:59 Speaker A: How did it. How did it come about? Or how did you guys get interested in it?
+
+11:03 Speaker B: Yeah, um, you know, companies have been doing it for quite a while now. I, um, think we've always said we're not on the bleeding edge, but we're certainly trying to be cutting edge. And, you know, as Sean said, in order to remain relevant as things change, it's something we definitely needed. And we felt very comfortable trusting Epicor to guide us in the right direction, what package to use, and going all the way from signing on the dotted line to going live.
+
+11:37 Speaker A: Cool.
+
+11:39 Speaker B: Okay.
+
+11:40 Speaker A: Okay. All right, you guys are done.
+
+11:42 Speaker B: Okay, that's a wrap. So, yeah.

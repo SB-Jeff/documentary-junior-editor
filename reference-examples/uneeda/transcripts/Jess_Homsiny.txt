@@ -1,0 +1,183 @@
+Transcript: Jess Homsiny.mp3
+
+0:02 Speaker A: So.
+
+0:03 Speaker B: So you.
+
+0:04 Speaker A: So you have a four year old.
+
+0:06 Speaker B: I do.
+
+0:06 Speaker A: Hey, can I just have you just kind of tug up your shirt just a smidge?
+
+0:10 Speaker B: Tuck.
+
+0:10 Speaker A: Just tug. Just give it a little tug. No, no, no. Done. And if you want, just if it'll like if you put your butt all the way to the back. Uh, yeah, yeah.
+
+0:21 Speaker B: Better.
+
+0:24 Speaker A: Yeah.
+
+0:24 Speaker B: Uh, sorry about the extra weight I got. We all can't be Ethan. Yeah, we all can't look like E. Probably.
+
+0:34 Speaker A: Okay.
+
+0:35 Speaker B: I'm rolling both cameras too.
+
+0:36 Speaker A: Okay. Um, but yeah, like, so when we go do these things, it's like you guys are so nice. So we really appreciate how friendly you've been and accommodating. It's like it makes, it makes a big difference. So thanks for sure. But just so I have, can you tell me your name and what do you do?
+
+0:52 Speaker B: My name is Jess Homsany. Uh, I am the Chief Technology Officer at, uh, Union Enterprises. I've been in the IT field specifically involving distribution and uh, more specifically, uh, epicor products since 1999.
+
+1:09 Speaker A: I'm with Epicor stuff since 1999.
+
+1:12 Speaker B: 1999.
+
+1:13 Speaker A: Wow.
+
+1:13 Speaker B: Y2K.
+
+1:14 Speaker A: Wow.
+
+1:16 Speaker B: That was the big push at the time as to why. Right at the time, the company I was at had a antiquated system. Uh, it was basically a glorified typewriter. And the panic was set again that, hey, Y2K is coming. What are we going to do? So we needed to get to, you know, on a platform that was legitimate and ran all aspects of the business. And at the time, uh, we chose a solution that inevitably became an epicore solution.
+
+1:47 Speaker A: So tell me. I was kind of in the way for the beginning of the. That's okay. So you obviously weren't around when these guys started using profit 21, right?
+
+1:58 Speaker B: I was not.
+
+1:58 Speaker A: Okay, so just for. But you probably understand like, what, what. Can you kind of explain what Profit 21 is and why it's so integral to unit?
+
+2:12 Speaker B: Sure. Profit 21 is a full service, uh, ERP system designed for distribution companies, industrial distributors. Uh, more specifically, uh, it controls all aspects of the business from order taking, inventory control, procurement, uh, accounting, logistics. Uh, every single aspect of this business is ran or helped, uh, on by using Profit21.
+
+2:41 Speaker A: How important important is it just to have it all like an end to end solution? Why is that like such a important thing? Uh, and if you can maybe just start saying solution allows for whatever.
+
+2:54 Speaker B: Yeah. Having an end to end and. Excuse me, let me start over having it.
+
+2:58 Speaker A: I'm going to tell you something. You're kind of, you Got, you got to chill out. Like I feel you got all of a sudden a little nervous on me. Just. No, just like don't, don't.
+
+3:07 Speaker B: I'm just trying to say still instead of you know, I want you, okay, I want you.
+
+3:13 Speaker A: I don't want, I want you to be yourself. It's like that's a lot more fun and people like that. But so you're gonna say having an end to end solution.
+
+3:21 Speaker B: Having an end to end solution simplifies things in that you are dealing with one entity primarily for uh, your needs, uh, for expansion, uh, especially for troubleshooting. It just helps to have everything under one roof, one umbrella. And uh, it makes it easier for internally uh, in terms of training and uh, bringing on uh, new employees, existing employees, taking on additional roles. It's just more um, uh beneficial when it's one application that does everything.
+
+3:59 Speaker A: What's your level of like satisfaction? Because technology changes all the time and I'm sure there's a lot of other erps out there what makes profit 21 sort of a uh, system where you're not really looking around or thinking about something else.
+
+4:15 Speaker B: Being that I personally have experience with this solution over 20 years now, obviously it kind of changes with the times and uh, has evolved and uh, uh that's a big deal when it comes to consistency. Uh obviously new uh, technologies are coming out all the time and they've done a great job in kind of keeping up with the times and being on the cutting edge.
+
+4:44 Speaker A: All right, so I might repeat, you're going to repeat yourself on some of this so don't worry about it. So yeah, as someone who's used Propit 21 for 20 plus years, how has it evolved and changed and um, what do you like, what has impressed you about that?
+
+5:06 Speaker B: Um, over the 20 plus years that I've been using uh, solutions or Epicor solutions I should say. Originally um, we were on a character based UNIX application. Uh the server itself uh, almost took up an entire computer room. Uh, so just character based kind of DOS screen that most people are familiar with that term. Uh but you know now in a Windows environment, you know a web based environment, it just has uh, the flexibility and the aesthetics for that reason is just so far beyond what it was originally. From just typing characters in a very vanilla looking screen to now being able to have product images, display, uh, you know, attachments, um, documents, uh, you name it, it's all right there in front of you.
+
+6:04 Speaker A: It's just how does it expand in terms of like the things that can handle has the scope of what it can do changed over time or has it always sort of stayed the same? Is what it does the same? Has this gotten better or have they expanded?
+
+6:23 Speaker B: Uh, over the years, uh, it has improved profit.
+
+6:30 Speaker A: Don't worry about you, we'll cut for you. You can have to do that.
+
+6:34 Speaker B: Um, over the years, Profit 21 has evolved and expanded upon what it does, what it was able to do. But in addition to that, anytime something new comes along, AI for example, they embrace it and factor it in and integrate it into their system.
+
+6:55 Speaker A: Do you like, so is profit 21. Do you feel like it's like something that helps you differentiate that from the competition? Or how does using this system give you guys a leg up?
+
+7:10 Speaker B: I think for us, uh, being able, using a system like Prophet 21 gives us a technological advantage over our competitors because we are utilizing some of the latest and greatest, uh, technologies out there to better serve our customers.
+
+7:33 Speaker A: So one of the things Christy was saying, remember I was kind of being kind of a wise ass and saying, like, what about Amazon this and that? You say customer service. And then I was just curious, like from your vantage point, like how important is Epicore and the software used to fulfill like that goal of customer service and being right there for people.
+
+7:52 Speaker B: Epicor, we, uh, view Epicor as a partner, uh, not necessarily a vendor that we use, uh, software from. They help us to get to where we want to be. Uh, Elitextra is a perfect example of that. Um, we were unaware that they even had a, uh, delivery routing logistics system. And it was something we needed at the time. The timing was for us perfect and it really allowed us to take that next step into where we want to be.
+
+8:26 Speaker A: When you say, what do you mean take the next step? Like I want to go back, but what did you mean by take the next step?
+
+8:32 Speaker B: Well, in our region, uh, being, uh, in the New York metropolitan area with a vast, uh, delivery area that we have, we take deliveries from Long island as far as Philadelphia. We, uh, were unable to really do that intelligently because everything was done manually. You know, planning our routes, uh, you know, uh, grouping which deliveries should be on which one of our trucks. Uh, all of that was done on paper. All of that was done by a human being who had to know, uh, where these addresses were by memory, uh, where these addresses were, which deliveries could be grouped with one another. And that was a very time consuming process, a very manual process. And now having a software system that not only does that, uh, intelligently, uh, but also does that in far less time. The efficiency gains are tremendous.
+
+9:32 Speaker A: Can you speak to, like, how would you, like, if you could put a number on it, what would you say? The efficiency, what are the gains? Matt, you can do it in any way that's comfortable, but what would you say in terms of time savings or anything like that?
+
+9:47 Speaker B: I would say the, um, having Elite Extra now has cut our, uh, dispatching time probably between 70 and 80%.
+
+10:03 Speaker A: That's crazy. That's a lot of time.
+
+10:06 Speaker B: It's a tremendous amount of time.
+
+10:11 Speaker A: Um, okay, so let's back up. This is cool. Crazy to me that. Because I know. I'm a small business owner too, sometimes you have problems and you don't even know what's out there, whatever. And then you go through that headache of trying to find something. It's like. It's so funny that you, like, you went to the thing, it's, like, appeared.
+
+10:27 Speaker B: Right in front of your face.
+
+10:29 Speaker A: Um, but. So talk to me before, what were, like, some of the conversations or, like, how bad was it getting in terms of, like, needing to address the, uh, situation? Like, what, What? Like, how big of a pain point was it?
+
+10:45 Speaker B: Uh, the way we used to route our deliveries and load our trucks was a gigantic pain point. We spoke about this, um, as a group in our, um, operations meetings, probably for the past two, three years. It was the same topic over and over again. How could we get better? How could we get better? How could we get better? How can we reduce this mountain of paper that we've had? How can we, uh, improve our picking process? Uh, how can we route our trucks better? And when we, uh, Ethan and I were tasked, when we went to Epicor Insights to network with other distributors to find out how they were doing. Lo and behold, when we arrived and we saw this new offering, uh, from Epicor Lead Extra, uh, dumbfounded is a good way to describe it. We couldn't believe what we were seeing, how well that this new solution would, uh, solve all of our logistics problems in one nice application. Uh, and, uh, right away we became interested. And the more we saw, the more we liked. And it just grew from there. And it. It really solved everything that we couldn't have imagined. A better solution that, uh, if we thought it up in a dream world, it really checked all the boxes. It does everything we wanted it to do and more.
+
+12:17 Speaker A: That's insane to me because normally you find something, it's close. I wonder if we could do that. So literally you were like, holy shit.
+
+12:25 Speaker B: Almost too good to be true. But it is true, so can't really. Can't really use that term.
+
+12:30 Speaker A: Okay, so then there's, there's, you know, there's the dog and pony show that you get and then there's rubber meets the road. So how was it once you saw it, what was it like to actually bring the system on board and like get it operational? How was that experience and how did Epicorp help with that?
+
+12:48 Speaker B: Getting lead extra installed and integrated, uh, with our environment was really relatively simple. Um, we hadn't had a system for planning our routes and uh, building our trucks. So having a new solution to use rather than replacing an existing solution made it somewhat a seamless process. Once, uh, we were able to get the data, uh, integrating properly and the bidirectional communication, it was a snap.
+
+13:23 Speaker A: Um, what does that say to you about, like when you think about Epicor as a company and that they have this big thing and people go to and they introduce new stuff, like what do you think? What is that? What kind of level of confidence or what does that say to you about Epicor? Just not all companies do that. So what, what impresses you, uh, about Epicor as a company and how it continues to educate its users and try to help its users?
+
+13:51 Speaker B: What impresses me about Epicor is, uh, the longevity and how they have evolved over the years. I, uh, feel that my career is directly tied to Epicor and Epicor solutions as it is. Uh, and just being involved with them for so, so many years, it really. You have a different perspective on things. Uh, when I do network with uh, some of the other distributors and you know, I hear that they just became on board, they just went to uh, an Epicor solution. And knowing that I personally have dealt with I think four different Epicor solutions over the years, uh, it just speaks to how flexible they are and how they've been able to grow, uh, with the times and with the changing needs of uh, the distribution world.
+
+14:48 Speaker A: Have you recommended it before? And if so, what do you say about it? Like, how do you recommend or what do you say to people who are in your shoes, in a different biz?
+
+14:58 Speaker B: It's a tough one. I don't really, I don't come across anybody in that field because it's kind of a niche specialty.
+
+15:06 Speaker A: Yeah. Yeah. All right, well, let me. Well let's see. Like, would you, would you recommend Epicor and its suite of software? And if so, why would you do it?
+
+15:15 Speaker B: I would definitely recommend Epicore, uh, as a solution for other distributors. Uh, mostly because I know from my past experience that they're here to stay, that they are not going anywhere that they are going to put the best products for forward that they possibly can, uh, to fit all of the needs that their customer base has.
+
+15:38 Speaker A: How do you like. So you probably, You've probably interfaced with a lot of Epicor people over the years, right? Is that fair to say?
+
+15:45 Speaker B: Yes.
+
+15:45 Speaker A: How would you describe, like, the Epicorp staff and like, what do you appreciate about them?
+
+15:52 Speaker B: Uh, a lot of people on the Epicor staff have become friends of mine, uh, over the years. So I don't really even view them as, uh, resources in the, in the professional world. Uh, you know, they. I have established relationships with, uh, most of them and where, uh, I view them more as friends rather than colleagues, uh, or even, uh, you know, support staff. Uh, but they do, um, they have such a large resource pool in terms of, uh, you know, the capabilities and the knowledge and experience that they bring to the table. Um, so it's really a pleasure, uh, to work with them. And it's, It's. There are few times where I can't find someone who has the answers to the questions that we have.
+
+16:49 Speaker A: So when you. We were talking yesterday about, uh, how the big guy in the corner office wants things to grow and where he wants to take it. So what, um, having like profit 21 and now elite Extra, how does that set this company up in terms of what it wants to do in the future?
+
+17:13 Speaker B: Having Prophet 21 and Elite Extra really is a. Enabling us to take UNITA to the next level of the automation that it provides. Uh, from a delivery standpoint, uh, being able to notify customers when their delivery is about to be delivered. Uh, with the majority of our deliveries being actually in Manhattan. Uh, as you can imagine, it's a logistics nightmare. Uh, you have a large truck pulling down a narrow street in Manhattan where there's double parking, and somehow it needs to be coordinated that, uh, someone from on the customer side needs to meet our driver at a loading dock at the precise time. And uh, otherwise they're not going to be able to get their delivery. Uh, being able to have an automated notification to notify whoever needs to be aware that the delivery will be there in 10 minutes or 15 minutes or whatever we choose to set it to, or more importantly, whatever the customer wants, uh, whatever time frame they would like to be notified in, that is invaluable. Uh, before we had Elite Extra, we were relying on drivers as they're driving through Manhattan and possibly over a bridge or a tunnel to have to try to notify their customer. Now the challenge with that Is do they have the contact information, do they know the right phone number to use? And not to mention we don't want them using their devices as they're driving. So uh, you could imagine uh, how uh, the challenge it was for the drivers and how much better it is now that the system itself can uh, detect when the driver is X minutes away from the delivery and can notify whoever, uh, the customer wants to be notified automatically.
+
+19:14 Speaker A: Um, I'm going to set this up as not a question, but I'm going to give you, I'm going to talk a little bit and then see if you have a comment on it. But um, one of the things I think is interesting is just uh, so if I think about my business, one of the hands cups always used to be like our, our uh, Internet connection to get a high speed Internet connector was like really expensive, right? But then all of a sudden we got this fiber like and also we can do. So I used to pay like $180 a month and like the up and down was like 50 megabits and now I pay $50 and it's like 5 or 600 up and down. So all sudden it's like, wait a second, now we can like maybe we could um, you know, have online edits. Like all these things suddenly become possible where before, like holy shit, like how are we gonna, like, I don't know if we can use editors from somewhere else and all that. And I would imagine like this it's similar in the sense that like even if you want to grow like that old scenario, I don't know how you would grow like in any way, shape or form, like if you're adding on. So like, like what is this? What is this? What is the opportunity now for you, you guys, now that you have the technology buttoned up, where could it go? Whereas before it probably would have been like, I don't know how we're going to do it. Like clone Carlos.
+
+20:32 Speaker B: Yeah, we'd have to clone Carlos several times, uh, to be able to expand, uh, with Elite Extra. Uh, we've really barely scratched the surface of its capabilities. Uh, it solved a huge problem that we had and it solved it better than we possibly could have hoped for. But there are other aspects to it that we haven't really even begun to uh, start to explore. The delivery network for one thing. Um, it's kind of like doordash but for industrial deliveries. Uh, so when all of our trucks are out and a uh, customer calls with an emergency and we don't have any Way to, uh, get the customer's material, the material they need to the customer. We, uh, could tap into this delivery network and it literally will say, oh, here are the services that could take your delivery to the customer, and here is the price of each of them, and we could just click on one of them and away it goes.
+
+21:31 Speaker A: How do you envision scaling with this? How easy does it make that.
+
+21:37 Speaker B: We have another location in Florida that we have. Have not turned on to Elite Extra, but, uh, we will be doing that within the next few, uh, weeks. And just the idea that we could monitor deliveries, uh, in another state, uh, when, you know, we're physically in New York and he's making deliveries in Florida and that we could plan his routes and, uh, set up the sequence of his deliveries. We could. Could see where his truck is at any given time. Uh, it's. It's exciting times that, uh, we're kind of in right now.
+
+22:16 Speaker A: Here's what I was hoping you could say, and if you think it's true and you want to say it, that's cool. But. But the sense I'm getting is now that we had this, like. Like, wow, scaling could be really easy, like, and fun, like, Like, I can see how, you know, now you can see, like, wow, we could really grow and really scale without a hiccup or without any. So, like, do you see it that way or.
+
+22:41 Speaker B: No, uh, not really. I do. It's just not what I do. It's not my focus. But absolutely. Um, the scalability with a application or an offering like a lead extra is, uh, unlimited. I would think we could add additional trucks and be confident that this software will be able to accommodate, uh, not only the additional trucks, the additional drivers, and the additional output. You know, if. If our business doubled tomorrow, I'm confident that we could just add a couple more vehicles and drivers if you and Elite Extra would handle the rest.
+
+23:25 Speaker A: Nice. Carrie, do you have anything else?
+
+23:29 Speaker C: The only thing I was thinking, and it's not available yet, but it's coming as a return nomination. Can you just describe maybe that process and as soon as it's available, how.
+
+23:44 Speaker B: Um, I think it is available, to be honest, I think we do. We do have it. Um, can you look at Jeff? Yeah. Just m. Want to clarify one thing first. In talking about the advantages of the Elite Extra in some ways and kind of talking about the disadvantages of the Pod app, which is still offered, is that. Do it anyway?
+
+24:15 Speaker A: Yeah.
+
+24:18 Speaker B: Okay. Uh, should I talk about it and then just add the return feature to what I'm Trying, uh, to say.
+
+24:32 Speaker A: Mhm. Is that an add on to EliteXter? No.
+
+24:40 Speaker C: And that is one of the capabilities that we have.
+
+24:44 Speaker A: Returns automation.
+
+24:46 Speaker B: Okay, uh, all right, how should I phrase this? No, we do. We do enough that it would be relevant.
+
+24:58 Speaker A: So how has Elite Extra helped with the situation returns and how that's handled?
+
+25:04 Speaker B: Unita was already using Epicor, uh, POD app, uh, for signature capture and for the drivers to take along with them, you know, so that, see the routes. The problem we had with the, uh, POD app is that it was extremely inflexible. Once a route was defined, it could only one route at a time, could only be downloaded to the driver's device, and there were no changes that could be made on that route until that route was complete. Uh, with the Elite Extra driver app, there could be. Each driver could have multiple routes. His, uh, routes for the entire week could be laid out in advance and could actually be downloaded to his phone. Uh, in addition to that, there's an extreme amount of flexibility. Routes could be changed real time. Uh, if a driver is out on the road making deliveries, we could actually, uh, request a return and insert it. Uh, if a customer requests a return, it could be sent to a driver that's already on the road that he needs to make a stop to pick up a return. Uh, that is something that we were unable to do in the POD app and something that just makes our service level to our customers go through the roof.
+
+26:20 Speaker A: Yeah, like how did you used to manage returns separately?
+
+26:25 Speaker B: It was a very manual process and it had to be done in advance. And the POD app, uh, couldn't really handle returns, unfortunately.
+
+26:35 Speaker A: Yeah, that seems like a big deal just to have it already out there.
+
+26:38 Speaker B: I'll just grab it. It's a huge deal. Believe it or not. The drivers could initiate returns using the Lead Extra app. Right. Uh, at the customer's location. If a customer happens to, to say, oh, by the way, I need to return this item, there's a way for the driver to do it right there and then on the app if the company, uh, wants to give those drivers that permission.
+
+27:01 Speaker A: Cool. Anything else? That was great. Jeff's. Good stuff.
+
+27:06 Speaker B: Nah, I heard that stuff.

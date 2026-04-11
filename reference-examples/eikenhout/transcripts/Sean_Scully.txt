@@ -1,0 +1,155 @@
+Transcript: Sean Scully.mp3
+
+0:00 Speaker A: Let's not.
+
+0:01 Speaker B: Let's not get to it.
+
+0:04 Speaker A: So how a Michigan boy becomes a Chiefs fan. It's really my wife, dude. So my sister lives in Texas.
+
+0:10 Speaker B: Okay.
+
+0:11 Speaker A: And we're down in Texas with my sister for Thanksgiving. She's watching Texas Tech, and Mahome takes his helmet off and she's like, I love him. So that's how it's been. And then the big joke was I'm like, well, I like the kicker because he actually scores points, so. Bucker fan. So I have a Bucker jersey, and then we go to Kansas City. It's hilarious.
+
+0:33 Speaker B: Nice.
+
+0:33 Speaker C: Sean, do you mind pulling down your jacket? How do you want your collar? Do you want it up or folded?
+
+0:39 Speaker A: I. However you want it, it's fine.
+
+0:42 Speaker C: I'm just saying if you wanted it folded, you should fold it. But I think it looks fine just how it is.
+
+0:47 Speaker A: That's like when my wife says you should fold your collar. Just fold it. Sean, are you in.
+
+0:55 Speaker B: Are you in your mid-30s? That way you got all the.
+
+0:58 Speaker A: Almost. I'm 48, bro. Nice work.
+
+1:03 Speaker B: Yeah, nice work. It's that. It's that slightly orange hair, youthful look.
+
+1:09 Speaker A: Um, my daughter tells me I'm turning, uh, we're turning ginger together.
+
+1:13 Speaker B: I'm like, yeah, you do not look 48.
+
+1:16 Speaker A: Thank you.
+
+1:17 Speaker B: And I have no agenda on that. Okay, so for starters, can you just, uh, tell me your m. Name, what you do, and tell me a little bit about the company?
+
+1:29 Speaker A: I'm, uh, Sean Scully. I'm the COO. Uh, I can now. It's been around for over 130 years. Uh, I started there and can you just say I'm CEO of. Okay. It's just. It's a nice cleaner for what we're.
+
+1:43 Speaker B: Going to edit later.
+
+1:44 Speaker A: Sure. Let's start over. I'm sorry. Sorry. Yeah, no problem. We can do it four or five times. Hi, I'm Sean Scully. I'm, um, the COO of IconOut. Been, um, with IKenOut now for 25 years. Um, try not to say, um, so many times.
+
+2:01 Speaker B: Don't worry, we will cut the hell out.
+
+2:04 Speaker A: Tell me about the company.
+
+2:05 Speaker B: Like, how do you describe the company? How big is it? What's your customer base?
+
+2:09 Speaker A: So we have 10 locations across Michigan. Uh, the culture is probably my favorite part. Uh, Icon out has a lot of long term employees. Um, our motto is kind of do what you say you're going to do. Uh, so most. Yeah, customer experience. We have a lot of long term customers, a lot of generational customers to where, you know, their dads hand the business down and they've stayed with us. Um, some of that is we have to being 130 year old company, we've had to stay relevant. So we have to continue with technology to try to compete with the 1, 2, 3 brands of the world, the nationals and with us. And we're also part of an organization called idac, uh, which is a group of individual, uh, independent distributors. So we work together to try to focus on training, focus on technology. We are unique because we use BizTrack. They're primary. Um, Joel, what do they use? DMSI. M. Yeah, they're a DMSI customer. Most, the majority, like 75%. So we're constantly trying to sell evacor, be like, hey, that's nice. You got this, all these different soft, all this software and then you have all these bolt ons. How about you buy something that's all in one package and you can have the E Com. You know, we did a huge analysis uh, when we were looking at changing from Catalyst Falcon over to Biztrak and we had our owner at the time being a huge member of idac, decided that, you know, you guys need to look at DMSI because that's what everybody else is using. So we had to do a big pros and cons and it ended up being the E commerce was a huge difference. The smart views were a huge difference. Um, and really just taking our data in and being able to manipulate it and our experience in relationship with Epicor and knowing the people and so many of the Falcon Catalyst people came up to BizTrack so it made sense.
+
+4:10 Speaker B: Yeah, I was going to ask you, and you might repeat yourself on some of this, but I love when someone says like I love our culture and I've had this experience just with my small company. It's like when you align with a different company and you share that, uh, it makes the fit even better. So what, when you think about your culture and what your company is about, what makes Epicorp like a logical good partner for you guys?
+
+4:33 Speaker A: So I think the technology is easy to learn. Uh, when we get new hires, uh, with our training department, I don't want to say it's just kids, right? But some are new hires in general. Pick it up. It's really quick, easy to find. You know, we spend a lot of time moving towards the E commerce. We spend a lot of time cleaning our data in that sense has made it easier for the new people to learn. Um, as far as the culture, because.
+
+5:04 Speaker B: You said one thing you said we.
+
+5:05 Speaker A: Do what we say we're gonna do.
+
+5:06 Speaker B: Right?
+
+5:07 Speaker A: Is that.
+
+5:08 Speaker B: What do you find? How would you describe, like, the Epicor staff and what they. How they. What do they do for you? Like, what can you count on from them?
+
+5:17 Speaker A: Or what.
+
+5:18 Speaker B: What do you like about them?
+
+5:19 Speaker A: What I like about them is we're maybe not the biggest, uh, distributor or customer out there, but, like, Nick has worked well with us. Uh, Mikel's worked well with us. What they do is they try, they understand when we have an issue or something that's not working right, and they do their best to make sure, and they follow up to make sure that it gets corrected. You know, they'll apologize. Very similar to what we do for our customers. Acknowledge the problem, find a plan to fix the problem and deliver. That's. And they do the same thing as we do. So it's been a great partnership. That way we know we can call each other up or email each other and say, hey, this isn't working so well. And then, yeah, I know, we're working on that. We're going to get that fixed. And then they take care of it.
+
+6:04 Speaker B: Um, so from an operator, like, from your vantage point in operations, I know obviously, like, onboarding people is a big deal, but where, in what other parts of the business do you see Epicor and their solutions? Really, really, uh, moving the needle in terms of making operations efficient or, you know, where do you see the roi?
+
+6:23 Speaker A: So I see a lot, you know, crossing over into the VP of Finance Lane, uh, the AP automation side, which I know he's going to talk about, for the branch managers to know that it's getting paid right away. With the WMS side, uh, inventory accuracy, huge. Uh, I have noticed inventory adjustments dropping. Uh, with the Smart View side, I've noticed, uh, almost 80% reduction in our debt inventory because it's making our branch managers aware. I have systematic reports that Kyle wrote. It's a constant reminder for them. So I guess Epicor giving us the ability to send these reports and have these smart views and these smart clicks have made them better managers, in turn allowing us to do what we say we're going to do for our customers. You know, arrival at this time, correct colors are ordered, you know, the descriptions fit, they're updated because it's easy to upload all of those changes. Um, yeah, that's good.
+
+7:29 Speaker B: Um, were you involved, like, how long have you guys been using BizTrack?
+
+7:35 Speaker A: Like, we switched over to BizTrack in 2020, so not that long.
+
+7:39 Speaker B: Were you involved in the implementation, yes. Okay. I was going to say, as a chief operating officer, I'd be surprised if you weren't. So I've said this like 30 times today, but I think it's always interesting when you're a buyer of technology. There's the vetting process and then someone wins you over and it's like the honeymoon and then you get married, you're back in your house and the dishes pile up and all that shit. But how would you describe, like, how would you describe the implementation process with Epicor? And um, uh, what made you know, what was rewarding or powerful about it in any way you want to describe it? Because I think that's a big fear of people. It's like, yeah, once you buy it then you gotta like work with someone to get it to work.
+
+8:22 Speaker A: So when biztrak came out, we were a catalyst Falcon and it was kind of pushed that they were going to make this too. So we were super resistant. So I was not excited to switch over to BizTrack at all. I was satisfied with our existing software. It has definitely proven itself to me. Uh, the advancements and the more things that it can do. It's kind of like one of those things. You don't, you don't know what you're missing if you've never seen it before. So when they, when we started learning the capabilities and what it could do as far as the implementation goes, um, it was good. I mean most stuff came over, but there was talking about Epicor taking care of a problem. I learned really quick because there was uh, some uploads that were done, uh, that were done in stages. And I had talked to someone and said, hey, I'm going to make a bunch of changes to this product groups and this and that. Just want to make sure we're all set there to when I do that. And uh, that never got uploaded and then we went live. So I had a whole bunch of SKUs with wrong units of measure. They're in the wrong categories. And I'm like, you guys, they took the time to uh, re upload a bunch of the items after we were live. Gave taught me how to fix some of those things and constantly checked in with me to make sure because it was not the greatest situation. So, um. No, it won't. I was telling you the truth.
+
+9:52 Speaker B: No, no, I know. And that's what I want.
+
+9:55 Speaker A: That's all. Uh, I could make up sunny Sundays.
+
+9:58 Speaker B: No, I, I think that's like even being a small business owner, I think that is really Key. Like, a lot of times you really.
+
+10:05 Speaker A: See someone's true colors.
+
+10:06 Speaker B: Like, we're all gonna make mistakes. It's just like, how do they respond to it?
+
+10:10 Speaker A: Yeah.
+
+10:10 Speaker B: And if you take accountability and you're really empathetic and you apologize, that matters. Cause a lot of people will try to hide under something or like, oh, no, you didn't tell me this. You didn't.
+
+10:20 Speaker A: Whatever. Um, if I was gonna tell you about implementation, ask Kyle questions about the WMS implementation that. Were you there for our original. No. Okay. Uh, Greg Gallagher, which he did our implementation. He was awesome. He stayed with us for weeks, got everything all set up because it was our very first one, and then we kind of took it over after that. But he was really good.
+
+10:48 Speaker B: I'll just ask you this and we'll float into the next guy. Um, just in broad strokes, how do you feel like Epicors made the business operations easier across the board?
+
+10:59 Speaker A: Uh, very smooth.
+
+11:00 Speaker B: We say, you know, Epicor, you know, helped us. Our business operations are so much smoother because of that or whatever.
+
+11:05 Speaker A: Just Epicor has made our business solutions so much smoother.
+
+11:11 Speaker B: That's great. That's great. Um, all right.
+
+11:15 Speaker C: Oh, I. I have one question. From like a co perspective. Can you give like a high level of why it was so important to migrate to the cloud, why you decided to do that, and what do you see from a high level of the benefits of being in the cloud, especially like being multi site as well?
+
+11:36 Speaker A: For us being on premises? Um, it was. Oh, sorry. For us being on premises, we're gonna all stop talking.
+
+11:44 Speaker B: You got a great smile. And again, no agenda there because thanks.
+
+11:49 Speaker A: For us being on premises. It worked just fine. We, uh, were working on our disaster recovery strategy and we wanted. We went down a couple times in our. In our hub in Grand Rapids and IT brought the whole company down. And I was talking to the IT team and said, we, we. Just because Grand Rapids goes down doesn't mean all. All other nine locations need to cease to exist. You know, we have to come up with some kind of solution. Um, so we talked about going hosted. It was also with our phones too. We were kind of going all hosted for the disaster recovery, and then we worked into having the redundancy so where one branch could take care of another branch. So does that answer your question? Yes. Okay.
+
+12:31 Speaker C: No, that's perfect. And can you get to see what WMS as well? Like, from a high level perspective, why WMS was that important to implement?
+
+12:40 Speaker A: WMS is important because my inventory adjustments are spot on. Um, my shrink Annually has dropped over 50%. Um, like I said, the identification with finding items. Um, so my debt inventory, we get rid of that cycle counts, uh, really have eliminated annual inventories, which is always expensive because by the time you start an annual inventory, by the end, no one cares. And they're counting. Yeah, it's 37. We're good. You know, so how would you. How would you.
+
+13:15 Speaker B: So this is interesting because I think it's. We always think of, like, well, at least I do. It's like, oh, you make more money because you're selling more stuff. But like, someone earlier, they're just talking about just how exactly, like, managing inventory can be a big lever you can pull to make more money where you just doing the same thing, just managing better. Like, what was your experience in terms of that? Like, how did ws, in terms of.
+
+13:36 Speaker A: The bottom line, as far as the bottom line? Obviously, inventory shrank. Accuracy. Uh, WMS gave us a metric that we never had before, was how long it took us to service our customers. We had customers that were complaining about the amount of time. And real quick, though, we had a customer that came and was complaining of how long it was taking his guy to pick up material. I cannot take him 30 minutes to pull an order or whatever. We sent him our metrics from wms and the guy was coming to Ikenau, leaving, and not as a job site. So with the WMS metrics, like, no, man, you have an average of 4.93 minutes, uh, that it takes for your job. So it was funny.
+
+14:18 Speaker B: I thought you're gonna say the guy's sleeping in the car.
+
+14:20 Speaker A: No, it's close enough. I don't know what he was doing, but he wasn't there.
+
+14:24 Speaker B: That's funny.
+
+14:24 Speaker C: One last question and then you're done.
+
+14:26 Speaker A: Sorry, that's my third last question.
+
+14:29 Speaker C: I have a really bad habit. That's just because it comes whenever I hear you talking. Um, okay. From an executive perspective, supply chain can be really complex. It can be really uncertain. Does biztrac at WMS enable you or, uh, help you with, like, rather than being reactive, being proactive to what may or may not happen.
+
+14:56 Speaker A: So as far as, like, what happened in Covid time and the reduction of it?
+
+15:00 Speaker C: Uh, yeah, Covid time. Or like, if, like, tariffs are kind of a thing or even, like, just you don't know what's going to happen next. Prep for what you can.
+
+15:12 Speaker A: So we're looking at right now trying to get some smart views that will help us with purchasing and suggested orders, but not really.
+
+15:21 Speaker C: It's a hard question. So it's fine.
+
+15:23 Speaker A: It's a hard question. You failed.
+
+15:24 Speaker C: But did I fail or did you fail?
+
+15:28 Speaker A: No, me. It's a hard question, Sean. You sucked at it, but it's okay.
+
+15:33 Speaker B: You don't want another question. You just give a shitty answer. You're not going to get your fourth last question.
+
+15:40 Speaker A: That enough for any.
+
+15:44 Speaker B: I'm just going to keep rolling. Sure. Okay, next.

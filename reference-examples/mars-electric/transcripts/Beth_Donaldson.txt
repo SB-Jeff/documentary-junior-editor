@@ -1,0 +1,251 @@
+Transcript: Beth Donaldson.mp3
+
+0:14 Speaker A: Trey, uh, when you're not. When you're not here, what do you do for fun?
+
+0:18 Speaker B: Hiking.
+
+0:19 Speaker A: Is there a lot of good hiking around?
+
+0:21 Speaker B: There's some. There's some hiking around here, but any. Any chance we get if we go. My husband and I go somewhere and there's a trail. We'll hike.
+
+0:29 Speaker A: What's been your favorite place to hike outside of here?
+
+0:33 Speaker B: Oh, probably Sedona, but I like Zion.
+
+0:38 Speaker A: Oh, yeah.
+
+0:39 Speaker B: And next week we're going to Oregon, so.
+
+0:41 Speaker A: Oh, sweet. And how. How, uh. How good a shape are you? Like, how long do you hike for?
+
+0:48 Speaker B: Uh, our longest hike was, like, eight hours when we were in the Rockies, but there was a lot of snow, so we were not moving fast.
+
+0:56 Speaker A: Yeah. Have you ever looked into, like, any of the European trips where it's like a. Like, where you hike for, like, five, six miles a day and then you sleep somewhere?
+
+1:05 Speaker B: No. That sounds fun.
+
+1:07 Speaker A: There's one in. There's a bunch. There's like, you can do it in Ireland. Uh, I've heard one around the Alps, and it seems really cool where there's little hot, you know, places where you stop and you. Feed you or whatever.
+
+1:20 Speaker B: Yeah. Move to the next one.
+
+1:23 Speaker A: You should just do an Internet search, because if you guys are into that.
+
+1:26 Speaker B: Yeah, we love that.
+
+1:27 Speaker A: Phenomenal trip. Um, so for, um. So we'll just start. So just so I have it. Can you tell me your name? What do you do here?
+
+1:34 Speaker B: Beth Donaldson, and I'm the CFO at Mars.
+
+1:37 Speaker A: So I'm going to ask you just as a general question. What do you love about Mars Electric? Why is it a great place to work for you?
+
+1:43 Speaker B: The culture, the people. You know, we. Everybody here works hard together to get the job done. Um, and we have fun.
+
+1:53 Speaker A: Um, one thing I didn't say that, um, would help me a little bit is no one's gonna ever hear my question. So you just want to use, um, the subject of the question.
+
+2:10 Speaker B: That's why Michael was repeating everything.
+
+2:12 Speaker A: You don't have to repeat it. You just have to avoid, like, it or they or whatever. Just refer to, like, okay, epicor. Or, you know, our culture or our people. Or, um, you know, and I'll let you know if you're not doing it.
+
+2:25 Speaker B: Okay.
+
+2:26 Speaker A: But you don't have to be a robot and repeat the question. Just avoid pronoun. Excessive use of pronouns. Like, you know, so people. Because they're never going to hear what I'm saying. But I gotta lift it up a little. Sorry. I can still see it. Just a little. And then how but as a setup, like, how long have you been here?
+
+2:42 Speaker B: Eight years.
+
+2:43 Speaker A: Oh, eight years. Um, so, uh, so you've been here for eight years. Obviously Eclipse has been in the mix the whole time. So, um, what in your mind, um, what makes Epicor a great partner and, and how have you seen Eclipse, uh, grow over time?
+
+3:05 Speaker B: So what, what makes Epicor a great partner and Eclipse growth over time is the people at the company really listen to what we say and what our frustrations and concerns are, and they are looking at new products and changes that will solve all those issues for us.
+
+3:24 Speaker A: How do you like? Because I, you know, when we're talking before, you know, so much of what you guys are up to is wanting to be on the bleeding edge of technology, like really using it as a competitive advantage. Like, what's your level of trust or faith like in the team at Epicor and just the platform in general?
+
+3:43 Speaker B: The, uh, level of trust that we have with Epicor is pretty high. When we go to them and ask for a solution, you know, we usually get something back that's either what we're asking for or better. And they're sharing with us where they're even going. So we know that this is coming. And Mars is now part of the beta testing group. And with that new, uh, products that are coming out, we are able to look at those and also offer our advice on, you know, maybe you could put this improvement in there. If you could add this, the customers would even, you know, benefit more from that product.
+
+4:20 Speaker A: Why? Like, some people would be like, I'm not gonna, I don't want to be on the bleeding edge, I want to be right behind. So I have to deal with any of the change management stuff. Why for Mars, is it important to be in that beta testing group? And why do you see it as an advantage? Not like a, uh, thing where we're like, it's a challenge. You know what I mean? Why is it an advantage?
+
+4:43 Speaker B: Mars wants to be on the cutting edge of all the new technology coming out because we are really pushing the system to the limits. We know that we can't just keep adding people to solve issues. We need to use technology to solve those issues. And so testing what's coming out from Epicor is one of the ways that we can do that and providing guidance.
+
+5:08 Speaker A: Um, and you're probably going to repeat yourself. Don't worry about it.
+
+5:13 Speaker B: Okay?
+
+5:14 Speaker A: Like, you know, in a normal conversation you say, oh, am I repeating myself? Don't worry about it. So what, in your time, what have been sort of the Bigger challenges that have come up and how is um, how have they been addressed through Cliff? Like what have been some of the things that come up and how have you solved that working with them?
+
+5:36 Speaker B: So in the time that I have been here, some of the challenges that have come up have been implementing change. We went from um, printing all the invoices out and stuffing them into envelopes to using third party technology that Eclipse has partnered with and allowing that to help us be more efficient and effective in the process. Um, and I forgot your question.
+
+6:05 Speaker A: I'm just curious because I know it's like an evolving system, you guys are company that's growing fast. I'm ah, just curious like what. And you want to be a beta tester. So I'm just curious like what are the things, the pain points or challenges that you've seen and how are you helping address them through apicor, Eclipse or the modules? Just trying to get a sense of what's coming.
+
+6:27 Speaker B: Um, so one of the areas that we're going to beta test is grow. It's a new uh, add on that will allow to do analytics through the system. And analytics is one of the big pieces that help us understand where we've been and where we're going. And without that um, we're not able to be as successful as we could be. So being part of that cutting edge of the technology and um, testing the software, we're able to provide um, guidance and information on if we could do this it would be easier where we're looking for more information in this area and Epicor will listen and make those enhancements.
+
+7:12 Speaker A: Um, um, so some of these questions in here are like that we originally have around implementation. I know that was way before the time, right? But like what in your time, what features or things have you seen come out in the platform that really helps the company and what you're up to?
+
+7:53 Speaker B: So some of the features that have come out in my time and since coming from the financial side, um, we are accessing uh, the ability to do ach, um transactions utilizing what's in the system. When we started we didn't, there was no ACH done. So we stepped up and worked with Epicor to get that implemented. Other areas that we have added on, um, you have to think about that.
+
+8:27 Speaker A: Let me step back for a sec. So when you think about the business just in broad terms, why is Eclipse and the platform, why is it so critical or essential to what you guys do?
+
+8:42 Speaker B: Could you imagine doing it without Eclipse, Without Eclipse? So Eclipse is designed for distributors and so Distributors do different types of costing. What we put in the system to sell is that replacement cost. What accountants use to do their financial analytics is on historical cost. The system tracks all that. And anything that you need to understand what was changed, why it was changed, you can go in and, and see step by step who did what, how and when. And so that the ability to see all those transactions and understand how things occurred through the system has been critical. And not all systems do that.
+
+9:28 Speaker A: And how does it like, impact just people in general? How does it impact morale or how people feel about the work they're doing? Their ability to get it done?
+
+9:36 Speaker B: Yeah, the, the work that people are doing and their ability to see what's happening through the system and understand what's happening through the system. It allows them to have accountability, to understand the impact that they're making on the company. They can see everything that they've done. A lot of, uh, what we do here is we're looking every day for people to make improvements to their job. Continuous improvement, as is a big push here. So they can see that if there's a frustration point and they can make a change that difference. You know, they, it just allows them to know that they did this with the company and um, their impact has a lasting effect. So Epicor is, you know, flexible to a point to allow all those changes to come through the system and um, you know, people appreciate that.
+
+10:36 Speaker A: Um, I'm going to ask you a slightly different way. You're probably going to repeat yourself.
+
+10:39 Speaker B: That's okay.
+
+10:44 Speaker A: How does Epicor and Eclipse facilitate, like, um, constant. Constant process. You say process improvement. What was your.
+
+10:54 Speaker B: We use continuous improvement, but process improvement.
+
+10:57 Speaker A: Is help the company with continuous improvement, like just in broad strokes.
+
+11:05 Speaker B: So Epicor helps the company with continuous improvement by listening. And if there's a solution that already exists, they will tell us, you know, where to look and how to implement it, or they'll help us in finding a solution.
+
+11:20 Speaker A: What, like when you, what do you like from your vantage point? What are the things you guys are trying to improve right now?
+
+11:28 Speaker B: Uh, the APE Accounts payable process is one of them. We want to automate as much as possible through that. Um, and so I do know that Epicor is there looking at solutions and um, John Smart, who's our ERP manager, is in conversations with them and we have a group going to the Eclipse user conference that's going to investigate what's coming out in the future because we know that we can't continue to add people. We have to find solutions to do things More effectively and more efficiently automatically. Um, what do you think?
+
+12:05 Speaker A: I'm sorry.
+
+12:05 Speaker B: Oh, I was also going to add that Epicor has come out with some new technology, Automation Studios and Mars has really, ah, jumped on that and we're implementing that solution wherever we can throughout the company.
+
+12:21 Speaker A: Can you describe what that is and why and how it helps?
+
+12:24 Speaker B: Automation Studios allows us to take processes that are repetitive and automate them. So for example, one of the things that we did is, uh, every day we receive, um, packages from our vendors and the packing slips come in and we scan those in and Automation Studios goes through a process that it looks for the po, the parts, it attaches it to the PO in our system. Where previously there were so many packing slips we could not do that manually. And so we had a big drawer where someone, if there was an issue, they had to go search through that drawer to try to find the packing slip where we didn't receive the right quantity for whatever the issue was and to solve the problem. And today it's through Automation Studios. It's attached to the PO and they just go right there and find it.
+
+13:19 Speaker A: That seems like a massive, like how, just in terms of mana, like how.
+
+13:23 Speaker B: Big a deal is that, that saved days? You know, we have to pay our buying group, we have to provide our information on the 10th of every month. And it was a, um, mad dash for, for purchasing, accounting and receiving to try to get through all the problems every month. And now everything's in the system and they just have to go in there and see where the variances are and solve those. So it's been a huge, huge time savings. Um, we've done a lot with Automation Studios here and every day we think, oh, we can maybe use that, we can do that with Automation Studio. So it's a great tool that I think is not. We haven't touched the surface with it yet.
+
+14:14 Speaker A: And when did it come? How long have you been using it?
+
+14:18 Speaker B: Probably a year at the most. When it first came out, we're like, wow, this is cool, but what are we going to do with it? And we have a group, uh, an IT group that they talk a lot amongst each other and um, they saw issues that were happening in the company and I'm like, oh, I wonder if we could use it for that. And it kind of just came up out of those conversations.
+
+14:42 Speaker A: That. Exactly. Dave is sort of insane.
+
+14:45 Speaker B: It's huge. Yeah, yeah.
+
+14:49 Speaker A: So, uh, I'm just gonna try this. So like, so that speaks to. That's a massive efficiency improvement. Um, so when you Think about Eclipse and you think about the platform in general. What is it really providing Mars now and what do you see it providing in the future?
+
+15:12 Speaker B: Today it's providing us scalability. Um, every time we make an improvement, we change a process. Uh, we're allowing people to do their jobs more effectively and more efficiently and Eclipse is coming out with new products. You know, we're talking about going to Eclipse in the cloud which will allow for different things to happen. But all of those things are allowing us to continue to grow and not worry about what happens. If we want to add three branches or whatever, we know that Eclipse will help us do that and that we can do it.
+
+15:51 Speaker A: That's a big, that's got to change like how you view growth dramatically. I think.
+
+15:56 Speaker B: Yeah, we don't worry about our system when we talk about growth. That's not one of our concerns because we know the system will handle whatever we're going to do.
+
+16:06 Speaker A: That was a great example. Uh, uh, and what do you think the impact is like externally? Like what do you think the impact of Eclipse and the platform is just on your customers? Like how it's. Because I know when we talked earlier like such a big deal. It's like about executing and um, like why is, why is, you know, why is Eclipse and the platform critical for like customer satisfaction, how you work with customers?
+
+16:32 Speaker B: So what we put into the system, you know, we, we can take it from our customer and automatically import it if that's what they want. So, so that saves time on both our customer side and our employee side, makes things more um, efficient and we know that we're getting into our system exactly what they wanted. But we can also send them information out of our system invoices and um, statements that can automatically flow into their system just using the technology that we have available and that connectivity that makes us a, ah, partner with them and helps them be more efficient. And we also are able to um, be very confident in what we're putting on our trucks, what we're delivering. We understand that when we, you know, we get a sign off at a job site that the customer is going to be invoiced for what we just gave them. And those are all critical things, they just happen automatically. We don't have to go into the system and cut an invoice every day. If it's gone through the system properly, the invoice is processed and those things are critical in making sure that we're efficient, the customer gets what they need timely and they really appreciate that we're able to do that, we're able to tell them that we're coming, notify them if they want a text message that we're two stops away. There's all these capabilities in the system that you just have to test them and see which customers want to use them. But it's really helped us be, uh, leading edge on those things because anybody can deliver a light bulb to a customer. It's how you deliver it that makes the difference to the customer. And if we get it there on time and in proper form, then they can do their job and keep moving. On the job site.
+
+18:38 Speaker A: What you said was awesome. I wonder if I'm going to try to help you just do a more summary statement about it. So what I heard you say, and you can say it any way you want, but what I heard you say is the thing that, uh, Eclipse and the platform has really helped us do is like, allow us to be like super efficient with customers, have great communication and kind of eliminate mistakes or whatever. But I'm just like, globally, like how would you describe like the overall impact to the customer?
+
+19:05 Speaker B: Okay, yeah, the overall impact to the customer that the system allows is it's efficiency. Um, we get them what they need, timely, and they can continue doing their, their work without any interference.
+
+19:30 Speaker A: I asked this before, but do you guys have like goals for growing or you like.
+
+19:36 Speaker B: Yes.
+
+19:36 Speaker A: What, Tell me about like what the current, what is that? What are sort of some of the current strategic thoughts about Mars and like, how does Epicor Eclipse and how does that, how does that feed into that?
+
+19:51 Speaker B: So we do every year strategic planning process here at Mars, looking at where, what areas that we want to grow in the company. And as we do that process, we use the system to help us analyze. We use a lot of data analytics to help us analyze. Are we meeting those goals? And uh, do we have the products to support that? Um, do we have the people? So, uh, it's holistically we use the goals that we want to do for sales growth and look at what's coming out of the system with analytics to understand what we need behind the scenes. Do we need people? Do we need product, do we need space? Like, what do we need? And Eclipse, ah, allows us to do all that.
+
+20:37 Speaker A: Okay, so I'm gonna ask you one more time. You do? Awesome. You're doing a great job. I'm just thinking like, so one thing is, one thing you have to keep in mind is everything you're saying is great. I'm just thinking about like the editing.
+
+20:46 Speaker B: And what we're doing.
+
+20:47 Speaker A: So it's not. So don't feel like I'm like, you're not, because you're doing a great job. Uh, but as I'm hearing you say something, I'm like, oh, I should. I should have given you a better.
+
+20:55 Speaker B: Question, I'm sure that way. So that's sort of what's going on in my head.
+
+20:59 Speaker A: But so, uh, how critical is using. How critical is Eclipse when it comes to, like, setting strategy and goals and why? I guess that's what I want to get to. And you kind of got to it.
+
+21:13 Speaker B: But I'm trying to make it quicker, more direct. So utilizing Eclipse in our strategic planning process allows us to look at, once we know the goal, where do we want to grow? We look at, do we have the product, do we have the people, do we have the space in our, uh, warehouse to do all that? And Eclipse allows us to succinctly look at those things, using data analytics to make sure we're going to meet our strategic goals.
+
+21:42 Speaker A: Like, could you do it without Eclipse? And if you could, why not?
+
+21:47 Speaker B: Could we do the strategic planning and the analytics without Eclipse? Probably, but it would take a lot longer. Eclipse has it at our fingertips that we can go in there and look at the information very quickly and make decisions without a lot of effort.
+
+22:10 Speaker C: You mentioned time speeds and whether we can expand on that.
+
+22:14 Speaker B: So it's been a big deal being.
+
+22:17 Speaker C: Able to provide, you know, days of work, get a. It gives you so much more free time to do something else.
+
+22:24 Speaker B: Yeah.
+
+22:27 Speaker C: We can highlight a little bit about maybe how much time savings you achieved. And then also what we were speaking about before and you were saying how you went from really like, apparently back then it was my grammar sort of paper and manual process. And now it's so automatic and it's advanced that you're coming overall. So maybe we can touch those two topics.
+
+22:54 Speaker B: Okay. Okay.
+
+22:57 Speaker A: Yeah. So I guess the first question, like, in terms of, like, how. How much in terms of roi, like, can you give a sense of how much time Eclipse and the platform has given you back your. And why has that been important? What does that allow people to do beyond that?
+
+23:19 Speaker B: So when we're looking to do an investment and utilizing a new feature of Eclipse, we always do an roi. And on the last several activities that we've done, the ROI has saved 10 hours a week in an accounts payable team, which when you multiply that out over a year, it's a lot. They're able to look at, uh, statements and look for credits and look for a lot More things than they were able to because now they're utilizing new technology. I also talked about implementing the PO variance queue. That saves hours and hours of time from each area every week where they're not trying to match things up and go through trackers. Now they have a queue, they, they look at the Q, the variances and um, can make decisions very quickly from there because everything's at their fingertips. So what Epicor has done, when we find a new, um, bottleneck in the system is there's a solution in there, we look at what it's going to cost to implement that solution. And every time we've done that, we found hours of savings in a person's daily work. Once that's implemented, like how big a deal?
+
+24:36 Speaker A: Like trivial or like how you would.
+
+24:39 Speaker B: Have to add more people if we didn't implement these solutions. And that's not sustainable in a business today. So you have to find automations. And so the second question.
+
+24:55 Speaker C: What? Oh, I do grab.
+
+24:58 Speaker A: Thank you for doing. I know you did that just to make me feel good. I'm starting to feel like I'm getting Alzheimer's. So it's like the fact that you're doing as a young lady that, that I appreciate it.
+
+25:09 Speaker C: I know you always.
+
+25:10 Speaker A: I know you did it for me.
+
+25:13 Speaker C: My second question was.
+
+25:19 Speaker B: When you're talking about am I not. You're good?
+
+25:21 Speaker A: No.
+
+25:22 Speaker B: Okay.
+
+25:22 Speaker A: I'm just going to do one tiny thing.
+
+25:28 Speaker B: We don't have grow yet, but we really want, we use focus. But Eclipse, uh, one of the positives about Eclipse is they partner with third parties and they're not afraid to make improvements over time. So, you know, it might be focused today, but we're dying to grow and I think we need to be in the cloud to, to get. Grow and so. Well, we're working on the contract right now. Like it's in, you know.
+
+25:59 Speaker A: Okay, so I'll give you a ltm.
+
+26:00 Speaker B: Okay.
+
+26:01 Speaker A: Um, you have a great smile, by the way.
+
+26:03 Speaker B: Oh, thanks.
+
+26:05 Speaker A: Um, when you think about the future and what you're doing with Epicor, like, what are you looking at and what's.
+
+26:11 Speaker B: Exciting for the future with Epicor? The thing we're looking at right now is moving to the cloud. The cloud offers security, data reliability and scalability. And as we continue to grow, that's one thing that we don't want to have to worry about. And so currently we are just in contract negotiations with Eclipse because that's our next step. We need to be in the cloud.
+
+26:38 Speaker A: What are you optimistic, uh, about from. Of what that once you get on the other side of that, what do you see happening? What's going to be different or better?
+
+26:49 Speaker B: Once we go to the cloud with Eclipse, there are uh, additional features that are going to be available. One of those is Grow, which is an analytical tool that will allow us to um, continue our data analytics journey and allowing us to provide information to management to, to help them uh, make decisions and keep the company moving forward. There's also additional um, capabilities coming out and I don't remember the AI tool that's coming out, Prism, but that's another thing. Mars is very excited for Prism to come out and be part of our platform because using AI and doing analytics is going to be key to finding where our pain points are, what we should be looking at quickly instead of having to spend days looking at data. You can do it all manually, but if you can use a tool that's going to help you do it immediately, you need to put that in place.
+
+27:52 Speaker A: So one thing I noticed from different companies, a lot of companies more and more rely on um, clients, cloud solutions or suites and stuff. And part of one of the things that they look for is just relieving that burden of trying to figure out what the next thing is, in other words. So I'm teeing up this question, but how confident are you in um, Epicor as ah, a technology partner in them really having a pulse, um, on where things need to go? Technology, like, is that part of what you like about the partnership is that you guys don't have to stay up at night worrying about like what the next thing is that they're going to be bringing? What's your take on that?
+
+28:44 Speaker B: So the partnership that we have with Epicor and understanding where they are going in the cloud is that when they put something together and it's a solution, you know that it's going to work. We haven't implemented something that doesn't work. It's usually user error that causes any issues. So when we go to the cloud, I don't have any concerns that we're going to have any issues.
+
+29:09 Speaker A: Do you feel like they have a good pulse on where technology is going? And always kind of that gets reflected in the platform, like how would you.
+
+29:17 Speaker B: So I do feel that epicor has a pulse on where the technology is going. I had a group of people that went to the um, Insights conference a couple months ago and the information that they came back with on where technology is going and what epicor is looking at bringing to the table, it's everything that a company needs to be successful in the future.
+
+29:38 Speaker A: Nice. All right.
+
+29:40 Speaker C: That was perfect. I loved it. I remembered my question. I just put, like, a blanket statement of, like, we were talking about over there, like, how do you serve it off so manually and now your blast is so automatic.
+
+29:54 Speaker B: Oh, just a quick summary statement of.
+
+29:56 Speaker C: Like, what you came from and now you and you already spoke about.
+
+30:01 Speaker B: Yeah, yeah.
+
+30:02 Speaker C: So that'll be kind of like the editing part of it, like what you started with now, what you're at now and then.
+
+30:08 Speaker B: Okay.
+
+30:09 Speaker A: Yeah. I think it's just more in a broad strokes, like it. Broad strokes. Like, what's the evolution look like? Where were you guys really struggling and where have you gone?
+
+30:19 Speaker B: Okay. When I started at Mars eight years ago, we were doing a lot of manual processes. And as I learned what clps had to offer, we implemented processes that were automated, and that's allowed us to grow. We've quadrupled over the last 10 years, and without making changes, we can't be successful in our growth. So Eclipse has been a partner in making sure that we are able to continue growing into the future. Good. Thank you. Now you want Andrew?
+
+30:54 Speaker C: Yep.
+
+30:55 Speaker B: Andrew or John. I'll go.
