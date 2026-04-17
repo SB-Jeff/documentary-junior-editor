@@ -1,5 +1,201 @@
 # Documentary Junior Editor — Changelog
 
+## v4.0 — 2026-04-17
+
+Major version — Edit Agent workflow reframe, viewer dual-mode, plus new rules
+and the first Nonprofit Testimonial reference example. Originally planned as
+v3.5; the workflow reframe tipped it into a major version bump.
+
+### Edit Agent workflow reframe: first pass is a rough cut, not a draft (SKILL-edit.md)
+
+Reframes the Edit Agent's first-pass output from a near-target draft to a
+**rough cut** — longer, over-inclusive, not runtime-gated. The goal of the
+first pass is the best possible story with logical progression and stand-
+alone narrative integrity; whether it lands at 5 minutes or 12 minutes does
+not matter for this pass. Reduction happens later, after review.
+
+The Edit Agent now operates in three explicit phases:
+
+1. **Rough Cut** — include every quote that plausibly earns its place. Err
+   long. Expect 1.5x–2x the target runtime. A rough cut that lands at
+   target means quotes got missed; that is the failure mode this phase is
+   designed to prevent.
+2. **Discussion** — collaborative review with Jeff. The agent brings a
+   proposal (which beats to cut first, which are load-bearing, which are
+   uncertain, and why) so Jeff has a reactable surface. Review mode in the
+   viewer is the primary surface. Question: "does this tell the story?"
+3. **Reduction** — targeted trim against agreed runtime, informed by the
+   Discussion. Runtime becomes a real constraint here. Edit mode in the
+   viewer is the primary surface. Question: "which words come out?"
+
+**Why:** On Crisis Nursery, the Edit Agent produced what looked like a draft
+at 5:50 against the 3–5 minute target — already trimmed toward runtime — and
+good Act 3 quotes were missed as a result. Jeff's observation: "the goal
+initially is to tell the best possible story... then we look at it again and
+see what we can cut without losing any of the integrity of the story."
+Previous skill guidance ("consider runtime from the start," "if 2x over
+target, tighten before presenting") was actively working against this.
+Replaced entirely.
+
+The Act 3 runtime-overrun rule drafted as part of the planned v3.5 entry
+has been subsumed by the broader rough-cut principle. It survives in the
+skill as the "never pre-truncate the closing act" guidance — one expression
+of the general rule, not a standalone Act-3-specific rule.
+
+### Viewer: Review / Edit mode toggle (SKILL-edit.md)
+
+The JSX/HTML viewer now renders with a Review/Edit toggle.
+
+- **Review mode** (default landing): selected quotes rendered as continuous
+  narrative — speaker labels, act dividers, trimmed text only, no controls.
+  Surface for the Discussion phase.
+- **Edit mode**: full interactive interface (trim controls, drag handles,
+  section dropdowns, scissors splits, interstitial placement, filters).
+  Surface for the Reduction phase.
+
+Both modes read from the same data block — no drift between modes.
+
+**Why:** Jeff raised that the transition from chat discussion to the
+interactive viewer was slow and that context was effectively being burned
+generating narrative previews in chat separately from the interactive
+viewer. A single dual-mode artifact solves both — one render, two ways to
+consume, naturally aligned to the Discussion/Reduction rhythm. An earlier
+proposal to split viewer generation into a separate Viewer Agent was
+considered and rejected in favor of the toggle — the toggle solves the
+user-facing problem (reading the story vs. editing the quotes) without
+adding pipeline complexity or forcing session-switching.
+
+### New editorial rules (SKILL-edit.md)
+
+**Limited-entry supporting voice pattern.** For projects with a primary
+protagonist plus a close-relation second voice (spouse, adult child,
+colleague), don't distribute the supporting voice evenly. Pick 2–4
+deliberate entry points where the second voice adds something the
+protagonist can't. Added to Phase 3 Selection Principles. Reference
+example: Crisis Nursery Testimonial (TJ Bryant — three entries across 22
+total beats).
+
+**Lead-with-vulnerability, close-with-authority placement.** When a
+subject has both personal vulnerability and earned present-day authority
+(board seat, staff role, public advocacy, credentialed perspective), open
+with the vulnerable material and save the authority for the close rather
+than front-loading credentials. Added to Phase 3 Ordering Principles.
+Previously lived only in user memory — now encoded in the skill so it
+syncs via git to all machines.
+
+**Runtime estimation in two numbers.** Long-form emotional testimonials
+run roughly 25–30% longer than word-count math predicts. Estimate the
+rough-cut length and the target length as separate numbers so the gap
+between "what we have" and "what we need to get to" is explicit. Sets
+expectations for the Discussion; constrains the Reduction.
+
+### Reference example: Crisis Nursery Testimonial (Nonprofit Testimonial)
+
+First Nonprofit Testimonial added to the knowledge base — the 2026 Crisis
+Nursery annual fundraising video with Tyanna Bryant (protagonist) and her
+24-year-old son TJ (supporting / intergenerational witness). 22 quotes
+across 3 acts (Stigma / Partner / Every Parent), 1 split (source #7 into
+Act 1 closer + Act 2 opener), no interstitials. Approved on first pass —
+no loop-back from FCPXML.
+
+Establishes patterns for: single-protagonist with limited-entry supporting
+voice (TJ enters exactly three times); paired-perspective emotional center
+(mother's memory + adult child's own-voice confirmation of the same
+event); off-scope material routed to Orphans rather than Discards when
+part of a quote pool future editors might revisit; act labels set directly
+to messaging-framework pillars when the Interview Guide already speaks in
+those terms.
+
+Reference example's `lessons-learned.md` has been updated in v4.0 to
+reframe the 7:29.6 runtime as a rough-cut-treated-as-draft failure mode
+rather than a deliberate overrun kept for Act 3 integrity, per Jeff's
+observation that good Act 3 quotes were missed.
+
+### Folder-layout variants documented (SKILL-fcpxml.md)
+
+Added Phase 1 guidance acknowledging two layout variants the FCPXML Agent
+may encounter:
+
+- **Uppercase `XML/` with `exports/` and `imports/` subfolders.** Source
+  `.fcpxmld` packages in `XML/exports/`; generated rough cut written to
+  `XML/imports/`. Crisis Nursery used this.
+- **Multi-deliverable output naming without `_v<N>` suffix.** When a
+  project slug already implies scope
+  (`[project-slug]_rough_cut.fcpxml`) and there is only one version, Jeff
+  sometimes drops the version suffix. The skill now tells the agent to
+  match the naming used in `edit-handoff.md` rather than force the
+  canonical `[ProjectName]_rough_cut_v<N>.fcpxml` form.
+
+Neither variant requires a structural change — just an instruction to the
+agent to read what's there and not over-correct.
+
+The `handoffs/[project-slug]/` multi-deliverable subfolder convention was
+already documented in SKILL.md (Multi-Project Folders section) prior to
+this review; v4.0 adds no new convention, just reinforces it.
+
+### Known issues — OPEN, flagged for Jeff
+
+**FCPXML Params parser-format mismatch (SKILL-fcpxml-params.md).** Schema
+mismatch between the `fcpxml-params.md` format documented in the skill
+(per-speaker `### [Name]` sections with `Media ref ID` / `Tele angleID` /
+`Wide angleID` bullets) and the format `scripts/build_fcpxml.py`'s
+`parse_params_md` actually parses (flat top-level sections: `## Media Ref
+IDs`, `## Angle IDs`, `## Reference FCPXML`, `## Library Location`, `##
+Event Name`, `## Format Reference`). The FCPXML Agent on Crisis Nursery
+reformatted the file mid-pipeline before `build_fcpxml.py` would run.
+
+*Interim guidance:* skill instructs Params Agent to produce BOTH forms —
+parser-expected top-level sections for tool consumption, followed by a
+per-speaker details block for human reading.
+
+*Open for Jeff:* which side should be the canonical form long-term —
+update `parse_params_md` to accept the per-speaker headings, or keep the
+parser format and drop the per-speaker human-readable block? Either
+direction eliminates the dual-format obligation.
+
+**FCPXML caption-matcher performance on long interviews (SKILL-fcpxml.md).**
+`build_fcpxml.py`'s fuzzy matcher scans `captions × max_span` windows per
+sentence with `search_hint` reset to 0 at the start of each quote. On
+Tyanna's ~708-caption source this exceeded the 45-second shell timeout
+end-to-end. Validated workaround: narrow the caption search window per
+quote using each quote's `startTC`/`endTC` (±15-second buffer). Match
+scores stayed 0.85–1.00 and total match time dropped to ~2 seconds. The
+permanent fix belongs in `generate_fcpxml.py`'s `find_quote_range` — use
+the TC window already present in `paper_cuts` to set
+`search_start`/`search_end` rather than scanning the whole caption list
+per quote.
+
+### Cardinal Rule status
+
+Zero violations on Crisis Nursery. All 22 trims verified as contiguous
+verbatim substrings of the source text. Transcription artifacts preserved
+per the rule (#1 "Tiana" spelling instead of "Tyanna"; #38 lowercase
+"please don't wait" sentence start). Split handling (#7 → #7a + #7)
+treated as two independently trimmed subclips from the same source TC
+window — clean.
+
+### Follow-ups flagged but not done
+
+- **SKILL-edit-pipeline.md** (n8n variant) holds matching v3.5-pipeline
+  content. The v4.0 workflow reframe and dual-mode viewer spec would
+  benefit from a matching update, but this agent did not modify the
+  pipeline variant — flagged for Jeff's approval before touching the n8n
+  deployment surface.
+
+### Version bumps summary
+
+- `SKILL.md` → v4.0
+- `SKILL-edit.md` → v4.0
+- `SKILL-fcpxml-params.md` → v4.0
+- `SKILL-fcpxml.md` → v4.0.1
+- `SKILL-review.md` → unchanged (v3.4)
+- `SKILL-creative-context.md`, `SKILL-transcript.md`, `SKILL-synthesis.md`
+  → unchanged (no v4.0 changes warranted)
+- `SKILL-edit-pipeline.md` → unchanged (v3.5-pipeline); flagged for a
+  matching v4.0-pipeline pass pending Jeff's approval
+
+---
+
 ## v3.4 — 2026-04-09
 
 ### Narrative Coherence Rule added to SKILL-edit.md

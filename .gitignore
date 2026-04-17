@@ -1,0 +1,16 @@
+# Secrets — never commit
+.env
+.env.local
+*.env
+
+# Claude Code per-session state
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+Icon?

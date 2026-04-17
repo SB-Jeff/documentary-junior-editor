@@ -13,7 +13,7 @@ description: |
 ---
 
 # Documentary Junior Editor — Master Skill Index
-### Version 3.4 | April 2026
+### Version 4.0 | April 2026
 
 This is the master index for the documentary-junior-editor skill. Read this file first at
 the start of every session. It describes the pipeline, the folder structure, how agents
@@ -141,7 +141,11 @@ documentary-junior-editor/
 │   │   ├── Final_Edit.txt
 │   │   ├── lessons-learned.md
 │   │   └── transcripts/
-│   └── pacer-center/              ← Nonprofit Fundraising
+│   ├── pacer-center/              ← Nonprofit Fundraising
+│   │   ├── Final_Edit.txt
+│   │   ├── lessons-learned.md
+│   │   └── transcripts/
+│   └── crisis-nursery-testimonial/ ← Nonprofit Testimonial
 │       ├── Final_Edit.txt
 │       ├── lessons-learned.md
 │       └── transcripts/
@@ -339,7 +343,60 @@ fallback if n8n has issues.
 
 See `CHANGELOG.md` for full version history.
 
-Current version: 3.4 — April 2026
+Current version: 4.0 — April 2026
+
+### Edit Agent workflow reframe (major)
+- **First pass is a rough cut, not a draft.** The Edit Agent's first pass
+  prioritizes narrative integrity and logical progression over runtime. Whether
+  the rough cut lands at 5 minutes or 12 minutes does not matter for this
+  pass — the question is "is the story compelling?" Reduction to target runtime
+  happens later, after review.
+- **Three-phase Edit Agent workflow: Rough Cut → Discussion → Reduction.** The
+  Discussion phase is now an explicit collaborative step in the Edit Agent's
+  job, not an afterthought. The agent brings a proposal for what could come
+  out and why, giving Jeff a reactable surface rather than cold pruning.
+
+### Dual-mode viewer spec (SKILL-edit.md)
+- The JSX/HTML viewer now renders with a **Review / Edit** toggle. Review mode
+  shows the quotes as continuous narrative (speaker labels, act dividers, no
+  trim controls) for reading the story. Edit mode retains the full interactive
+  interface (trims, reorders, splits, interstitials). Default landing is
+  Review mode — reading the narrative comes before cutting words.
+
+### Rules promoted from practice (SKILL-edit.md)
+- **Limited-entry supporting voice pattern** — single-protagonist + close-
+  relation second voice that enters sparingly at deliberate beats, not
+  evenly distributed.
+- **Lead-with-vulnerability, close-with-authority placement** — when a
+  subject has both personal vulnerability and earned present-day authority,
+  open with vulnerability and save authority for the close rather than
+  front-loading credentials.
+- **Runtime-estimation calibration** — long-form emotional testimonials run
+  roughly 25–30% longer than word-count math predicts. Estimate rough-cut
+  length and target length as two separate numbers.
+
+### Reference example
+- **Crisis Nursery Testimonial** (Tyanna + TJ Bryant) — first `Nonprofit
+  Testimonial` in the knowledge base; validates the single-protagonist +
+  limited-entry supporting-voice pattern (TJ enters exactly three times).
+
+### Known issues carried into v4.0
+- **FCPXML Params parser-format mismatch** (SKILL-fcpxml-params.md) — OPEN.
+  The documented handoff format and what `build_fcpxml.py` actually parses
+  disagree; interim guidance instructs the Params Agent to produce both
+  forms. Awaiting Jeff's call on which side to reconcile.
+- **FCPXML caption-match performance on long interviews** (SKILL-fcpxml.md) —
+  the fuzzy matcher can exceed the 45s shell timeout on interviews with
+  ~700+ captions; narrowing per-quote using `startTC`/`endTC` (±15s) is a
+  validated workaround.
+
+## v3.5 — April 2026
+
+Consolidated into v4.0 before release (version label superseded). See
+`CHANGELOG.md` v4.0 entry for the full set of v3.5 material plus the workflow
+reframe that tipped the release into a major version bump.
+
+## v3.4 — April 2026
 - Narrative Coherence Rule: paper cut must read as a coherent story; read-through
   required after every change; quote fragments evaluated in assembled context
 - Viewer is the single source of truth: every editorial suggestion reflected in viewer

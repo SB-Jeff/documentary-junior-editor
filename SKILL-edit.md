@@ -300,9 +300,51 @@ and flow through to the handoff JSON.
 trims, section assignments, and interstitials) as a JSON string and restore from a
 previously saved state. This enables persistence across sessions.
 
+**Review / Edit mode toggle.** The viewer renders with two modes:
+
+- **Review mode** (default): shows selected quotes as continuous narrative —
+  speaker labels, act dividers, trimmed text only, no controls. Designed for
+  reading the story as Jeff would experience it on screen. This is the mode
+  to use during the Discussion phase, when the question is "does this tell
+  the story?"
+- **Edit mode**: the full interactive interface described above — trim
+  controls, drag handles, section dropdowns, scissors splits, interstitial
+  placement, checkboxes, section filters. This is the mode to use during
+  Reduction, when the question is "which words come out?"
+
+A toggle at the top of the viewer switches between modes. The default
+landing is Review mode — reading the narrative comes before cutting words.
+Both modes read from the same underlying data block; changes made in Edit
+mode reflect immediately in Review mode and vice versa. No data drift
+between modes.
+
 ---
 
-## Phase 3: First Pass — Selection, Trimming, and Ordering
+## Phase 3: Rough Cut — The First Pass
+
+**The Edit Agent's work with Jeff follows three phases in this order: Rough
+Cut → Discussion → Reduction.** Phase 3 is the Rough Cut. Phase 4 covers the
+Discussion and Reduction. These are editorial phases, not delivery
+checkpoints — you will move back and forth between them as the material
+reveals itself.
+
+**The first pass is a rough cut, not a draft.** The goal is the best possible
+story — logical progression, full emotional arc, a narrative that stands
+alone and holds a viewer. Whether the rough cut lands at 5 minutes or 12
+minutes does not matter for this pass. Runtime is *not* the constraint.
+
+Include every quote that plausibly earns its place in the narrative. Err on
+the side of keeping material — you are showing Jeff the full shape of what
+the material can do. A quote that feels redundant to you may be the one Jeff
+wants. A quote you cut "for runtime" may be the emotional peak of the act.
+Don't pre-truncate to hit a number; that decision happens in Reduction,
+informed by the Discussion.
+
+The rough cut is long on purpose. Expect it to run 1.5x–2x the target
+runtime or more. If the rough cut is already at target, you have almost
+certainly selected too narrowly — widen before presenting. A rough cut that
+came in under target means good quotes got missed; that is the failure mode
+this phase is designed to prevent.
 
 Present recommendations act by act — never try to lock the whole edit at once.
 
@@ -321,10 +363,38 @@ reference unshipped features, or require context not yet established.
 One speaker per story. When multiple speakers describe the same experience, pick the
 strongest one and present both options to Jeff.
 
-**Consider runtime from the start.** Check the target runtime in the creative brief.
-Estimate your first pass against it (roughly 150 words per minute of screen time).
-If your first pass is 2x over target, you've selected too broadly — tighten before
-presenting.
+**Limited-entry supporting voice pattern.** When a project has a primary
+protagonist plus a close-relation second voice (spouse, adult child,
+colleague), don't distribute the supporting voice evenly. Pick 2–4
+deliberate entry points where the second voice adds something the
+protagonist can't — a paired-perspective emotional moment, a witness
+confirmation, a generational or relational shift — and let the protagonist
+carry the rest. See the Crisis Nursery reference example: TJ Bryant enters
+three times across 22 total beats, each entry placed for a specific
+narrative purpose.
+
+**The rough cut is not runtime-gated.** Check the target runtime in the
+creative brief for awareness, but do not trim toward it in the first pass.
+The rough cut should err long — including every quote that plausibly earns
+its place across the full narrative arc. Runtime becomes the constraint only
+at Reduction, after the Discussion with Jeff.
+
+**Never pre-truncate the closing act to hit a number.** Act 3 (or whichever
+act carries the landing) needs its full widening arc to work. If the full
+closing sequence runs 30–60 seconds over a 3–5 minute target, present it
+intact and flag the length explicitly — do not collapse the closing beats
+to hit runtime. Pattern validated on Crisis Nursery: the close moved from
+external authority → personal cost → present-day role → the ask → son's
+tribute → final widening; each beat earned its place. Collapsing any of
+them to hit a number would have weakened the landing.
+
+**Estimate runtime in two numbers, not one.** Long-form emotional
+testimonials commonly run 25–30% longer than word-count math predicts
+(speakers pause, weight, breathe). Estimate the rough-cut length *and* the
+target length as separate numbers in your first-pass summary, so Jeff knows
+the gap between "what we have" and "what we need to get to." The first-pass
+estimate sets expectations for the Discussion; the target sets the
+constraint for the Reduction.
 
 ### Ordering Principles
 
@@ -333,6 +403,18 @@ context before referencing it. Build the problem before presenting the solution.
 
 Strong opening, strong closing. The first quote hooks the viewer. The last quote is
 forward-looking and leaves the viewer with confidence.
+
+**Lead with vulnerability, close with authority.** When a subject has both
+personal vulnerability and earned present-day authority — a board seat, a
+staff role, public advocacy, a credentialed expert perspective — open the
+piece with the vulnerable material and save the authority for the close,
+rather than using the authority as a front-loaded credential. The
+permission-to-ask-for-help story lands because the viewer sees the fear
+first and the earned power later. Validated on Crisis Nursery: Tyanna's
+board-of-directors quote (seq #19) is held until Act 3; the opening beats
+are about isolation, stigma, and community distrust. If the order were
+reversed, the vulnerability would read as retroactive framing rather than
+the real thing, and the close would have nothing left to land on.
 
 Interleave when it serves the narrative. Quotes do not have to stay in the order they
 were tagged. Think of each quote as a pool of usable sentences — the narrative sequence
@@ -406,10 +488,33 @@ departing from the plan.
 
 ---
 
-## Phase 4: Collaborative Editing — Selection, Trimming, and Splitting
+## Phase 4: Collaborative Editing — Discussion and Reduction
 
-This is the core working session. Selection, trimming, and splitting happen
-together — not in strict sequence. Follow Jeff's lead.
+Phase 4 covers the second and third phases of the three-phase workflow:
+**Discussion** (collaborative review of the rough cut) and **Reduction**
+(targeted trim against agreed runtime). These happen together, not in strict
+sequence, and you will move back and forth between them. Follow Jeff's lead.
+
+**Discussion.** Once the rough cut is in the viewer, the Edit Agent's job is
+not done. Bring a proposal for the Discussion: which beats you'd cut first
+if forced to reduce, which are load-bearing, which you're uncertain about,
+and why. Give Jeff a reactable surface — not a cold "here's the rough cut,
+what comes out?" Jeff will surface things the rough cut revealed — a beat
+he didn't know he wanted, a redundancy he can now see, an ordering change
+that opens a cut elsewhere. Capture decisions as they land; don't
+accumulate a backlog. Review mode in the viewer is the primary surface for
+this phase — the question is "does this tell the story?"
+
+**Reduction.** Once Discussion has produced decisions, Reduction applies
+them. Trim, reorder, split, deselect against an agreed target runtime. The
+question shifts from "does this tell the story?" to "which words come
+out?" — Edit mode in the viewer is the primary surface for this phase.
+Runtime is now a real constraint.
+
+Selection, trimming, and splitting still happen together inside Reduction —
+not in strict sequence. Trimming reveals redundancies that change selection,
+splitting changes sequence count and pacing, and the editor needs the full
+quote pool at all times.
 
 ### When Jeff is satisfied with a section's selection, begin trimming it.
 
@@ -751,5 +856,5 @@ The FCPXML Agent reads:
 
 ---
 
-*Edit Agent — documentary-junior-editor v3.4*
+*Edit Agent — documentary-junior-editor v4.0*
 *Read SKILL.md first for pipeline overview and folder structure.*

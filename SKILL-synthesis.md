@@ -30,14 +30,28 @@ You do NOT receive raw transcripts. You work with the structured outputs only. Y
 
 ## Required Inputs
 
+### Handoff directory resolution
+
+The Synthesis Agent operates inside a project-specific handoff directory. A single SSD/repo can hold more than one project's handoff set (e.g., the 2026 Crisis Nursery shoot produces both a main testimonial and a tribute video, each in its own slugged subfolder). Every path in this skill is relative to `handoffs/[project-slug]/`.
+
+Resolve the handoff directory before reading anything else:
+
+1. **If the kickoff prompt names a project slug or handoff path**, use it directly (e.g., `crisis-nursery-testimonial` → `handoffs/crisis-nursery-testimonial/`). This is the expected case when Jeff launches the skill as a Cowork task.
+2. **If the kickoff prompt does not specify**, glob `handoffs/*/act-structure.md`. If exactly one match is found, use it. If multiple are found, stop and ask Jeff which project to synthesize. Do not guess.
+3. **Legacy fallback:** if no slugged subfolder is present but `handoffs/act-structure.md` exists at the flat root, use `handoffs/` as the handoff directory. This preserves compatibility with earlier projects that pre-date the project-slug convention.
+
+Throughout the rest of this skill, `handoffs/[project-slug]/` is the canonical handoff directory. Substitute the resolved project slug for `[project-slug]` wherever it appears below. If operating in the legacy flat layout, substitute an empty project slug (so `handoffs/[project-slug]/foo.md` reads as `handoffs/foo.md`).
+
+### Input files
+
 | Input | Source | Description |
 |-------|--------|-------------|
-| `handoffs/act-structure.md` | Creative Context Agent (Jeff-approved) | Approved act structure, labels, narrative roadmaps, speaker list |
-| `handoffs/creative-brief-summary.md` | Creative Agent | Editorial context, messaging framework, project goals |
-| `handoffs/*-tagged-quotes.json` | Transcript Agents (per speaker) | Tagged quotes with act assignments, one file per speaker |
-| `handoffs/*-orphans.md` | Transcript Agents (per speaker) | Orphan quotes that exist but did not fit any act, one file per speaker |
-| `handoffs/*-discards.md` | Transcript Agents (per speaker) | Discard summaries explaining what was excluded and why, one file per speaker |
-| `handoffs/*-summary.md` | Transcript Agents (per speaker) | Content summaries of each interview, one file per speaker |
+| `handoffs/[project-slug]/act-structure.md` | Creative Context Agent (Jeff-approved) | Approved act structure, labels, narrative roadmaps, speaker list |
+| `handoffs/[project-slug]/creative-brief-summary.md` | Creative Agent | Editorial context, messaging framework, project goals |
+| `handoffs/[project-slug]/*-tagged-quotes.json` | Transcript Agents (per speaker) | Tagged quotes with act assignments, one file per speaker |
+| `handoffs/[project-slug]/*-orphans.md` | Transcript Agents (per speaker) | Orphan quotes that exist but did not fit any act, one file per speaker |
+| `handoffs/[project-slug]/*-discards.md` | Transcript Agents (per speaker) | Discard summaries explaining what was excluded and why, one file per speaker |
+| `handoffs/[project-slug]/*-summary.md` | Transcript Agents (per speaker) | Content summaries of each interview, one file per speaker |
 
 **Does NOT receive:** raw interview transcripts, captioned FCPXMLs, audio files, conversation histories from Transcript Agent sessions.
 
@@ -47,7 +61,7 @@ You do NOT receive raw transcripts. You work with the structured outputs only. Y
 
 ### 1.1 — Discover speakers
 
-Glob `handoffs/*-tagged-quotes.json` to discover all speakers who have been processed by the Transcript Agents.
+Glob `handoffs/[project-slug]/*-tagged-quotes.json` to discover all speakers who have been processed by the Transcript Agents.
 
 Extract speaker slugs from filenames. The slug is the portion before `-tagged-quotes.json`:
 - `rob-manion-tagged-quotes.json` yields slug `rob-manion`
@@ -55,15 +69,15 @@ Extract speaker slugs from filenames. The slug is the portion before `-tagged-qu
 
 ### 1.2 — Cross-reference against act structure
 
-Read the speaker list from `handoffs/act-structure.md`. Every speaker listed there must have a matching set of output files discovered in the glob. Flag any speaker present in the act structure but missing from the discovered files — this means a Transcript Agent has not completed.
+Read the speaker list from `handoffs/[project-slug]/act-structure.md`. Every speaker listed there must have a matching set of output files discovered in the glob. Flag any speaker present in the act structure but missing from the discovered files — this means a Transcript Agent has not completed.
 
 ### 1.3 — Verify all four files per speaker
 
 For every discovered speaker slug, verify the existence of all four required output files:
-1. `handoffs/[speaker-slug]-tagged-quotes.json`
-2. `handoffs/[speaker-slug]-orphans.md`
-3. `handoffs/[speaker-slug]-discards.md`
-4. `handoffs/[speaker-slug]-summary.md`
+1. `handoffs/[project-slug]/[speaker-slug]-tagged-quotes.json`
+2. `handoffs/[project-slug]/[speaker-slug]-orphans.md`
+3. `handoffs/[project-slug]/[speaker-slug]-discards.md`
+4. `handoffs/[project-slug]/[speaker-slug]-summary.md`
 
 If any file is missing for any speaker, stop and report the gap to Jeff. Be specific:
 list the speaker slug, which of the four files is missing, and which files ARE present.
@@ -78,7 +92,7 @@ Do not proceed with incomplete data.
 
 ### 1.4 — Validate act label consistency
 
-Read the act labels from `handoffs/act-structure.md`. Then scan every per-speaker `tagged-quotes.json` file and verify that every act label used in the `act` field matches an approved label exactly — same spelling, same capitalization, same punctuation.
+Read the act labels from `handoffs/[project-slug]/act-structure.md`. Then scan every per-speaker `tagged-quotes.json` file and verify that every act label used in the `act` field matches an approved label exactly — same spelling, same capitalization, same punctuation.
 
 Flag any drift: quotes tagged with act labels that do not appear in the approved structure. Report the speaker slug, quote number, and the non-matching label. Do not silently correct drift — surface it.
 
@@ -88,7 +102,7 @@ Flag any drift: quotes tagged with act labels that do not appear in the approved
 
 ### 2.1 — Determine speaker order
 
-Speaker order follows the order in `handoffs/act-structure.md` speaker list. This order is intentional — it reflects the narrative priority set during structure approval.
+Speaker order follows the order in `handoffs/[project-slug]/act-structure.md` speaker list. This order is intentional — it reflects the narrative priority set during structure approval.
 
 ### 2.2 — Renumber sequentially
 
@@ -119,7 +133,7 @@ Quote splitting only happens downstream in the Edit Agent. The Synthesis Agent p
 
 ### 2.5 — Write merged output
 
-Write the merged result to `handoffs/tagged-quotes.json`.
+Write the merged result to `handoffs/[project-slug]/tagged-quotes.json`.
 
 This file is the single combined quote inventory for all downstream agents. The Edit Agent and FCPXML Agent both read from this file.
 
@@ -129,11 +143,11 @@ This file is the single combined quote inventory for all downstream agents. The 
 
 ### 3.1 — Merge orphan quotes
 
-Combine all `handoffs/[speaker-slug]-orphans.md` files into a single `handoffs/orphan-quotes.md`.
+Combine all `handoffs/[project-slug]/[speaker-slug]-orphans.md` files into a single `handoffs/[project-slug]/orphan-quotes.md`.
 
 Structure:
 - Organize by speaker, using clear `## [Speaker Name]` headers
-- Preserve speaker order from `act-structure.md`
+- Preserve speaker order from `handoffs/[project-slug]/act-structure.md`
 - Renumber orphan quotes to continue after the main tagged quote sequence (if the last tagged quote is #147, orphans start at #148)
 - Add `speakerSlug` notation to each orphan for traceability
 - Preserve all original content: quote text, context notes, reasons for orphan status
@@ -142,11 +156,11 @@ The orphan file is surfaced to Jeff for review. Some orphans may be re-tagged in
 
 ### 3.2 — Merge discard summaries
 
-Combine all `handoffs/[speaker-slug]-discards.md` files into a single `handoffs/discard-summary.md`.
+Combine all `handoffs/[project-slug]/[speaker-slug]-discards.md` files into a single `handoffs/[project-slug]/discard-summary.md`.
 
 Structure:
 - Organize by speaker, using clear `## [Speaker Name]` headers
-- Preserve speaker order from `act-structure.md`
+- Preserve speaker order from `handoffs/[project-slug]/act-structure.md`
 - Preserve all original content: descriptions of what was excluded and why
 
 The discard summary is a reference document. It is not used by downstream agents but is available to Jeff if he wants to understand what was left out.
@@ -157,16 +171,16 @@ The discard summary is a reference document. It is not used by downstream agents
 
 ### 4.1 — Merge content summaries
 
-Combine all `handoffs/[speaker-slug]-summary.md` content summaries into the first section of `handoffs/transcript-summary.md`.
+Combine all `handoffs/[project-slug]/[speaker-slug]-summary.md` content summaries into the first section of `handoffs/[project-slug]/transcript-summary.md`.
 
 Structure:
 - Organize by speaker, using clear `## [Speaker Name]` headers
-- Preserve speaker order from `act-structure.md`
+- Preserve speaker order from `handoffs/[project-slug]/act-structure.md`
 - Preserve all original content from per-speaker summaries
 
 ### 4.2 — Produce narrative assessment
 
-This is the unique contribution of the Synthesis Agent. Append a `# Narrative Assessment` section to `handoffs/transcript-summary.md` containing the following subsections:
+This is the unique contribution of the Synthesis Agent. Append a `# Narrative Assessment` section to `handoffs/[project-slug]/transcript-summary.md` containing the following subsections:
 
 #### Speaker Coverage Map
 
@@ -226,7 +240,7 @@ For each cross-reference:
 Before writing final outputs, run these validation checks:
 
 ### 5.1 — Quote count integrity
-Total quote count in `handoffs/tagged-quotes.json` must equal the sum of quote counts across all per-speaker `[speaker-slug]-tagged-quotes.json` files. If the counts do not match, stop and report the discrepancy.
+Total quote count in `handoffs/[project-slug]/tagged-quotes.json` must equal the sum of quote counts across all per-speaker `handoffs/[project-slug]/[speaker-slug]-tagged-quotes.json` files. If the counts do not match, stop and report the discrepancy.
 
 ### 5.2 — No data loss
 Every quote present in any per-speaker tagged-quotes file must be present in the merged file. Cross-check by `originalNum` and `speakerSlug` — every combination must appear exactly once.
@@ -235,10 +249,10 @@ Every quote present in any per-speaker tagged-quotes file must be present in the
 Every `num` value in the merged `tagged-quotes.json` must be unique. No gaps in the sequence.
 
 ### 5.4 — Act label consistency
-Every `act` value in the merged `tagged-quotes.json` must match an approved act label from `handoffs/act-structure.md`. No typos, no drift, no labels that were not approved.
+Every `act` value in the merged `tagged-quotes.json` must match an approved act label from `handoffs/[project-slug]/act-structure.md`. No typos, no drift, no labels that were not approved.
 
 ### 5.5 — Speaker representation
-Every speaker listed in `handoffs/act-structure.md` must have at least one quote in the merged `tagged-quotes.json`. If a speaker has zero quotes after merge, flag this — it likely indicates a processing error upstream.
+Every speaker listed in `handoffs/[project-slug]/act-structure.md` must have at least one quote in the merged `tagged-quotes.json`. If a speaker has zero quotes after merge, flag this — it likely indicates a processing error upstream.
 
 ---
 
@@ -246,7 +260,7 @@ Every speaker listed in `handoffs/act-structure.md` must have at least one quote
 
 The Synthesis Agent does not pause for human review. Its outputs are structural merges and analytical summaries — not creative decisions. On completion, it triggers the Edit Agent, which is the next human-in-the-loop decision point.
 
-**Cowork fallback:** If running in a Cowork session rather than the automated n8n pipeline, Jeff starts the Edit Agent session manually after confirming the Synthesis Agent outputs are present in `handoffs/`.
+**Cowork fallback:** If running in a Cowork session rather than the automated n8n pipeline, Jeff starts the Edit Agent session manually after confirming the Synthesis Agent outputs are present in `handoffs/[project-slug]/`.
 
 ---
 
@@ -260,10 +274,10 @@ The human-readable `tagged-quotes.md` is dropped in v3.0. The dashboard's quote 
 
 | File | Description |
 |------|-------------|
-| `handoffs/tagged-quotes.json` | Merged, renumbered tagged quotes from all speakers |
-| `handoffs/orphan-quotes.md` | Combined orphan quotes from all speakers, renumbered |
-| `handoffs/discard-summary.md` | Combined discard summaries from all speakers |
-| `handoffs/transcript-summary.md` | Combined content summaries plus narrative assessment |
+| `handoffs/[project-slug]/tagged-quotes.json` | Merged, renumbered tagged quotes from all speakers |
+| `handoffs/[project-slug]/orphan-quotes.md` | Combined orphan quotes from all speakers, renumbered |
+| `handoffs/[project-slug]/discard-summary.md` | Combined discard summaries from all speakers |
+| `handoffs/[project-slug]/transcript-summary.md` | Combined content summaries plus narrative assessment |
 
 ---
 

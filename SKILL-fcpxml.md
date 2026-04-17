@@ -104,6 +104,20 @@ The FCPXML output filename should match the trimmed-quotes version so Jeff can
 trace a rough cut in FCP back to the paper cut that produced it. Default to v1
 if unclear.
 
+**Folder-layout variants the agent may see:**
+
+- **Uppercase `XML/`** with `exports/` and `imports/` subfolders — e.g.,
+  `XML/exports/` holds source `.fcpxmld` packages and the sample narrative XML,
+  and `XML/imports/` is where the generated rough cut `.fcpxml` is written. The
+  Crisis Nursery project used this layout. Treat `XML/exports/` as the
+  `xml/` source folder for parsing and write output into `XML/imports/`.
+- **Multi-deliverable projects** (handoffs in `handoffs/[project-slug]/`): Jeff
+  sometimes drops the `_v<N>` suffix on the rough-cut filename when there is
+  only one version, so the output file may be named
+  `[project-slug]_rough_cut.fcpxml` instead of `[ProjectName]_rough_cut_v1.fcpxml`.
+  Read `edit-handoff.md`'s "Key Files" or "Version history" section to see the
+  naming Jeff has been using; match it rather than forcing the canonical form.
+
 **Call the script:**
 
 ```
@@ -126,6 +140,21 @@ run_script(
   output_dir: "xml"
 )
 ```
+
+**Known Issue — Caption-matcher timing on long interviews.** `build_fcpxml.py`'s
+fuzzy matcher scans `captions × max_span` (max_span=15 at sentence level, 40 at
+whole-quote fallback) windows per sentence. `search_hint` resets to 0 at the
+start of each quote, so every quote pays the full scan cost. On the Crisis
+Nursery project, Tyanna's ~708-caption source exceeded the 45-second shell
+timeout end-to-end. The validated workaround: before calling `build_fcpxml.py`,
+narrow the caption search window per-quote using the `startTC`/`endTC` fields
+already in `trimmed-quotes.json` (±15-second buffer). Match scores stayed
+0.85–1.00 and total match time dropped to ~2 seconds. This is a known
+performance issue in the script, not an agent instruction — noted here so the
+next FCPXML Agent hitting a timeout knows the symptom and the fix. A permanent
+fix belongs in `generate_fcpxml.py`'s `find_quote_range` (use the quote's TC
+window to set `search_start`/`search_end`) rather than a per-session
+workaround; flag to Jeff when it recurs.
 
 **On failure (non-zero exit or thrown error):**
 
@@ -179,6 +208,6 @@ After Jeff imports and watches the cut, he may:
 
 ---
 
-*FCPXML Agent — documentary-junior-editor v3.5*
+*FCPXML Agent — documentary-junior-editor v4.0.1*
 *Read SKILL.md first for pipeline overview and folder structure.*
 *FCPXML generation delegated to `scripts/build_fcpxml.py` (see repo).*

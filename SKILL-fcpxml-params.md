@@ -137,35 +137,94 @@ is tele vs wide.
 
 ## Phase 2: Produce Handoff
 
+> **KNOWN ISSUE — Parser Format Mismatch (open, flagged for Jeff).**
+> The human-readable format documented below (`### [Speaker Name]` sections with
+> `Media ref ID` / `Tele angleID` / `Wide angleID` bullets) is NOT the format that
+> `scripts/build_fcpxml.py`'s `parse_params_md` currently parses. The parser
+> expects flat top-level sections:
+>
+> - `## Media Ref IDs` — list of `- <Speaker>: r<N>` bullets
+> - `## Angle IDs` — list of `- <Speaker>: <angleID>` bullets (tele/zoom by default)
+> - `## Reference FCPXML` — filename as a scalar
+> - `## Library Location` — `file:///` URL as a scalar
+> - `## Event Name` — scalar
+> - `## Format Reference` — scalar (e.g., `r1`)
+>
+> On the Crisis Nursery project the FCPXML Agent hit this mismatch mid-pipeline
+> and reformatted the file by hand before `build_fcpxml.py` would run. Until Jeff
+> decides which side to reconcile (update the skill to match the parser, or
+> update the parser to accept the human-readable per-speaker sections),
+> **produce BOTH forms in the handoff** — parser-expected top-level sections
+> first for tool consumption, followed by the per-speaker details block below
+> for human reading. See the updated handoff format.
+
 Save the extracted parameters to `handoffs/fcpxml-params.md` using the following format:
 
 ```markdown
 # FCPXML Technical Parameters
 ## Project: [Project Name]
+## Source XML: xml/[Sample Narrative XML].fcpxml
 ## Extracted: [Date]
 
 ---
 
+## Media Ref IDs
+
+- [Speaker Name]: r2
+- [Speaker Name]: r5
+
+## Angle IDs
+
+- [Speaker Name]: [tele angleID]
+- [Speaker Name]: [tele angleID]
+
+## Reference FCPXML
+
+[Sample Narrative XML filename].fcpxml
+
+## Library Location
+
+file:///path/to/Library.fcpbundle/
+
+## Event Name
+
+[Event Name]
+
+## Event UID
+
+[uid]
+
+## Format Reference
+
+r1
+
+---
+
+## Per-speaker details (human-readable)
+
 ### [Speaker Name]
-- Media ref ID: r7
-- Tele angleID: [value]
+- Media ref ID: r2
+- Tele (zoom) angleID: [value]
 - Wide angleID: [value]
 
 ### [Speaker Name]
-- Media ref ID: r10
-- Tele angleID: [value]
+- Media ref ID: r5
+- Tele (zoom) angleID: [value]
 - Wide angleID: [value]
 
 ---
 
-### Library
-- Location: [file:///path/to/Library.fcpbundle]
-- Event: [Event Name] (UID: [uid])
-- Format ref: [id]
+## Notes
+
+- Angle naming convention: confirm that `name="zoom"` (tele/tight) is the default
+  selected angle in the sample timeline. The canonical "Angle IDs" section above
+  uses the tele angleID for each speaker.
+- Format reference, frame rate, and color space as relevant.
 ```
 
-One section per speaker, then a single Library section with the shared project-level
-parameters. Keep it clean and scannable — the FCPXML Agent reads this file directly.
+The top-level sections are consumed by `scripts/build_fcpxml.py`. The per-speaker
+details and notes block below is for humans reading the file. Keep it clean and
+scannable — the FCPXML Agent reads this file directly.
 
 ---
 
@@ -202,5 +261,5 @@ session. Open the sample narrative XML, extract parameters, save the handoff, do
 
 ---
 
-*FCPXML Params Agent — documentary-junior-editor v3.1*
+*FCPXML Params Agent — documentary-junior-editor v4.0*
 *Read SKILL.md first for pipeline overview and folder structure.*
