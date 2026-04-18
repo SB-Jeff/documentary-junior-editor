@@ -4,6 +4,17 @@ import { useState, useCallback, useRef, useEffect } from "react";
 // DATA BLOCK — Replace this section with project-specific data.
 // The React component below should NOT be modified when populating project data.
 // When baking in editor edits, only update this data block.
+//
+// The viewer renders in two modes driven by a Review/Edit toggle:
+//   • Review (default landing) — selected quotes as continuous narrative,
+//     act-scoped by default with a tab to read "All" end-to-end. No controls.
+//     This is the Discussion surface — "does this tell the story?"
+//   • Edit — the full interactive interface (section filter tabs, toolbar,
+//     quote cards with checkboxes, drag handles, section-reassign dropdowns,
+//     trim panels, split panels, interstitial placement, Selected Quotes
+//     bottom bar). This is the Reduction surface — "which words come out?"
+// Both modes read from the same state; edits in Edit mode reflect immediately
+// in Review and vice versa. Data block signatures are identical across modes.
 // ============================================================================
 
 const PROJECT_TITLE = "Subject Name — Company Name";
@@ -375,6 +386,28 @@ function getInitialTrims() {
 export default function QuotesView() {
   const sectionColors = buildSectionColors(initialQuotes, SECTION_CONFIG);
   const sectionNames = Object.keys(sectionColors).filter(s => s !== "Orphan");
+
+  // === View mode ===
+  // "review" (default landing) — selected quotes as continuous narrative, no controls.
+  // "edit" — full interactive interface.
+  // Both modes share state below; no data drift between modes.
+  const [viewMode, setViewMode] = useState("review");
+
+  // Review-mode scope — one of the section names or "All".
+  // Defaults to the first section that has selected quotes on mount, so the
+  // Review landing drops the reader straight into the first act under discussion.
+  // Falls back to the first section name, or "All" if no sections exist.
+  const [reviewScope, setReviewScope] = useState(() => {
+    const init = getInitialQuotes();
+    const seen = [];
+    init.forEach(q => {
+      if (q.part && q.part !== "Orphan" && !seen.includes(q.part)) seen.push(q.part);
+    });
+    for (const name of seen) {
+      if (init.some(q => q.part === name && q.selected)) return name;
+    }
+    return seen[0] || "All";
+  });
 
   const [filter, setFilter] = useState("All");
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
@@ -779,25 +812,237 @@ export default function QuotesView() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 font-sans">
-      <div className="mb-4">
+      {/* Title + counts (mode-aware) */}
+      <div className="mb-4 text-center">
         <h1 className="text-xl font-bold text-gray-900 mb-1">{PROJECT_TITLE}</h1>
-        <p className="text-sm text-gray-500">{quotes.length} quotes total  •  {selectedQuotes.length} selected  •  {Object.keys(editedQuotes).length} trimmed{interstitials.length > 0 ? `  •  ${interstitials.length} interstitial${interstitials.length !== 1 ? "s" : ""}` : ""}</p>
+        {viewMode === "review" ? (
+          <p className="text-sm text-gray-500">
+            Reading {reviewScope === "All" ? "the full sequence" : `"${reviewScope}"`}
+            {" — "}
+            {(reviewScope === "All"
+              ? selectedQuotes.length
+              : selectedQuotes.filter(q => q.part === reviewScope).length)} selected quote{
+              (reviewScope === "All"
+                ? selectedQuotes.length
+                : selectedQuotes.filter(q => q.part === reviewScope).length) === 1 ? "" : "s"}
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">{quotes.length} quotes total  •  {selectedQuotes.length} selected  •  {Object.keys(editedQuotes).length} trimmed{interstitials.length > 0 ? `  •  ${interstitials.length} interstitial${interstitials.length !== 1 ? "s" : ""}` : ""}</p>
+        )}
       </div>
 
-      {/* Toolbar */}
+      {/* Shared chrome — Review/Edit toggle (centered) with Save/Restore on
+          the right in Edit mode. Three-column grid keeps the toggle anchored. */}
+      <div className="grid grid-cols-3 items-center mb-6">
+        <div />
+        <div className="justify-self-center">
+          <div className="inline-flex rounded-full bg-gray-100 p-1">
+            <button
+              onClick={() => setViewMode("review")}
+              className={`px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                viewMode === "review" ? "bg-gray-900 text-white shadow-sm" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Review
+            </button>
+            <button
+              onClick={() => setViewMode("edit")}
+              className={`px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                viewMode === "edit" ? "bg-gray-900 text-white shadow-sm" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+        <div className="justify-self-end">
+          {viewMode === "edit" && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSaveState}
+                className="px-3 py-1.5 rounded text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+              >
+                Save State
+              </button>
+              <button
+                onClick={() => setShowSavePanel(!showSavePanel)}
+                className="px-3 py-1.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+              >
+                Restore State
+              </button>
+              {saveConfirmation && (
+                <span className="text-xs text-green-700 font-medium ml-1">{saveConfirmation}</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Review-mode render path — selected quotes only, continuous narrative.
+          No editorial controls. Act-scoped by default; "All" tab reads end-to-end. */}
+      {viewMode === "review" && (() => {
+        const reviewItems = [...sectionNames, "All"];
+        const inScope = quotes
+          .filter(q => q.selected)
+          .filter(q => reviewScope === "All" || q.part === reviewScope);
+        const firstSection = sectionNames[0];
+        const inScopeIds = new Set(inScope.map(q => q.id));
+        const startInter = interstitials.filter(t =>
+          (t.afterId === null || t.afterId === "__START__") &&
+          (reviewScope === "All" || reviewScope === firstSection)
+        );
+
+        const blocks = [];
+        let lastSectionInReview = null;
+        let lastSpeaker = null;
+
+        startInter.forEach(t => {
+          blocks.push(
+            <div key={`r-start-${t.id}`} className="my-5 px-5 py-3 border border-dashed border-indigo-300 bg-indigo-50 rounded-lg">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 block mb-1">
+                Text Interstitial — {t.id}
+              </span>
+              <p className="text-sm text-indigo-900 italic leading-relaxed">{t.text}</p>
+            </div>
+          );
+        });
+
+        inScope.forEach(q => {
+          if (reviewScope === "All" && q.part !== lastSectionInReview) {
+            blocks.push(
+              <div key={`r-sec-${q.part}-${q.id}`} className="mt-10 mb-6 first:mt-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-gray-300" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-gray-500">{q.part}</span>
+                  <div className="flex-1 h-px bg-gray-300" />
+                </div>
+              </div>
+            );
+            lastSectionInReview = q.part;
+            lastSpeaker = null;
+          }
+          if (q.speaker !== lastSpeaker) {
+            blocks.push(
+              <p key={`r-sp-${q.id}`} className="text-xs font-semibold uppercase tracking-wider text-gray-500 mt-5 mb-2">
+                — {q.speaker}
+              </p>
+            );
+            lastSpeaker = q.speaker;
+          }
+          const displayText = editedQuotes[q.id] || q.quote;
+          blocks.push(
+            <p key={`r-q-${q.id}`} className="text-lg text-gray-900 leading-relaxed mb-4">
+              {displayText}
+            </p>
+          );
+          interstitials
+            .filter(t => t.afterId === q.id && inScopeIds.has(q.id))
+            .forEach(t => {
+              blocks.push(
+                <div key={`r-inline-${t.id}`} className="my-5 px-5 py-3 border border-dashed border-indigo-300 bg-indigo-50 rounded-lg">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 block mb-1">
+                    Text Interstitial — {t.id}
+                  </span>
+                  <p className="text-sm text-indigo-900 italic leading-relaxed">{t.text}</p>
+                </div>
+              );
+            });
+        });
+
+        return (
+          <div>
+            {/* Review scope tabs (act selector, with "All" for full-sequence read) */}
+            <div className="text-center mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Acts</span>
+            </div>
+            <div className="border-b border-gray-200 mb-8">
+              <div className="flex items-center gap-6 justify-center flex-wrap -mb-px">
+                {reviewItems.map(name => {
+                  const count = name === "All"
+                    ? selectedQuotes.length
+                    : quotes.filter(q => q.selected && q.part === name).length;
+                  const active = reviewScope === name;
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => setReviewScope(name)}
+                      className={`px-1 pb-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                        active
+                          ? "text-gray-900 border-gray-900"
+                          : "text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300"
+                      }`}
+                    >
+                      {name}
+                      <span className={`ml-1.5 text-xs ${active ? "text-gray-500" : "text-gray-400"}`}>({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {reviewScope !== "All" && (
+              <div className="max-w-2xl mx-auto mb-6 text-center">
+                <h2 className="text-2xl font-semibold text-gray-900 tracking-tight">{reviewScope}</h2>
+              </div>
+            )}
+
+            <div className="max-w-2xl mx-auto">
+              {blocks.length === 0 ? (
+                <p className="text-sm text-gray-400 italic text-center py-8">
+                  No selected quotes in this act yet.
+                </p>
+              ) : blocks}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Edit-mode render path — full interactive interface, unchanged behavior.
+          Wrapped in a fragment so the existing render block can stay intact. */}
+      {viewMode === "edit" && (
+      <>
+      {/* Section filter tabs (underline style, unified with Review's act scope)
+          + Selected-only toggle on the right. */}
+      <div className="flex items-center border-b border-gray-200 mb-6">
+        <div className="flex items-center gap-6 flex-wrap">
+          {sections.map(s => {
+            const count = s === "All" ? quotes.length : quotes.filter(q => q.part === s).length;
+            const selCount = s === "All"
+              ? selectedQuotes.length
+              : quotes.filter(q => q.part === s && q.selected).length;
+            const active = filter === s;
+            return (
+              <button
+                key={s}
+                onClick={() => setFilter(s)}
+                className={`px-1 pb-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  active
+                    ? "text-gray-900 border-gray-900"
+                    : "text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300"
+                }`}
+              >
+                {s}
+                <span className={`ml-1.5 text-xs ${active ? "text-gray-500" : "text-gray-400"}`}>
+                  ({selCount}/{count})
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="ml-auto pb-2.5">
+          <button
+            onClick={() => setShowSelectedOnly(!showSelectedOnly)}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              showSelectedOnly ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {showSelectedOnly ? "Show all" : "Selected only"}
+          </button>
+        </div>
+      </div>
+
+      {/* Editorial toolbar — + Interstitial only (Save/Restore moved to toggle row) */}
       <div className="flex items-center gap-2 mb-4">
-        <button
-          onClick={handleSaveState}
-          className="px-3 py-1.5 rounded text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
-        >
-          Save State
-        </button>
-        <button
-          onClick={() => setShowSavePanel(!showSavePanel)}
-          className="px-3 py-1.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
-        >
-          Restore State
-        </button>
         {placingInterstitial ? (
           <button
             onClick={cancelPlacement}
@@ -813,15 +1058,12 @@ export default function QuotesView() {
             + Interstitial
           </button>
         )}
-        {saveConfirmation && (
-          <span className="text-xs text-green-700 font-medium">{saveConfirmation}</span>
-        )}
         {placingInterstitial && (
           <span className="text-xs text-indigo-600 font-medium animate-pulse">Click a drop zone between quotes to place it</span>
         )}
       </div>
 
-      {/* Save/Restore panel */}
+      {/* Save/Restore panel (opened by Restore State in the toggle row) */}
       {showSavePanel && (
         <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
           {savedJson && (
@@ -867,44 +1109,6 @@ export default function QuotesView() {
           </div>
         </div>
       )}
-
-      {/* Section filters */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        {sections.map(s => {
-          const count = s === "All" ? quotes.length : quotes.filter(q => q.part === s).length;
-          const selCount = s === "All"
-            ? selectedQuotes.length
-            : quotes.filter(q => q.part === s && q.selected).length;
-          const sColors = sectionColors[s];
-          const activeStyle = s === "All"
-            ? "bg-gray-900 text-white"
-            : sColors ? sColors.btnActive : "bg-gray-900 text-white";
-          const inactiveStyle = sColors && s !== "All"
-            ? `${sColors.badge} hover:ring-2 hover:ring-gray-300`
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200";
-          return (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                filter === s ? activeStyle : inactiveStyle
-              }`}
-            >
-              {s} ({selCount}/{count})
-            </button>
-          );
-        })}
-        <div className="ml-auto">
-          <button
-            onClick={() => setShowSelectedOnly(!showSelectedOnly)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              showSelectedOnly ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {showSelectedOnly ? "Show all" : "Selected only"}
-          </button>
-        </div>
-      </div>
 
       {/* Quotes list */}
       <div className="space-y-2">
@@ -1220,6 +1424,8 @@ export default function QuotesView() {
             </div>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   );

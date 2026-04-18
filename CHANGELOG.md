@@ -1,5 +1,85 @@
 # Documentary Junior Editor — Changelog
 
+## v4.0.1 — 2026-04-17
+
+Template implementation of the v4.0 Review/Edit dual-mode viewer spec.
+The spec landed in SKILL-edit.md as part of v4.0 on the same day, but
+`scripts/quotes_viewer_template.jsx` itself was not updated — every Edit
+Agent session since v4.0 had to construct Review mode from scratch from
+the spec. This entry eliminates that per-session work by baking the
+toggle into the template's universal React component.
+
+### Review/Edit toggle baked into `scripts/quotes_viewer_template.jsx`
+
+**Behavior.**
+
+- Default landing is Review mode.
+- Review is act-scoped by default, not whole-sequence. The initial scope
+  is the first act that has selected quotes on mount, matching the
+  act-by-act rhythm of the Discussion phase. An `All` tab reads the full
+  sequence end-to-end with section dividers.
+- Review renders selected quotes only, as continuous narrative. Speaker
+  labels appear on speaker change (and reset at each act divider when
+  reading `All`). Trimmed text is shown when a trim exists; otherwise
+  the full quote. Interstitials render inline at their anchor positions.
+  Start-of-sequence interstitials show when the scope is the first act
+  or `All`. No editorial controls — this is reading, not editing.
+- Edit mode preserves all existing behavior: trim controls, drag
+  handles, section-reassign dropdowns, scissors splits, interstitial
+  placement, checkboxes, Selected Quotes bottom bar.
+- Both modes read from the same state — `quotes`, `editedQuotes`,
+  `interstitials`. Selecting/deselecting, applying a trim, placing or
+  removing an interstitial in Edit mode reflects immediately in Review
+  and vice versa. No data drift between modes.
+
+**UI unification.**
+
+- Review's act scope and Edit's section filter now render with the same
+  underline-tab pattern, anchored in the same position directly below
+  the Review/Edit mode toggle. Toggling between modes feels like staying
+  in one artifact rather than jumping between two screens.
+- `Save State` and `Restore State` moved from the editorial toolbar to
+  the Review/Edit toggle row (visible only in Edit mode). They're
+  file-level utilities, not editorial actions, and now read that way.
+- The editorial toolbar is now just the `+ Interstitial` button.
+- An `ACTS` caption sits above the scope tabs in Review mode to cue
+  that the tabs are story acts.
+
+**Data block contract unchanged.** `initialQuotes`, `initialTrims`,
+`initialInterstitials`, `RESTORED_STATE`, and `SECTION_CONFIG`
+signatures are identical. Populating the data block is the same
+operation as before.
+
+**Template header comment updated.** The instructions block at the top
+of the file now mentions the dual-mode nature so future consumers don't
+attempt to re-derive Review from the spec.
+
+**Why:** Jeff observed that starting every editing session by
+reconstructing Review mode from scratch was wasted work and a drift
+vector — two agents could each interpret the spec slightly differently
+and produce viewers that behaved differently. Baking the toggle into
+the template makes the behavior canonical and instant.
+
+### Follow-ups flagged but not done
+
+- `SKILL-edit-pipeline.md` (n8n variant) still reflects the
+  v3.5-pipeline template. The v4.0 toggle spec and this v4.0.1 template
+  bake-in should propagate to the pipeline variant in a separate pass,
+  pending Jeff's approval before touching the n8n deployment surface.
+
+### Version bumps summary
+
+- `scripts/quotes_viewer_template.jsx` → v4.0.1 (dual-mode bake-in)
+- `CHANGELOG.md` → v4.0.1
+- All other files unchanged.
+
+### Out of scope
+
+Data block shape changes, SKILL-edit.md (spec already landed in v4.0),
+SKILL-edit-pipeline.md, and any fcpxml-related code.
+
+---
+
 ## v4.0 — 2026-04-17
 
 Major version — Edit Agent workflow reframe, viewer dual-mode, plus new rules
