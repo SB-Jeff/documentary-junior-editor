@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+
+<fcpxml version="1.14">
+    <resources>
+        <format id="r1" name="FFVideoFormat1080p2398" frameDuration="1001/24000s" width="1920" height="1080" colorSpace="1-1-1 (Rec. 709)"/>
+        <asset id="r2" name="P1008525" uid="49D24E13F3CB625E06A91C94A0915655" start="1969300333/24000s" duration="3375372/24000s" hasVideo="1" format="r3" hasAudio="1" videoSources="1" audioSources="4" audioChannels="1" audioRate="48000" customLUTOverride="64 (Panasonic_VLog_VGamut)">
+            <media-rep kind="original-media" sig="49D24E13F3CB625E06A91C94A0915655" src="file:///Volumes/Nanos%202026/2026%20Nanos%20Boston/media/P1008525.MOV">
+                <bookmark>Ym9va1gEAAAAAAUQQAAAAN9lGILcZk7ZdXG6Vk77beOdbAGRuOiNdcVqB/Zh82tyAAAAAAAAAAAAAAAAAAAAAEQDAAAEAAAAAwMAAAAYACgHAAAAAQEAAFZvbHVtZXMACgAAAAEBAABOYW5vcyAyMDI2AAARAAAAAQEAADIwMjYgTmFub3MgQm9zdG9uAAAABQAAAAEBAABtZWRpYQAAAAwAAAABAQAAUDEwMDg1MjUuTU9WFAAAAAEGAAAQAAAAIAAAADQAAABQAAAAYAAAAAgAAAAEAwAAbkIAAAAAAAAIAAAABAMAAAIAAAAAAAAACAAAAAQDAABLAQAAAAAAAAgAAAAEAwAA2wcAAAAAAAAIAAAABAMAAOsHAAAAAAAAFAAAAAEGAACQAAAAoAAAALAAAADAAAAA0AAAAAgAAAAABAAAQce3rYoAAAAYAAAAAQIAAAEAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAABBQAABAAAAAMDAAAFAAAABAAAAAMDAAADAAAAHQAAAAEJAABmaWxlOi8vL1ZvbHVtZXMvTmFub3MlMjAyMDI2LwAAAAgAAAAEAwAAAABtf6MDAAAIAAAAAAQAAEHHStKFIIRcJAAAAAEBAAA3RTRENDk3Qy00Qzg0LTQwNDUtQkIzMS0xMDBGNEMxQzZBNTYYAAAAAQIAAAEBAAABAAAA7xMAAAEAAAAAAAAAAAAAABMAAAABAQAAL1ZvbHVtZXMvTmFub3MgMjAyNgAIAAAAAQkAAGZpbGU6Ly8vDAAAAAEBAABNYWNpbnRvc2ggSEQIAAAABAMAAABQoRtzAAAACAAAAAAEAABBx6dTdgAAACQAAAABAQAANjU4OTAxOTEtRDcyOS00RUY2LTgzQTEtOTAxNTZGMUNEMUVFGAAAAAECAACBAAAAAQAAAO8TAAABAAAAAAAAAAAAAAABAAAAAQEAAC8AAABgAAAA/v///wDwAAAAAAAABwAAAAIgAACMAgAAAAAAAAUgAAD8AQAAAAAAABAgAAAMAgAAAAAAABEgAABAAgAAAAAAABIgAAAgAgAAAAAAABMgAAAwAgAAAAAAACAgAABsAgAAAAAAAAQAAAADAwAAAPAAAAQAAAADAwAAAAAAAAQAAAADAwAAAQAAABgAAAABBgAAAAMAAAwDAAAYAwAADAMAAAwDAAAMAwAAzAAAAP7///8BAAAAmAIAABAAAAAEEAAAdAAAAAAAAAAFEAAA4AAAAAAAAAAQEAAADAEAAAAAAABAEAAA/AAAAAAAAABUEAAANAEAAAAAAABVEAAAQAEAAAAAAABWEAAALAEAAAAAAAAAIAAAJAMAAAAAAAACIAAA4AEAAAAAAAAFIAAATAEAAAAAAAAQIAAAIAAAAAAAAAARIAAAlAEAAAAAAAASIAAAdAEAAAAAAAATIAAAhAEAAAAAAAAgIAAAwAEAAAAAAAAQ0AAABAAAAAAAAAA=</bookmark>
+            </media-rep>
+            <metadata>
+                <md key="com.apple.proapps.studio.rawToLogConversion" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemProfileName" value="HD (1-1-1)"/>
+                <md key="com.apple.proapps.studio.cameraISO" value="0"/>
+                <md key="com.apple.proapps.studio.cameraColorTemperature" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemCodecs">
+                    <array>
+                        <string>'avc1'</string>
+                        <string>Linear PCM</string>
+                    </array>
+                </md>
+                <md key="com.apple.proapps.mio.ingestDate" value="2026-03-24 10:11:49 -0500"/>
+            </metadata>
+        </asset>
+        <format id="r3" name="FFVideoFormat3840x2160p2398" frameDuration="1001/24000s" width="3840" height="2160" colorSpace="1-1-1 (Rec. 709)"/>
+        <asset id="r4" name="P1008526" uid="071D0B3D7A3270B22A20DED41282903E" start="1972675705/24000s" duration="780780/24000s" hasVideo="1" format="r3" hasAudio="1" videoSources="1" audioSources="4" audioChannels="1" audioRate="48000" customLUTOverride="64 (Panasonic_VLog_VGamut)">
+            <media-rep kind="original-media" sig="071D0B3D7A3270B22A20DED41282903E" src="file:///Volumes/Nanos%202026/2026%20Nanos%20Boston/media/P1008526.MOV">
+                <bookmark>Ym9va1gEAAAAAAUQQAAAACNVgVCZWXUWWUp3tZKAuOf3nwI7QnRlA9zL4BQHa1ruAAAAAAAAAAAAAAAAAAAAAEQDAAAEAAAAAwMAAAAYACgHAAAAAQEAAFZvbHVtZXMACgAAAAEBAABOYW5vcyAyMDI2AAARAAAAAQEAADIwMjYgTmFub3MgQm9zdG9uAAAABQAAAAEBAABtZWRpYQAAAAwAAAABAQAAUDEwMDg1MjYuTU9WFAAAAAEGAAAQAAAAIAAAADQAAABQAAAAYAAAAAgAAAAEAwAAbkIAAAAAAAAIAAAABAMAAAIAAAAAAAAACAAAAAQDAABLAQAAAAAAAAgAAAAEAwAA2wcAAAAAAAAIAAAABAMAAPwHAAAAAAAAFAAAAAEGAACQAAAAoAAAALAAAADAAAAA0AAAAAgAAAAABAAAQce3ramAAAAYAAAAAQIAAAEAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAABBQAABAAAAAMDAAAFAAAABAAAAAMDAAADAAAAHQAAAAEJAABmaWxlOi8vL1ZvbHVtZXMvTmFub3MlMjAyMDI2LwAAAAgAAAAEAwAAAABtf6MDAAAIAAAAAAQAAEHHStKFIIRcJAAAAAEBAAA3RTRENDk3Qy00Qzg0LTQwNDUtQkIzMS0xMDBGNEMxQzZBNTYYAAAAAQIAAAEBAAABAAAA7xMAAAEAAAAAAAAAAAAAABMAAAABAQAAL1ZvbHVtZXMvTmFub3MgMjAyNgAIAAAAAQkAAGZpbGU6Ly8vDAAAAAEBAABNYWNpbnRvc2ggSEQIAAAABAMAAABQoRtzAAAACAAAAAAEAABBx6dTdgAAACQAAAABAQAANjU4OTAxOTEtRDcyOS00RUY2LTgzQTEtOTAxNTZGMUNEMUVFGAAAAAECAACBAAAAAQAAAO8TAAABAAAAAAAAAAAAAAABAAAAAQEAAC8AAABgAAAA/v///wDwAAAAAAAABwAAAAIgAACMAgAAAAAAAAUgAAD8AQAAAAAAABAgAAAMAgAAAAAAABEgAABAAgAAAAAAABIgAAAgAgAAAAAAABMgAAAwAgAAAAAAACAgAABsAgAAAAAAAAQAAAADAwAAAPAAAAQAAAADAwAAAAAAAAQAAAADAwAAAQAAABgAAAABBgAAAAMAAAwDAAAYAwAADAMAAAwDAAAMAwAAzAAAAP7///8BAAAAmAIAABAAAAAEEAAAdAAAAAAAAAAFEAAA4AAAAAAAAAAQEAAADAEAAAAAAABAEAAA/AAAAAAAAABUEAAANAEAAAAAAABVEAAAQAEAAAAAAABWEAAALAEAAAAAAAAAIAAAJAMAAAAAAAACIAAA4AEAAAAAAAAFIAAATAEAAAAAAAAQIAAAIAAAAAAAAAARIAAAlAEAAAAAAAASIAAAdAEAAAAAAAATIAAAhAEAAAAAAAAgIAAAwAEAAAAAAAAQ0AAABAAAAAAAAAA=</bookmark>
+            </media-rep>
+            <metadata>
+                <md key="com.apple.proapps.studio.rawToLogConversion" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemProfileName" value="HD (1-1-1)"/>
+                <md key="com.apple.proapps.studio.cameraISO" value="0"/>
+                <md key="com.apple.proapps.studio.cameraColorTemperature" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemCodecs">
+                    <array>
+                        <string>'avc1'</string>
+                        <string>Linear PCM</string>
+                    </array>
+                </md>
+                <md key="com.apple.proapps.mio.ingestDate" value="2026-03-24 10:11:49 -0500"/>
+            </metadata>
+        </asset>
+        <asset id="r5" name="P1008523" uid="56A8AF89823A5872BA5DE06612B90DAC" start="1958369413/24000s" duration="6678672/24000s" hasVideo="1" format="r3" hasAudio="1" videoSources="1" audioSources="4" audioChannels="1" audioRate="48000" customLUTOverride="64 (Panasonic_VLog_VGamut)">
+            <media-rep kind="original-media" sig="56A8AF89823A5872BA5DE06612B90DAC" src="file:///Volumes/Nanos%202026/2026%20Nanos%20Boston/media/P1008523.MOV">
+                <bookmark>Ym9va1gEAAAAAAUQQAAAAHDNTTwYHUQiWShUENP7fkrD3CREGZysk3TfS42a7xSGAAAAAAAAAAAAAAAAAAAAAEQDAAAEAAAAAwMAAAAYACgHAAAAAQEAAFZvbHVtZXMACgAAAAEBAABOYW5vcyAyMDI2AAARAAAAAQEAADIwMjYgTmFub3MgQm9zdG9uAAAABQAAAAEBAABtZWRpYQAAAAwAAAABAQAAUDEwMDg1MjMuTU9WFAAAAAEGAAAQAAAAIAAAADQAAABQAAAAYAAAAAgAAAAEAwAAbkIAAAAAAAAIAAAABAMAAAIAAAAAAAAACAAAAAQDAABLAQAAAAAAAAgAAAAEAwAA2wcAAAAAAAAIAAAABAMAAAwIAAAAAAAAFAAAAAEGAACQAAAAoAAAALAAAADAAAAA0AAAAAgAAAAABAAAQce3rKGAAAAYAAAAAQIAAAEAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAABBQAABAAAAAMDAAAFAAAABAAAAAMDAAADAAAAHQAAAAEJAABmaWxlOi8vL1ZvbHVtZXMvTmFub3MlMjAyMDI2LwAAAAgAAAAEAwAAAABtf6MDAAAIAAAAAAQAAEHHStKFIIRcJAAAAAEBAAA3RTRENDk3Qy00Qzg0LTQwNDUtQkIzMS0xMDBGNEMxQzZBNTYYAAAAAQIAAAEBAAABAAAA7xMAAAEAAAAAAAAAAAAAABMAAAABAQAAL1ZvbHVtZXMvTmFub3MgMjAyNgAIAAAAAQkAAGZpbGU6Ly8vDAAAAAEBAABNYWNpbnRvc2ggSEQIAAAABAMAAABQoRtzAAAACAAAAAAEAABBx6dTdgAAACQAAAABAQAANjU4OTAxOTEtRDcyOS00RUY2LTgzQTEtOTAxNTZGMUNEMUVFGAAAAAECAACBAAAAAQAAAO8TAAABAAAAAAAAAAAAAAABAAAAAQEAAC8AAABgAAAA/v///wDwAAAAAAAABwAAAAIgAACMAgAAAAAAAAUgAAD8AQAAAAAAABAgAAAMAgAAAAAAABEgAABAAgAAAAAAABIgAAAgAgAAAAAAABMgAAAwAgAAAAAAACAgAABsAgAAAAAAAAQAAAADAwAAAPAAAAQAAAADAwAAAAAAAAQAAAADAwAAAQAAABgAAAABBgAAAAMAAAwDAAAYAwAADAMAAAwDAAAMAwAAzAAAAP7///8BAAAAmAIAABAAAAAEEAAAdAAAAAAAAAAFEAAA4AAAAAAAAAAQEAAADAEAAAAAAABAEAAA/AAAAAAAAABUEAAANAEAAAAAAABVEAAAQAEAAAAAAABWEAAALAEAAAAAAAAAIAAAJAMAAAAAAAACIAAA4AEAAAAAAAAFIAAATAEAAAAAAAAQIAAAIAAAAAAAAAARIAAAlAEAAAAAAAASIAAAdAEAAAAAAAATIAAAhAEAAAAAAAAgIAAAwAEAAAAAAAAQ0AAABAAAAAAAAAA=</bookmark>
+            </media-rep>
+            <metadata>
+                <md key="com.apple.proapps.studio.rawToLogConversion" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemProfileName" value="HD (1-1-1)"/>
+                <md key="com.apple.proapps.studio.cameraISO" value="0"/>
+                <md key="com.apple.proapps.studio.cameraColorTemperature" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemCodecs">
+                    <array>
+                        <string>'avc1'</string>
+                        <string>Linear PCM</string>
+                    </array>
+                </md>
+                <md key="com.apple.proapps.mio.ingestDate" value="2026-03-24 10:11:49 -0500"/>
+            </metadata>
+        </asset>
+        <asset id="r6" name="P1008514" uid="3DF494E03FA21F92383DC0DE933AB74A" start="1930837909/24000s" duration="10426416/24000s" hasVideo="1" format="r3" hasAudio="1" videoSources="1" audioSources="4" audioChannels="1" audioRate="48000" customLUTOverride="64 (Panasonic_VLog_VGamut)">
+            <media-rep kind="original-media" sig="3DF494E03FA21F92383DC0DE933AB74A" src="file:///Volumes/Nanos%202026/2026%20Nanos%20Boston/media/P1008514.MOV">
+                <bookmark>Ym9va1gEAAAAAAUQQAAAAB9auGI2fsciTxL99T/bxp5nKRMrigIaISHykajRQcS1AAAAAAAAAAAAAAAAAAAAAEQDAAAEAAAAAwMAAAAYACgHAAAAAQEAAFZvbHVtZXMACgAAAAEBAABOYW5vcyAyMDI2AAARAAAAAQEAADIwMjYgTmFub3MgQm9zdG9uAAAABQAAAAEBAABtZWRpYQAAAAwAAAABAQAAUDEwMDg1MTQuTU9WFAAAAAEGAAAQAAAAIAAAADQAAABQAAAAYAAAAAgAAAAEAwAAbkIAAAAAAAAIAAAABAMAAAIAAAAAAAAACAAAAAQDAABLAQAAAAAAAAgAAAAEAwAA2wcAAAAAAAAIAAAABAMAAMgJAAAAAAAAFAAAAAEGAACQAAAAoAAAALAAAADAAAAA0AAAAAgAAAAABAAAQce3qEKAAAAYAAAAAQIAAAEAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAABBQAABAAAAAMDAAAFAAAABAAAAAMDAAADAAAAHQAAAAEJAABmaWxlOi8vL1ZvbHVtZXMvTmFub3MlMjAyMDI2LwAAAAgAAAAEAwAAAABtf6MDAAAIAAAAAAQAAEHHStKFIIRcJAAAAAEBAAA3RTRENDk3Qy00Qzg0LTQwNDUtQkIzMS0xMDBGNEMxQzZBNTYYAAAAAQIAAAEBAAABAAAA7xMAAAEAAAAAAAAAAAAAABMAAAABAQAAL1ZvbHVtZXMvTmFub3MgMjAyNgAIAAAAAQkAAGZpbGU6Ly8vDAAAAAEBAABNYWNpbnRvc2ggSEQIAAAABAMAAABQoRtzAAAACAAAAAAEAABBx6dTdgAAACQAAAABAQAANjU4OTAxOTEtRDcyOS00RUY2LTgzQTEtOTAxNTZGMUNEMUVFGAAAAAECAACBAAAAAQAAAO8TAAABAAAAAAAAAAAAAAABAAAAAQEAAC8AAABgAAAA/v///wDwAAAAAAAABwAAAAIgAACMAgAAAAAAAAUgAAD8AQAAAAAAABAgAAAMAgAAAAAAABEgAABAAgAAAAAAABIgAAAgAgAAAAAAABMgAAAwAgAAAAAAACAgAABsAgAAAAAAAAQAAAADAwAAAPAAAAQAAAADAwAAAAAAAAQAAAADAwAAAQAAABgAAAABBgAAAAMAAAwDAAAYAwAADAMAAAwDAAAMAwAAzAAAAP7///8BAAAAmAIAABAAAAAEEAAAdAAAAAAAAAAFEAAA4AAAAAAAAAAQEAAADAEAAAAAAABAEAAA/AAAAAAAAABUEAAANAEAAAAAAABVEAAAQAEAAAAAAABWEAAALAEAAAAAAAAAIAAAJAMAAAAAAAACIAAA4AEAAAAAAAAFIAAATAEAAAAAAAAQIAAAIAAAAAAAAAARIAAAlAEAAAAAAAASIAAAdAEAAAAAAAATIAAAhAEAAAAAAAAgIAAAwAEAAAAAAAAQ0AAABAAAAAAAAAA=</bookmark>
+            </media-rep>
+            <metadata>
+                <md key="com.apple.proapps.studio.rawToLogConversion" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemProfileName" value="HD (1-1-1)"/>
+                <md key="com.apple.proapps.studio.cameraISO" value="0"/>
+                <md key="com.apple.proapps.studio.cameraColorTemperature" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemCodecs">
+                    <array>
+                        <string>'avc1'</string>
+                        <string>Linear PCM</string>
+                    </array>
+                </md>
+                <md key="com.apple.proapps.mio.ingestDate" value="2026-03-24 10:11:49 -0500"/>
+            </metadata>
+        </asset>
+        <asset id="r7" name="P1008513" uid="5B793F297D98BBCE8DCE805B0B08B1BD" start="1926141217/24000s" duration="4696692/24000s" hasVideo="1" format="r3" hasAudio="1" videoSources="1" audioSources="4" audioChannels="1" audioRate="48000" customLUTOverride="64 (Panasonic_VLog_VGamut)">
+            <media-rep kind="original-media" sig="5B793F297D98BBCE8DCE805B0B08B1BD" src="file:///Volumes/Nanos%202026/2026%20Nanos%20Boston/media/P1008513.MOV">
+                <bookmark>Ym9va1gEAAAAAAUQQAAAAEA68/EiaUSYC61vAmjrJxDeBh37bNhX+3WLbNiiOA5tAAAAAAAAAAAAAAAAAAAAAEQDAAAEAAAAAwMAAAAYACgHAAAAAQEAAFZvbHVtZXMACgAAAAEBAABOYW5vcyAyMDI2AAARAAAAAQEAADIwMjYgTmFub3MgQm9zdG9uAAAABQAAAAEBAABtZWRpYQAAAAwAAAABAQAAUDEwMDg1MTMuTU9WFAAAAAEGAAAQAAAAIAAAADQAAABQAAAAYAAAAAgAAAAEAwAAbkIAAAAAAAAIAAAABAMAAAIAAAAAAAAACAAAAAQDAABLAQAAAAAAAAgAAAAEAwAA2wcAAAAAAAAIAAAABAMAALIJAAAAAAAAFAAAAAEGAACQAAAAoAAAALAAAADAAAAA0AAAAAgAAAAABAAAQce3p1wAAAAYAAAAAQIAAAEAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAABBQAABAAAAAMDAAAFAAAABAAAAAMDAAADAAAAHQAAAAEJAABmaWxlOi8vL1ZvbHVtZXMvTmFub3MlMjAyMDI2LwAAAAgAAAAEAwAAAABtf6MDAAAIAAAAAAQAAEHHStKFIIRcJAAAAAEBAAA3RTRENDk3Qy00Qzg0LTQwNDUtQkIzMS0xMDBGNEMxQzZBNTYYAAAAAQIAAAEBAAABAAAA7xMAAAEAAAAAAAAAAAAAABMAAAABAQAAL1ZvbHVtZXMvTmFub3MgMjAyNgAIAAAAAQkAAGZpbGU6Ly8vDAAAAAEBAABNYWNpbnRvc2ggSEQIAAAABAMAAABQoRtzAAAACAAAAAAEAABBx6dTdgAAACQAAAABAQAANjU4OTAxOTEtRDcyOS00RUY2LTgzQTEtOTAxNTZGMUNEMUVFGAAAAAECAACBAAAAAQAAAO8TAAABAAAAAAAAAAAAAAABAAAAAQEAAC8AAABgAAAA/v///wDwAAAAAAAABwAAAAIgAACMAgAAAAAAAAUgAAD8AQAAAAAAABAgAAAMAgAAAAAAABEgAABAAgAAAAAAABIgAAAgAgAAAAAAABMgAAAwAgAAAAAAACAgAABsAgAAAAAAAAQAAAADAwAAAPAAAAQAAAADAwAAAAAAAAQAAAADAwAAAQAAABgAAAABBgAAAAMAAAwDAAAYAwAADAMAAAwDAAAMAwAAzAAAAP7///8BAAAAmAIAABAAAAAEEAAAdAAAAAAAAAAFEAAA4AAAAAAAAAAQEAAADAEAAAAAAABAEAAA/AAAAAAAAABUEAAANAEAAAAAAABVEAAAQAEAAAAAAABWEAAALAEAAAAAAAAAIAAAJAMAAAAAAAACIAAA4AEAAAAAAAAFIAAATAEAAAAAAAAQIAAAIAAAAAAAAAARIAAAlAEAAAAAAAASIAAAdAEAAAAAAAATIAAAhAEAAAAAAAAgIAAAwAEAAAAAAAAQ0AAABAAAAAAAAAA=</bookmark>
+            </media-rep>
+            <metadata>
+                <md key="com.apple.proapps.studio.rawToLogConversion" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemProfileName" value="HD (1-1-1)"/>
+                <md key="com.apple.proapps.studio.cameraISO" value="0"/>
+                <md key="com.apple.proapps.studio.cameraColorTemperature" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemCodecs">
+                    <array>
+                        <string>'avc1'</string>
+                        <string>Linear PCM</string>
+                    </array>
+                </md>
+                <md key="com.apple.proapps.mio.ingestDate" value="2026-03-24 10:11:49 -0500"/>
+            </metadata>
+        </asset>
+        <asset id="r8" name="P1008512" uid="478B3863E84CC805C34330D7B68390A3" start="1918705789/24000s" duration="7435428/24000s" hasVideo="1" format="r3" hasAudio="1" videoSources="1" audioSources="4" audioChannels="1" audioRate="48000" customLUTOverride="64 (Panasonic_VLog_VGamut)">
+            <media-rep kind="original-media" sig="478B3863E84CC805C34330D7B68390A3" src="file:///Volumes/Nanos%202026/2026%20Nanos%20Boston/media/P1008512.MOV">
+                <bookmark>Ym9va1gEAAAAAAUQQAAAANiNbPHMtZX5b0gaTqQMKWxlEC4G5flD21IHVbkeejaXAAAAAAAAAAAAAAAAAAAAAEQDAAAEAAAAAwMAAAAYACgHAAAAAQEAAFZvbHVtZXMACgAAAAEBAABOYW5vcyAyMDI2AAARAAAAAQEAADIwMjYgTmFub3MgQm9zdG9uAAAABQAAAAEBAABtZWRpYQAAAAwAAAABAQAAUDEwMDg1MTIuTU9WFAAAAAEGAAAQAAAAIAAAADQAAABQAAAAYAAAAAgAAAAEAwAAbkIAAAAAAAAIAAAABAMAAAIAAAAAAAAACAAAAAQDAABLAQAAAAAAAAgAAAAEAwAA2wcAAAAAAAAIAAAABAMAAKAJAAAAAAAAFAAAAAEGAACQAAAAoAAAALAAAADAAAAA0AAAAAgAAAAABAAAQce3ptyAAAAYAAAAAQIAAAEAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAABBQAABAAAAAMDAAAFAAAABAAAAAMDAAADAAAAHQAAAAEJAABmaWxlOi8vL1ZvbHVtZXMvTmFub3MlMjAyMDI2LwAAAAgAAAAEAwAAAABtf6MDAAAIAAAAAAQAAEHHStKFIIRcJAAAAAEBAAA3RTRENDk3Qy00Qzg0LTQwNDUtQkIzMS0xMDBGNEMxQzZBNTYYAAAAAQIAAAEBAAABAAAA7xMAAAEAAAAAAAAAAAAAABMAAAABAQAAL1ZvbHVtZXMvTmFub3MgMjAyNgAIAAAAAQkAAGZpbGU6Ly8vDAAAAAEBAABNYWNpbnRvc2ggSEQIAAAABAMAAABQoRtzAAAACAAAAAAEAABBx6dTdgAAACQAAAABAQAANjU4OTAxOTEtRDcyOS00RUY2LTgzQTEtOTAxNTZGMUNEMUVFGAAAAAECAACBAAAAAQAAAO8TAAABAAAAAAAAAAAAAAABAAAAAQEAAC8AAABgAAAA/v///wDwAAAAAAAABwAAAAIgAACMAgAAAAAAAAUgAAD8AQAAAAAAABAgAAAMAgAAAAAAABEgAABAAgAAAAAAABIgAAAgAgAAAAAAABMgAAAwAgAAAAAAACAgAABsAgAAAAAAAAQAAAADAwAAAPAAAAQAAAADAwAAAAAAAAQAAAADAwAAAQAAABgAAAABBgAAAAMAAAwDAAAYAwAADAMAAAwDAAAMAwAAzAAAAP7///8BAAAAmAIAABAAAAAEEAAAdAAAAAAAAAAFEAAA4AAAAAAAAAAQEAAADAEAAAAAAABAEAAA/AAAAAAAAABUEAAANAEAAAAAAABVEAAAQAEAAAAAAABWEAAALAEAAAAAAAAAIAAAJAMAAAAAAAACIAAA4AEAAAAAAAAFIAAATAEAAAAAAAAQIAAAIAAAAAAAAAARIAAAlAEAAAAAAAASIAAAdAEAAAAAAAATIAAAhAEAAAAAAAAgIAAAwAEAAAAAAAAQ0AAABAAAAAAAAAA=</bookmark>
+            </media-rep>
+            <metadata>
+                <md key="com.apple.proapps.studio.rawToLogConversion" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemProfileName" value="HD (1-1-1)"/>
+                <md key="com.apple.proapps.studio.cameraISO" value="0"/>
+                <md key="com.apple.proapps.studio.cameraColorTemperature" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemCodecs">
+                    <array>
+                        <string>'avc1'</string>
+                        <string>Linear PCM</string>
+                    </array>
+                </md>
+                <md key="com.apple.proapps.mio.ingestDate" value="2026-03-24 10:11:49 -0500"/>
+            </metadata>
+        </asset>
+    </resources>
+    <library location="file:///Volumes/Nanos%202026/2026%20Nanos%20Boston/Nanos%202026.fcpbundle/">
+        <event name="5 | interview processing" uid="BB12DBCE-63D1-4E05-AD73-123A4EF8E0FA">
+            <project name="Sample" uid="3F8E52B7-57A1-4C29-82EA-4C5EED4FEE8F" modDate="2026-04-23 09:04:23 -0500">
+                <sequence format="r1" duration="898898/24000s" tcStart="0s" tcFormat="NDF" audioLayout="stereo" audioRate="48k">
+                    <spine>
+                        <asset-clip ref="r2" offset="0s" name="P1008525" start="1969481514/24000s" duration="147147/24000s" format="r3" tcFormat="NDF" audioRole="dialogue">
+                            <keyword start="1969300333/24000s" duration="3375372/24000s" value="interviews"/>
+                            <audio-channel-source srcCh="1" role="dialogue.dialogue-1">
+                                <adjust-noiseReduction amount="50"/>
+                                <adjust-voiceIsolation amount="50"/>
+                            </audio-channel-source>
+                            <audio-channel-source srcCh="2" role="dialogue.dialogue-2" active="0">
+                                <adjust-noiseReduction amount="50"/>
+                            </audio-channel-source>
+                            <audio-channel-source srcCh="3" role="dialogue.dialogue-3" active="0"/>
+                            <audio-channel-source srcCh="4" role="dialogue.dialogue-4" active="0"/>
+                        </asset-clip>
+                        <asset-clip ref="r4" offset="147147/24000s" name="P1008526" start="1973175204/24000s" duration="146146/24000s" format="r3" tcFormat="NDF" audioRole="dialogue">
+                            <keyword start="394535141/4800s" duration="780780/24000s" value="interviews"/>
+                            <audio-channel-source srcCh="1" role="dialogue.dialogue-1">
+                                <adjust-voiceIsolation amount="50"/>
+                            </audio-channel-source>
+                            <audio-channel-source srcCh="2" role="dialogue.dialogue-2" active="0"/>
+                            <audio-channel-source srcCh="3" role="dialogue.dialogue-3" active="0"/>
+                            <audio-channel-source srcCh="4" role="dialogue.dialogue-4" active="0"/>
+                        </asset-clip>
+                        <asset-clip ref="r5" offset="293293/24000s" name="P1008523" start="1958646690/24000s" duration="133133/24000s" format="r3" tcFormat="NDF" audioRole="dialogue">
+                            <keyword start="1958369413/24000s" duration="6678672/24000s" value="interviews"/>
+                            <audio-channel-source srcCh="1" role="dialogue.dialogue-1">
+                                <adjust-voiceIsolation amount="50"/>
+                            </audio-channel-source>
+                            <audio-channel-source srcCh="2" role="dialogue.dialogue-2" active="0"/>
+                            <audio-channel-source srcCh="3" role="dialogue.dialogue-3" active="0"/>
+                            <audio-channel-source srcCh="4" role="dialogue.dialogue-4" active="0"/>
+                        </asset-clip>
+                        <asset-clip ref="r6" offset="426426/24000s" name="P1008514" start="1932072142/24000s" duration="224224/24000s" format="r3" tcFormat="NDF" audioRole="dialogue">
+                            <keyword start="1930837909/24000s" duration="10426416/24000s" value="interviews"/>
+                            <audio-channel-source srcCh="1" role="dialogue.dialogue-1">
+                                <adjust-voiceIsolation amount="50"/>
+                            </audio-channel-source>
+                            <audio-channel-source srcCh="2" role="dialogue.dialogue-2" active="0"/>
+                            <audio-channel-source srcCh="3" role="dialogue.dialogue-3" active="0"/>
+                            <audio-channel-source srcCh="4" role="dialogue.dialogue-4" active="0"/>
+                        </asset-clip>
+                        <asset-clip ref="r7" offset="650650/24000s" name="P1008513" start="1926252328/24000s" duration="135135/24000s" format="r3" tcFormat="NDF" audioRole="dialogue">
+                            <keyword start="1926141217/24000s" duration="4696692/24000s" value="interviews"/>
+                            <audio-channel-source srcCh="1" role="dialogue.dialogue-1">
+                                <adjust-voiceIsolation amount="50"/>
+                            </audio-channel-source>
+                            <audio-channel-source srcCh="2" role="dialogue.dialogue-2" active="0"/>
+                            <audio-channel-source srcCh="3" role="dialogue.dialogue-3" active="0"/>
+                            <audio-channel-source srcCh="4" role="dialogue.dialogue-4" active="0"/>
+                        </asset-clip>
+                        <asset-clip ref="r8" offset="785785/24000s" name="P1008512" start="1919287370/24000s" duration="113113/24000s" format="r3" tcFormat="NDF" audioRole="dialogue">
+                            <keyword start="1918705789/24000s" duration="7435428/24000s" value="interviews"/>
+                            <audio-channel-source srcCh="1" role="dialogue.dialogue-1">
+                                <adjust-voiceIsolation amount="50"/>
+                            </audio-channel-source>
+                            <audio-channel-source srcCh="2" role="dialogue.dialogue-2" active="0"/>
+                            <audio-channel-source srcCh="3" role="dialogue.dialogue-3" active="0"/>
+                            <audio-channel-source srcCh="4" role="dialogue.dialogue-4" active="0"/>
+                        </asset-clip>
+                    </spine>
+                </sequence>
+            </project>
+        </event>
+        <smart-collection name="Projects" match="all">
+            <match-clip rule="is" type="project"/>
+        </smart-collection>
+        <smart-collection name="All Video" match="any">
+            <match-media rule="is" type="videoOnly"/>
+            <match-media rule="is" type="videoWithAudio"/>
+        </smart-collection>
+        <smart-collection name="Audio Only" match="all">
+            <match-media rule="is" type="audioOnly"/>
+        </smart-collection>
+        <smart-collection name="Stills" match="all">
+            <match-media rule="is" type="stills"/>
+        </smart-collection>
+        <smart-collection name="Favorites" match="all">
+            <match-ratings value="favorites"/>
+        </smart-collection>
+    </library>
+</fcpxml>

@@ -1,0 +1,1310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+
+<fcpxml version="1.14">
+    <resources>
+        <format id="r1" name="FFVideoFormat1080p2398" frameDuration="1001/24000s" width="1920" height="1080" colorSpace="1-1-1 (Rec. 709)"/>
+        <asset id="r2" name="P1008514" uid="3DF494E03FA21F92383DC0DE933AB74A" start="1930837909/24000s" duration="10426416/24000s" hasVideo="1" format="r3" hasAudio="1" videoSources="1" audioSources="4" audioChannels="1" audioRate="48000" customLUTOverride="64 (Panasonic_VLog_VGamut)">
+            <media-rep kind="original-media" sig="3DF494E03FA21F92383DC0DE933AB74A" src="file:///Volumes/Nanos%202026/2026%20Nanos%20Boston/media/P1008514.MOV">
+                <bookmark>Ym9va1gEAAAAAAUQQAAAAKkGHcVoVhWvjqO9o/SHa1gCKZk/LrP6vpHUnHRdT7/DAAAAAAAAAAAAAAAAAAAAAEQDAAAEAAAAAwMAAAAYACgHAAAAAQEAAFZvbHVtZXMACgAAAAEBAABOYW5vcyAyMDI2AAARAAAAAQEAADIwMjYgTmFub3MgQm9zdG9uAAAABQAAAAEBAABtZWRpYQAAAAwAAAABAQAAUDEwMDg1MTQuTU9WFAAAAAEGAAAQAAAAIAAAADQAAABQAAAAYAAAAAgAAAAEAwAAbkIAAAAAAAAIAAAABAMAAAIAAAAAAAAACAAAAAQDAABLAQAAAAAAAAgAAAAEAwAA2wcAAAAAAAAIAAAABAMAAMgJAAAAAAAAFAAAAAEGAACQAAAAoAAAALAAAADAAAAA0AAAAAgAAAAABAAAQce3qEKAAAAYAAAAAQIAAAEAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAABBQAABAAAAAMDAAAFAAAABAAAAAMDAAADAAAAHQAAAAEJAABmaWxlOi8vL1ZvbHVtZXMvTmFub3MlMjAyMDI2LwAAAAgAAAAEAwAAAABtf6MDAAAIAAAAAAQAAEHHStKFIIRcJAAAAAEBAAA3RTRENDk3Qy00Qzg0LTQwNDUtQkIzMS0xMDBGNEMxQzZBNTYYAAAAAQIAAAEBAAABAAAA7xMAAAEAAAAAAAAAAAAAABMAAAABAQAAL1ZvbHVtZXMvTmFub3MgMjAyNgAIAAAAAQkAAGZpbGU6Ly8vDAAAAAEBAABNYWNpbnRvc2ggSEQIAAAABAMAAABQoRtzAAAACAAAAAAEAABBx6dTdgAAACQAAAABAQAANjU4OTAxOTEtRDcyOS00RUY2LTgzQTEtOTAxNTZGMUNEMUVFGAAAAAECAACBAAAAAQAAAO8TAAABAAAAAAAAAAAAAAABAAAAAQEAAC8AAABgAAAA/v///wDwAAAAAAAABwAAAAIgAACMAgAAAAAAAAUgAAD8AQAAAAAAABAgAAAMAgAAAAAAABEgAABAAgAAAAAAABIgAAAgAgAAAAAAABMgAAAwAgAAAAAAACAgAABsAgAAAAAAAAQAAAADAwAAAPAAAAQAAAADAwAAAAAAAAQAAAADAwAAAQAAABgAAAABBgAAAAMAAAwDAAAYAwAADAMAAAwDAAAMAwAAzAAAAP7///8BAAAAmAIAABAAAAAEEAAAdAAAAAAAAAAFEAAA4AAAAAAAAAAQEAAADAEAAAAAAABAEAAA/AAAAAAAAABUEAAANAEAAAAAAABVEAAAQAEAAAAAAABWEAAALAEAAAAAAAAAIAAAJAMAAAAAAAACIAAA4AEAAAAAAAAFIAAATAEAAAAAAAAQIAAAIAAAAAAAAAARIAAAlAEAAAAAAAASIAAAdAEAAAAAAAATIAAAhAEAAAAAAAAgIAAAwAEAAAAAAAAQ0AAABAAAAAAAAAA=</bookmark>
+            </media-rep>
+            <metadata>
+                <md key="com.apple.proapps.studio.rawToLogConversion" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemProfileName" value="HD (1-1-1)"/>
+                <md key="com.apple.proapps.studio.cameraISO" value="0"/>
+                <md key="com.apple.proapps.studio.cameraColorTemperature" value="0"/>
+                <md key="com.apple.proapps.spotlight.kMDItemCodecs">
+                    <array>
+                        <string>'avc1'</string>
+                        <string>Linear PCM</string>
+                    </array>
+                </md>
+                <md key="com.apple.proapps.mio.ingestDate" value="2026-03-24 10:11:49 -0500"/>
+            </metadata>
+        </asset>
+        <format id="r3" name="FFVideoFormat3840x2160p2398" frameDuration="1001/24000s" width="3840" height="2160" colorSpace="1-1-1 (Rec. 709)"/>
+    </resources>
+    <library location="file:///Volumes/Nanos%202026/2026%20Nanos%20Boston/Nanos%202026.fcpbundle/">
+        <event name="5 | interview processing" uid="9B13AAF9-C0BB-4397-98A5-BDF276D1C8A7">
+            <project name="Ben" uid="AADFFE8B-A584-41C5-BDB6-9B596540B59F" modDate="2026-03-31 13:56:44 -0500">
+                <sequence format="r1" duration="10426416/24000s" tcStart="0s" tcFormat="NDF" audioLayout="stereo" audioRate="48k" keywords="single cam - event promo">
+                    <spine>
+                        <asset-clip ref="r2" offset="0s" name="P1008514" start="1930837909/24000s" duration="10426416/24000s" format="r3" tcFormat="NDF" audioRole="dialogue">
+                            <caption lane="1" offset="1930837909/24000s" name="stay close to this?" start="3600s" duration="24024/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts1">stay close to this?</text-style>
+                                </text>
+                                <text-style-def id="ts1">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="965431467/12000s" name="I was gonna try to do a Dean Martin thing." start="3600s" duration="46046/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts2">I was gonna try to do a Dean Martin thing.</text-style>
+                                </text>
+                                <text-style-def id="ts2">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1930911983/24000s" name="Okay, you can do that." start="3600s" duration="24024/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts3">Okay, you can do that.</text-style>
+                                </text>
+                                <text-style-def id="ts3">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1930938009/24000s" name="You can warm up with that." start="3600s" duration="21021/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts4">You can warm up with that.</text-style>
+                                </text>
+                                <text-style-def id="ts4">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="241370129/3000s" name="Are you gonna sing?" start="3600s" duration="21021/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts5">Are you gonna sing?</text-style>
+                                </text>
+                                <text-style-def id="ts5">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386196811/4800s" name="No, no." start="3600s" duration="18018/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts6">No, no.</text-style>
+                                </text>
+                                <text-style-def id="ts6">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="77240163/960s" name="He always had a drink." start="3600s" duration="21021/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts7">He always had a drink.</text-style>
+                                </text>
+                                <text-style-def id="ts7">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="965513549/12000s" name="Always." start="3600s" duration="20020/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts8">Always.</text-style>
+                                </text>
+                                <text-style-def id="ts8">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="24138114/300s" name="And so," start="3600s" duration="165165/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts9">And so,</text-style>
+                                </text>
+                                <text-style-def id="ts9">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386242857/4800s" name=" I'm from Minnesota, by the way." start="3600s" duration="30030/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts10"> I'm from Minnesota, by the way.</text-style>
+                                </text>
+                                <text-style-def id="ts10">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1931246317/24000s" name="Born and raised in St." start="3600s" duration="41041/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts11">Born and raised in St.</text-style>
+                                </text>
+                                <text-style-def id="ts11">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1931288359/24000s" name="Paul." start="3600s" duration="7007/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts12">Paul.</text-style>
+                                </text>
+                                <text-style-def id="ts12">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1931296367/24000s" name="I live in Stillwater." start="3600s" duration="23023/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts13">I live in Stillwater.</text-style>
+                                </text>
+                                <text-style-def id="ts13">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="120707587/1500s" name="And he lives in St." start="3600s" duration="47047/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts14">And he lives in St.</text-style>
+                                </text>
+                                <text-style-def id="ts14">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1931368439/24000s" name="Paul." start="3600s" duration="2002/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts15">Paul.</text-style>
+                                </text>
+                                <text-style-def id="ts15">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="241422181/3000s" name="you in Minneapolis?" start="3600s" duration="17017/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts16">you in Minneapolis?</text-style>
+                                </text>
+                                <text-style-def id="ts16">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="482853371/6000s" name="Yeah." start="3600s" duration="2002/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts17">Yeah.</text-style>
+                                </text>
+                                <text-style-def id="ts17">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1931416487/24000s" name="Yeah." start="3600s" duration="24024/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts18">Yeah.</text-style>
+                                </text>
+                                <text-style-def id="ts18">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="965721757/12000s" name="Where?" start="3600s" duration="5005/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts19">Where?</text-style>
+                                </text>
+                                <text-style-def id="ts19">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1931452523/24000s" name="Yeah, Lake Como?" start="3600s" duration="76076/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts20">Yeah, Lake Como?</text-style>
+                                </text>
+                                <text-style-def id="ts20">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="4828824/60s" name="Yeah, so I'm from Highland Park." start="3600s" duration="61061/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts21">Yeah, so I'm from Highland Park.</text-style>
+                                </text>
+                                <text-style-def id="ts21">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="965805841/12000s" name="That's where I grew up." start="3600s" duration="20020/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts22">That's where I grew up.</text-style>
+                                </text>
+                                <text-style-def id="ts22">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="241454213/3000s" name="But I" start="3600s" duration="97097/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts23">But I</text-style>
+                                </text>
+                                <text-style-def id="ts23">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="965865901/12000s" name=" left there 46 years ago." start="3600s" duration="63063/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts24"> left there 46 years ago.</text-style>
+                                </text>
+                                <text-style-def id="ts24">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="193194001/2400s" name="me your name come from?" start="3600s" duration="33033/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts25">me your name come from?</text-style>
+                                </text>
+                                <text-style-def id="ts25">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1932001071/24000s" name="Are we on?" start="3600s" duration="15015/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts26">Are we on?</text-style>
+                                </text>
+                                <text-style-def id="ts26">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1932017087/24000s" name="Are we on?" start="3600s" duration="10010/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts27">Are we on?</text-style>
+                                </text>
+                                <text-style-def id="ts27">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="19320301/240s" name="My name's Ben Frischberg." start="3600s" duration="76076/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts28">My name's Ben Frischberg.</text-style>
+                                </text>
+                                <text-style-def id="ts28">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1932107177/24000s" name="Uh, I'm a Minnesota guy, but I've been gone" start="3600s" duration="71071/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts29">Uh, I'm a Minnesota guy, but I've been gone</text-style>
+                                </text>
+                                <text-style-def id="ts29">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1932179249/24000s" name=" for a long time." start="3600s" duration="30030/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts30"> for a long time.</text-style>
+                                </text>
+                                <text-style-def id="ts30">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1932211281/24000s" name="I'm in San Diego now for the last 28 years." start="3600s" duration="61061/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts31">I'm in San Diego now for the last 28 years.</text-style>
+                                </text>
+                                <text-style-def id="ts31">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="966138173/12000s" name="Hi, come on, man." start="3600s" duration="94094/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts32">Hi, come on, man.</text-style>
+                                </text>
+                                <text-style-def id="ts32">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="966186221/12000s" name="That's fair." start="3600s" duration="30030/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts33">That's fair.</text-style>
+                                </text>
+                                <text-style-def id="ts33">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386483097/4800s" name="You gotta give it." start="3600s" duration="47047/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts34">You gotta give it.</text-style>
+                                </text>
+                                <text-style-def id="ts34">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1932463533/24000s" name="Why do you come to the annual event?" start="3600s" duration="87087/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts35">Why do you come to the annual event?</text-style>
+                                </text>
+                                <text-style-def id="ts35">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="966276311/12000s" name="Oh, my." start="3600s" duration="47047/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts36">Oh, my.</text-style>
+                                </text>
+                                <text-style-def id="ts36">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1932601671/24000s" name="I mean, Nanos has been part of my life." start="3600s" duration="63063/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts37">I mean, Nanos has been part of my life.</text-style>
+                                </text>
+                                <text-style-def id="ts37">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386533147/4800s" name="since 1984." start="3600s" duration="46046/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts38">since 1984.</text-style>
+                                </text>
+                                <text-style-def id="ts38">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="966358393/12000s" name="When I went to my first Walsh meeting in Cleveland," start="3600s" duration="77077/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts39">When I went to my first Walsh meeting in Cleveland,</text-style>
+                                </text>
+                                <text-style-def id="ts39">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="120799679/1500s" name=" and I so remember" start="3600s" duration="71071/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts40"> and I so remember</text-style>
+                                </text>
+                                <text-style-def id="ts40">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386573187/4800s" name=" how welcomed I was by all of" start="3600s" duration="79079/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts41"> how welcomed I was by all of</text-style>
+                                </text>
+                                <text-style-def id="ts41">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386589203/4800s" name=" these amazing clinicians." start="3600s" duration="93093/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts42"> these amazing clinicians.</text-style>
+                                </text>
+                                <text-style-def id="ts42">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1933052121/24000s" name="Back then, I met Dr. Foley, who was" start="3600s" duration="83083/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts43">Back then, I met Dr. Foley, who was</text-style>
+                                </text>
+                                <text-style-def id="ts43">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="483283801/6000s" name=" a terrific clinician out of that area." start="3600s" duration="58058/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts44"> a terrific clinician out of that area.</text-style>
+                                </text>
+                                <text-style-def id="ts44">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386639253/4800s" name="And then I" start="3600s" duration="74074/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts45">And then I</text-style>
+                                </text>
+                                <text-style-def id="ts45">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="96663567/1200s" name=" went to my first Rocky Mountain Neuro" start="3600s" duration="74074/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts46"> went to my first Rocky Mountain Neuro</text-style>
+                                </text>
+                                <text-style-def id="ts46">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="966672707/12000s" name=" Ophthalmology Society meeting, I think, in 1987, where I was asked" start="3600s" duration="73073/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts47"> Ophthalmology Society meeting, I think, in 1987, where I was asked</text-style>
+                                </text>
+                                <text-style-def id="ts47">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="120838718/1500s" name=" to give a presentation on MRI." start="3600s" duration="40040/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts48"> to give a presentation on MRI.</text-style>
+                                </text>
+                                <text-style-def id="ts48">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="241682441/3000s" name="Because back then, it was a New Technology, especially" start="3600s" duration="77077/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts49">Because back then, it was a New Technology, especially</text-style>
+                                </text>
+                                <text-style-def id="ts49">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="966768803/12000s" name=" in neuropthalmology." start="3600s" duration="24024/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts50"> in neuropthalmology.</text-style>
+                                </text>
+                                <text-style-def id="ts50">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="120847727/1500s" name="And again, welcomed" start="3600s" duration="87087/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts51">And again, welcomed</text-style>
+                                </text>
+                                <text-style-def id="ts51">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1933650719/24000s" name=" by all the, back then, the gray hairs, and now I'm a gray hair." start="3600s" duration="80080/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts52"> by all the, back then, the gray hairs, and now I'm a gray hair.</text-style>
+                                </text>
+                                <text-style-def id="ts52">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1933732801/24000s" name="It's crazy, you know?" start="3600s" duration="31031/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts53">It's crazy, you know?</text-style>
+                                </text>
+                                <text-style-def id="ts53">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386753367/4800s" name="When you think about coming here, like, how" start="3600s" duration="76076/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts54">When you think about coming here, like, how</text-style>
+                                </text>
+                                <text-style-def id="ts54">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1933882951/24000s" name=" would you describe the energy in the libels?" start="3600s" duration="50050/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts55"> would you describe the energy in the libels?</text-style>
+                                </text>
+                                <text-style-def id="ts55">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="96697601/1200s" name="Well, you know, in the old days, it'd be" start="3600s" duration="79079/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts56">Well, you know, in the old days, it'd be</text-style>
+                                </text>
+                                <text-style-def id="ts56">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1934031099/24000s" name=" 120, 30, 140 people." start="3600s" duration="50050/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts57"> 120, 30, 140 people.</text-style>
+                                </text>
+                                <text-style-def id="ts57">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1934083151/24000s" name="Now there's 1,000 people here." start="3600s" duration="35035/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts58">Now there's 1,000 people here.</text-style>
+                                </text>
+                                <text-style-def id="ts58">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="483530047/6000s" name="And I look around, and they're all so young." start="3600s" duration="77077/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts59">And I look around, and they're all so young.</text-style>
+                                </text>
+                                <text-style-def id="ts59">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="483550067/6000s" name="And everything is good, like, why" start="3600s" duration="84084/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts60">And everything is good, like, why</text-style>
+                                </text>
+                                <text-style-def id="ts60">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="120892772/1500s" name=" do you think the sound marketing for young practitioners?" start="3600s" duration="56056/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts61"> do you think the sound marketing for young practitioners?</text-style>
+                                </text>
+                                <text-style-def id="ts61">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386875489/4800s" name="Well, I think anybody that's involved in neuropthalmology" start="3600s" duration="78078/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts62">Well, I think anybody that's involved in neuropthalmology</text-style>
+                                </text>
+                                <text-style-def id="ts62">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="483614131/6000s" name=" has to be involved with nails." start="3600s" duration="48048/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts63"> has to be involved with nails.</text-style>
+                                </text>
+                                <text-style-def id="ts63">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="967253287/12000s" name="I mean, we are the organization that represents them." start="3600s" duration="105105/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts64">I mean, we are the organization that represents them.</text-style>
+                                </text>
+                                <text-style-def id="ts64">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="386923537/4800s" name="And I" start="3600s" duration="77077/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts65">And I</text-style>
+                                </text>
+                                <text-style-def id="ts65">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="967347381/12000s" name=" think most neuropthalmologists that are serious about doing neuropthalmology" start="3600s" duration="84084/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts66"> think most neuropthalmologists that are serious about doing neuropthalmology</text-style>
+                                </text>
+                                <text-style-def id="ts66">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1934779847/24000s" name=" come, and they come on an almost annual basis." start="3600s" duration="60060/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts67"> come, and they come on an almost annual basis.</text-style>
+                                </text>
+                                <text-style-def id="ts67">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1934841909/24000s" name="People come back year after year, they see they're" start="3600s" duration="71071/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts68">People come back year after year, they see they're</text-style>
+                                </text>
+                                <text-style-def id="ts68">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1934913981/24000s" name=" old friends, and they're introduced to the newest research," start="3600s" duration="80080/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts69"> old friends, and they're introduced to the newest research,</text-style>
+                                </text>
+                                <text-style-def id="ts69">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="967497531/12000s" name=" the Walsh meeting, which we did today, which is a" start="3600s" duration="72072/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts70"> the Walsh meeting, which we did today, which is a</text-style>
+                                </text>
+                                <text-style-def id="ts70">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="967543577/12000s" name=" wonderful opportunity to hear about new things going on," start="3600s" duration="82082/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts71"> wonderful opportunity to hear about new things going on,</text-style>
+                                </text>
+                                <text-style-def id="ts71">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="967587621/12000s" name=" to think about unusual presentations" start="3600s" duration="97097/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts72"> to think about unusual presentations</text-style>
+                                </text>
+                                <text-style-def id="ts72">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1935272339/24000s" name=" of these interesting diseases." start="3600s" duration="58058/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts73"> of these interesting diseases.</text-style>
+                                </text>
+                                <text-style-def id="ts73">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="967707741/12000s" name="It's one of my favorite, it's my favorite meeting." start="3600s" duration="58058/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts74">It's one of my favorite, it's my favorite meeting.</text-style>
+                                </text>
+                                <text-style-def id="ts74">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="967737771/12000s" name="It's one of my favorite things that I do every year, coming to nanos." start="3600s" duration="65065/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts75">It's one of my favorite things that I do every year, coming to nanos.</text-style>
+                                </text>
+                                <text-style-def id="ts75">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="483894411/6000s" name="You know?" start="3600s" duration="37037/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts76">You know?</text-style>
+                                </text>
+                                <text-style-def id="ts76">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="387123737/4800s" name="do you think it's just healthier?" start="3600s" duration="103103/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts77">do you think it's just healthier?</text-style>
+                                </text>
+                                <text-style-def id="ts77">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1935734801/24000s" name="Like other people talk about, yeah, like how do you describe life" start="3600s" duration="130130/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts78">Like other people talk about, yeah, like how do you describe life</text-style>
+                                </text>
+                                <text-style-def id="ts78">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="193594401/2400s" name="Well, it's..." start="3600s" duration="17017/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts79">Well, it's...</text-style>
+                                </text>
+                                <text-style-def id="ts79">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1935977043/24000s" name="It's not only a ritual, so I'm involved, right?" start="3600s" duration="66066/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts80">It's not only a ritual, so I'm involved, right?</text-style>
+                                </text>
+                                <text-style-def id="ts80">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="193604411/2400s" name="I'm involved in that, I'm a committee chairman" start="3600s" duration="73073/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts81">I'm involved in that, I'm a committee chairman</text-style>
+                                </text>
+                                <text-style-def id="ts81">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="242014773/3000s" name=" for the development committee." start="3600s" duration="37037/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts82"> for the development committee.</text-style>
+                                </text>
+                                <text-style-def id="ts82">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1936157223/24000s" name="I'm on several other committees, and I'm also the delegate" start="3600s" duration="90090/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts83">I'm on several other committees, and I'm also the delegate</text-style>
+                                </text>
+                                <text-style-def id="ts83">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1936247313/24000s" name=" to the American Medical Association for Nanos." start="3600s" duration="46046/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts84"> to the American Medical Association for Nanos.</text-style>
+                                </text>
+                                <text-style-def id="ts84">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="968148181/12000s" name="So, I'm..." start="3600s" duration="12012/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts85">So, I'm...</text-style>
+                                </text>
+                                <text-style-def id="ts85">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1936357423/24000s" name="As I give up my clinical practice, I'm putting in more volunteer" start="3600s" duration="78078/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts86">As I give up my clinical practice, I'm putting in more volunteer</text-style>
+                                </text>
+                                <text-style-def id="ts86">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="968218251/12000s" name=" time to an organization that I love," start="3600s" duration="76076/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts87"> time to an organization that I love,</text-style>
+                                </text>
+                                <text-style-def id="ts87">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="968256289/12000s" name=" and it's been very important to me." start="3600s" duration="28028/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts88"> and it's been very important to me.</text-style>
+                                </text>
+                                <text-style-def id="ts88">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="121033913/1500s" name="And I also, as head" start="3600s" duration="74074/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts89">And I also, as head</text-style>
+                                </text>
+                                <text-style-def id="ts89">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1936617683/24000s" name=" of the development committee, I personally am a big donor." start="3600s" duration="96096/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts90"> of the development committee, I personally am a big donor.</text-style>
+                                </text>
+                                <text-style-def id="ts90">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="968358391/12000s" name="I'm, you know, and I would ask others to" start="3600s" duration="90090/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts91">I'm, you know, and I would ask others to</text-style>
+                                </text>
+                                <text-style-def id="ts91">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="484204721/6000s" name=" think about being able to help" start="3600s" duration="71071/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts92"> think about being able to help</text-style>
+                                </text>
+                                <text-style-def id="ts92">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="484222739/6000s" name=" support nanos, personally, by donating." start="3600s" duration="70070/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts93"> support nanos, personally, by donating.</text-style>
+                                </text>
+                                <text-style-def id="ts93">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="484240757/6000s" name="So, you're a smarter guy." start="3600s" duration="60060/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts94">So, you're a smarter guy.</text-style>
+                                </text>
+                                <text-style-def id="ts94">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="19370351/240s" name="I've been probably your villain." start="3600s" duration="17017/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts95">I've been probably your villain.</text-style>
+                                </text>
+                                <text-style-def id="ts95">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="121066946/1500s" name="So when I think about like the highlight of my year, learn." start="3600s" duration="77077/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts96">So when I think about like the highlight of my year, learn.</text-style>
+                                </text>
+                                <text-style-def id="ts96">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="484300817/6000s" name="What makes it fun?" start="3600s" duration="38038/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts97">What makes it fun?</text-style>
+                                </text>
+                                <text-style-def id="ts97">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="193724531/2400s" name="Why is it fun?" start="3600s" duration="44044/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts98">Why is it fun?</text-style>
+                                </text>
+                                <text-style-def id="ts98">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="484322839/6000s" name="obviously real fun" start="3600s" duration="41041/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts99">obviously real fun</text-style>
+                                </text>
+                                <text-style-def id="ts99">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="121084964/1500s" name="What makes" start="3600s" duration="8008/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts100">What makes</text-style>
+                                </text>
+                                <text-style-def id="ts100">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="242178937/3000s" name="I think the camaraderie makes it fun." start="3600s" duration="32032/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts101">I think the camaraderie makes it fun.</text-style>
+                                </text>
+                                <text-style-def id="ts101">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="193746553/2400s" name="You know, again, seeing people you trained with people" start="3600s" duration="73073/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts102">You know, again, seeing people you trained with people</text-style>
+                                </text>
+                                <text-style-def id="ts102">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="484384901/6000s" name=" that I've known some of these people" start="3600s" duration="71071/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts103"> that I've known some of these people</text-style>
+                                </text>
+                                <text-style-def id="ts103">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="77504427/960s" name=" for 30, 35, 40 years." start="3600s" duration="83083/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts104"> for 30, 35, 40 years.</text-style>
+                                </text>
+                                <text-style-def id="ts104">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="24221197/300s" name="So it's really nice seeing them." start="3600s" duration="28028/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts105">So it's really nice seeing them.</text-style>
+                                </text>
+                                <text-style-def id="ts105">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1937726791/24000s" name="I don't know a lot of the young people, and I" start="3600s" duration="76076/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts106">I don't know a lot of the young people, and I</text-style>
+                                </text>
+                                <text-style-def id="ts106">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1937802867/24000s" name=" probably should go a little more out of my way to meet and greet." start="3600s" duration="81081/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts107"> probably should go a little more out of my way to meet and greet.</text-style>
+                                </text>
+                                <text-style-def id="ts107">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="121117997/1500s" name="So." start="3600s" duration="5005/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts108">So.</text-style>
+                                </text>
+                                <text-style-def id="ts108">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1937959023/24000s" name="You're having a great experience with kids sitting here and, like, hang out." start="3600s" duration="80080/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts109">You're having a great experience with kids sitting here and, like, hang out.</text-style>
+                                </text>
+                                <text-style-def id="ts109">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="969035067/12000s" name="Well, it's true." start="3600s" duration="12012/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts110">Well, it's true.</text-style>
+                                </text>
+                                <text-style-def id="ts110">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1938085149/24000s" name="Tomorrow morning, I'm gonna be at the young" start="3600s" duration="73073/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts111">Tomorrow morning, I'm gonna be at the young</text-style>
+                                </text>
+                                <text-style-def id="ts111">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="969079111/12000s" name=" Yono, the young neuro" start="3600s" duration="87087/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts112"> Yono, the young neuro</text-style>
+                                </text>
+                                <text-style-def id="ts112">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="193824631/2400s" name=" ophthalmology organization or whatever, and sit at" start="3600s" duration="73073/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts113"> ophthalmology organization or whatever, and sit at</text-style>
+                                </text>
+                                <text-style-def id="ts113">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1938319383/24000s" name=" a table and tell them about how to get started in practice." start="3600s" duration="76076/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts114"> a table and tell them about how to get started in practice.</text-style>
+                                </text>
+                                <text-style-def id="ts114">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1938397461/24000s" name="So, you know, mentoring, I would love to be able to do" start="3600s" duration="71071/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts115">So, you know, mentoring, I would love to be able to do</text-style>
+                                </text>
+                                <text-style-def id="ts115">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1938469533/24000s" name=" that, and, and, you know, try to do it when I can." start="3600s" duration="71071/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts116"> that, and, and, you know, try to do it when I can.</text-style>
+                                </text>
+                                <text-style-def id="ts116">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="969271303/12000s" name="And this is an opportunity to do that." start="3600s" duration="43043/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts117">And this is an opportunity to do that.</text-style>
+                                </text>
+                                <text-style-def id="ts117">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1938587651/24000s" name="You have some perspective on this." start="3600s" duration="73073/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts118">You have some perspective on this.</text-style>
+                                </text>
+                                <text-style-def id="ts118">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1938673737/24000s" name="Nothing can you agree for, like, having this front up," start="3600s" duration="74074/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts119">Nothing can you agree for, like, having this front up,</text-style>
+                                </text>
+                                <text-style-def id="ts119">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="484687203/6000s" name=" and is for younger people who are listening, like, wait." start="3600s" duration="90090/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts120"> and is for younger people who are listening, like, wait.</text-style>
+                                </text>
+                                <text-style-def id="ts120">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="242355113/3000s" name="Oh, I think it's huge." start="3600s" duration="21021/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts121">Oh, I think it's huge.</text-style>
+                                </text>
+                                <text-style-def id="ts121">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1938863927/24000s" name="I mean, this is an opportunity for residents" start="3600s" duration="86086/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts122">I mean, this is an opportunity for residents</text-style>
+                                </text>
+                                <text-style-def id="ts122">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1938950013/24000s" name=" and fellows to look for their next job to meet" start="3600s" duration="86086/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts123"> and fellows to look for their next job to meet</text-style>
+                                </text>
+                                <text-style-def id="ts123">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="19390371/240s" name=" people, to think about what they want to do in the future," start="3600s" duration="71071/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts124"> people, to think about what they want to do in the future,</text-style>
+                                </text>
+                                <text-style-def id="ts124">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="484777293/6000s" name=" to tap into mentors, or people" start="3600s" duration="74074/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts125"> to tap into mentors, or people</text-style>
+                                </text>
+                                <text-style-def id="ts125">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="969591623/12000s" name=" they can meet, to ask the important questions about" start="3600s" duration="80080/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts126"> they can meet, to ask the important questions about</text-style>
+                                </text>
+                                <text-style-def id="ts126">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1939264327/24000s" name=" what's important to you." start="3600s" duration="39039/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts127"> what's important to you.</text-style>
+                                </text>
+                                <text-style-def id="ts127">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="969659691/12000s" name="How is your practice going?" start="3600s" duration="21021/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts128">How is your practice going?</text-style>
+                                </text>
+                                <text-style-def id="ts128">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="387868481/4800s" name="What should I be looking for in a practice?" start="3600s" duration="41041/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts129">What should I be looking for in a practice?</text-style>
+                                </text>
+                                <text-style-def id="ts129">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="242423181/3000s" name="Um, and again, you know," start="3600s" duration="77077/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts130">Um, and again, you know,</text-style>
+                                </text>
+                                <text-style-def id="ts130">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="77578501/960s" name=" I really, I don't think we need to sell nanos to people in neuropthalmology." start="3600s" duration="109109/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts131"> I really, I don't think we need to sell nanos to people in neuropthalmology.</text-style>
+                                </text>
+                                <text-style-def id="ts131">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="484893409/6000s" name="They're already sold, right?" start="3600s" duration="29029/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts132">They're already sold, right?</text-style>
+                                </text>
+                                <text-style-def id="ts132">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1939618681/24000s" name="And we've been growing, and" start="3600s" duration="73073/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts133">And we've been growing, and</text-style>
+                                </text>
+                                <text-style-def id="ts133">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="969845877/12000s" name=" I hope we continue to grow." start="3600s" duration="27027/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts134"> I hope we continue to grow.</text-style>
+                                </text>
+                                <text-style-def id="ts134">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1939720783/24000s" name="One of the biggest problems we have is just not enough people coming" start="3600s" duration="76076/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts135">One of the biggest problems we have is just not enough people coming</text-style>
+                                </text>
+                                <text-style-def id="ts135">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1939796859/24000s" name=" into neurophthalmology." start="3600s" duration="27027/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts136"> into neurophthalmology.</text-style>
+                                </text>
+                                <text-style-def id="ts136">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1939824887/24000s" name="And we're trying to develop ways to" start="3600s" duration="74074/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts137">And we're trying to develop ways to</text-style>
+                                </text>
+                                <text-style-def id="ts137">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1939898961/24000s" name=" interest ophthalmologists and neurologists" start="3600s" duration="76076/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts138"> interest ophthalmologists and neurologists</text-style>
+                                </text>
+                                <text-style-def id="ts138">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="969988019/12000s" name=" to come into this field that" start="3600s" duration="71071/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts139"> to come into this field that</text-style>
+                                </text>
+                                <text-style-def id="ts139">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="194004811/2400s" name=" is so interesting and challenging." start="3600s" duration="37037/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts140"> is so interesting and challenging.</text-style>
+                                </text>
+                                <text-style-def id="ts140">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="485021537/6000s" name="It's one of the few specialties where" start="3600s" duration="76076/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts141">It's one of the few specialties where</text-style>
+                                </text>
+                                <text-style-def id="ts141">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="77606529/960s" name=" there's such crossover between neurology and ophthalmology," start="3600s" duration="79079/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts142"> there's such crossover between neurology and ophthalmology,</text-style>
+                                </text>
+                                <text-style-def id="ts142">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="121265144/1500s" name=" which is a really fun thing, because we do different things," start="3600s" duration="79079/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts143"> which is a really fun thing, because we do different things,</text-style>
+                                </text>
+                                <text-style-def id="ts143">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1940321383/24000s" name=" but now we're working together." start="3600s" duration="44044/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts144"> but now we're working together.</text-style>
+                                </text>
+                                <text-style-def id="ts144">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1940367429/24000s" name="And it's very nice." start="3600s" duration="50050/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts145">And it's very nice.</text-style>
+                                </text>
+                                <text-style-def id="ts145">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="970210241/12000s" name="So not everyone here..." start="3600s" duration="40040/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts146">So not everyone here...</text-style>
+                                </text>
+                                <text-style-def id="ts146">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1940511573/24000s" name="has made decision, right?" start="3600s" duration="51051/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts147">has made decision, right?</text-style>
+                                </text>
+                                <text-style-def id="ts147">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="970282313/12000s" name="So there's medical students here, there's residents here." start="3600s" duration="89089/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts148">So there's medical students here, there's residents here.</text-style>
+                                </text>
+                                <text-style-def id="ts148">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1940655717/24000s" name="Fellows here are all in, they're committed." start="3600s" duration="66066/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts149">Fellows here are all in, they're committed.</text-style>
+                                </text>
+                                <text-style-def id="ts149">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="970362393/12000s" name="Yeah, for the medical students and residents, they're looking..." start="3600s" duration="90090/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts150">Yeah, for the medical students and residents, they're looking...</text-style>
+                                </text>
+                                <text-style-def id="ts150">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="970446477/12000s" name="Well, if" start="3600s" duration="101101/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts151">Well, if</text-style>
+                                </text>
+                                <text-style-def id="ts151">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="121312191/1500s" name=" they're interested, they'll see what it's all about." start="3600s" duration="43043/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts152"> they're interested, they'll see what it's all about.</text-style>
+                                </text>
+                                <text-style-def id="ts152">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="970520551/12000s" name="They'll meet people to talk to, and they'll attend the" start="3600s" duration="80080/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts153">They'll meet people to talk to, and they'll attend the</text-style>
+                                </text>
+                                <text-style-def id="ts153">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1941122183/24000s" name=" meeting to see what we're all about." start="3600s" duration="28028/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts154"> meeting to see what we're all about.</text-style>
+                                </text>
+                                <text-style-def id="ts154">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="970576607/12000s" name="Okay, thank you." start="3600s" duration="61061/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts155">Okay, thank you.</text-style>
+                                </text>
+                                <text-style-def id="ts155">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <caption lane="1" offset="1941218279/24000s" name="I have to." start="3600s" duration="40040/24000s" role="iTT?captionFormat=ITT.en-US">
+                                <text placement="bottom">
+                                    <text-style ref="ts156">I have to.</text-style>
+                                </text>
+                                <text-style-def id="ts156">
+                                    <text-style font=".AppleSystemUIFont" fontSize="13" fontFace="Regular" fontColor="1 1 1 1" backgroundColor="0 0 0 1"/>
+                                </text-style-def>
+                            </caption>
+                            <keyword start="1930837909/24000s" duration="10426416/24000s" value="interviews"/>
+                            <audio-channel-source srcCh="1" role="dialogue.dialogue-1">
+                                <adjust-voiceIsolation amount="50"/>
+                            </audio-channel-source>
+                            <audio-channel-source srcCh="2" role="dialogue.dialogue-2" active="0"/>
+                            <audio-channel-source srcCh="3" role="dialogue.dialogue-3" active="0"/>
+                            <audio-channel-source srcCh="4" role="dialogue.dialogue-4" active="0"/>
+                        </asset-clip>
+                    </spine>
+                </sequence>
+            </project>
+        </event>
+        <smart-collection name="Projects" match="all">
+            <match-clip rule="is" type="project"/>
+        </smart-collection>
+        <smart-collection name="All Video" match="any">
+            <match-media rule="is" type="videoOnly"/>
+            <match-media rule="is" type="videoWithAudio"/>
+        </smart-collection>
+        <smart-collection name="Audio Only" match="all">
+            <match-media rule="is" type="audioOnly"/>
+        </smart-collection>
+        <smart-collection name="Stills" match="all">
+            <match-media rule="is" type="stills"/>
+        </smart-collection>
+        <smart-collection name="Favorites" match="all">
+            <match-ratings value="favorites"/>
+        </smart-collection>
+    </library>
+</fcpxml>

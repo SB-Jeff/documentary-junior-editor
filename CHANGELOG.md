@@ -1,5 +1,335 @@
 # Documentary Junior Editor — Changelog
 
+## v5.0 — 2026-04-29
+
+Major version — twelve lessons distilled from the International Institute of Minnesota
+Fund-a-Need 2026 review, including a fundamental data-model rewrite (segments + timeline
+entries), a new Transcription Agent at pipeline position 0, universal pipeline versioning,
+the Edit Agent reframed as a multi-round partner, and Phase 0 Discovery on the Creative
+Context Agent.
+
+### Quotes are clay; the timeline is the work product (SKILL-edit.md, SKILL-transcript.md, SKILL-synthesis.md, SKILL-fcpxml.md, SKILL.md)
+
+The biggest data-model change since v3.1's Selection+Trim merge into the Edit Agent.
+Source quotes are no longer atomic blocks the Edit Agent annotates with trim metadata —
+they are decomposed into **segments** at tag time. A segment is a meaningful,
+self-contained piece of an idea (a clause or phrase that completes a thought). Smaller
+than a sentence. Larger than a word.
+
+The paper cut becomes a **timeline of entries**. Each entry has `segments[]`; each
+segment references its source quote, source segment index, and optional per-segment
+head/tail trim. A timeline entry is a contiguous-in-source-order play of segments from
+one source quote, with arbitrary internal drops allowed (head, middle, tail, any
+combination). Two cases produce new entries: playback order ≠ source order, or segments
+from different source quotes. Splitting is implicit — the agent decomposes whenever a
+manipulation requires it.
+
+**Why:** Jeff's mental model articulated during the v5.0 review: *"The quotes from the
+interview subjects are clay. We can mold them any way we want to communicate the story
+as long as we use them verbatim and edit on a topic or idea level and not a word level.
+Think about it as a collection of segments that you can rearrange — but you can't take
+individual words or very short snippets and go about it that way."* The v4.0 model
+treated quotes as near-atomic; the v5.0 model treats them as raw material the timeline
+is composed from. This collapses intra-quote reorder and cross-quote pairing into one
+general primitive.
+
+The Cardinal Rule's existing wording is preserved verbatim. The framing AROUND it
+expands: where it says "rearrange sentences," that capability now operates on segments
+rather than whole sentences, and segment reuse can cross source-quote boundaries.
+
+**Schema impact:** `tagged-quotes-v[N].json` now has per-quote `segments[]`. The merged
+output preserves them. `trimmed-quotes-v[N].json` becomes a timeline of entries, each
+with `segments[]` referencing the source pool. The FCPXML Agent generates one clip per
+source segment per timeline entry.
+
+**Out of scope, flagged for follow-up:** `scripts/quotes_viewer_template.jsx` v5.0
+upgrades (segment-level reorder UI, source attribution per segment, status badges).
+`scripts/build_fcpxml.py` segment-aware clip generation. Both flagged as Phase 3 code
+changes.
+
+### New Transcription Agent at pipeline position 0 (SKILL-transcription.md, SKILL.md, cowork-session-guide.md)
+
+Replaces the prompt-driven Step 0 script invocation. The Transcription Agent is a
+proper SKILL with structured behavior: audio detection (`.mp3`, `.wav`, `.m4a`, `.mov`,
+`.mp4`), speaker confirmation (derive name from filename, present list, accept Jeff's
+corrections), format conversion (ffmpeg in the Cowork sandbox if a video container),
+AssemblyAI calls with retry logic (transient retry, 401/403 hard-fail with clear
+message), output validation (non-empty, timecodes, speaker labels, plausible word
+count), and `transcription-summary-v[N].md` handoff.
+
+**Runs entirely in the Cowork sandbox.** No Terminal interaction at any point.
+
+**AssemblyAI key location:** `documentary-junior-editor/secrets/assembly_ai.key` —
+git-crypt encrypted in `storyboard-ops`. Each Mac needs `git-crypt unlock` once with
+the master key; after that, `git pull` retrieves the decrypted file transparently. If
+git-crypt isn't unlocked, the agent fails fast with the exact remediation command.
+
+**Trigger:** the Creative Context Agent on launch checks for audio without transcripts.
+If found, it pauses and provides the Transcription Agent launch prompt; Jeff runs that
+in a separate Cowork session and returns.
+
+**Why:** Jeff observation — "the audio transcription process is still pretty buggy and
+seems to be happening differently across projects." Root causes: prompt interpretation
+varies; the script lookup of the AssemblyAI key sometimes fails; Terminal pasting is
+required when Cowork can't reach the script; format edge cases aren't consistently
+handled. Promoting transcription to a proper agent makes behavior predictable and
+removes the Terminal dependency.
+
+**Out of scope, flagged for follow-up:** `scripts/transcribe.py` updated to read the
+encrypted key path (currently looks at `~/Desktop/storyboard-ops/file-api/.env`).
+The new SKILL documents the v5.0 contract; the script catches up in a Phase 3 code
+change.
+
+### Universal pipeline versioning + dependency graph (every SKILL file, SKILL.md)
+
+Every handoff document is suffixed `-v[N]`; no agent ever overwrites. Per-file version
+trajectory — re-running the Creative Context Agent doesn't force a re-run of every
+downstream file, only the ones whose upstream just incremented.
+
+A new file at `handoffs/pipeline-state.json` (or per-project-slug variant on multi-project
+SSDs) tracks current versions per agent and dependency edges. Schema documented in
+`SKILL.md`. Every agent reads it on launch — surfaces stale-state warnings to Jeff when
+an upstream agent has run since this agent last did. Every agent writes to it on emit,
+recording the upstream versions it consumed.
+
+**Cascade behavior:** in Cowork today, stale-state warnings surface in chat and Jeff
+decides pace. In n8n + Claude API (Phase 4 of the storyboard-ops roadmap), the same
+file becomes the orchestrator's work queue — same data, automated cascade. Skill is
+identical in both worlds.
+
+**Why:** Jeff observation — when revisiting upstream work (e.g., revising the act
+structure), downstream agents currently overwrite their previous outputs, losing the
+history of how the project evolved. The Edit Agent already does versioning naturally
+(v1, v2, v3); generalizing this across the pipeline gives Jeff lossless history,
+diff-able passes, and a single state file the Skill Review Agent can read to reconstruct
+the project's full editorial journey.
+
+**Dependency edges:** Creative Context → Transcript Agents → Synthesis → Edit → FCPXML;
+FCPXML Params is an independent branch; Transcription is a precondition that emits no
+downstream-relevant version. Each agent on launch checks every upstream it depends on
+against the version it consumed last time.
+
+### Edit Agent built for multi-round iteration; agents stay separate (SKILL-edit.md, SKILL.md, cowork-session-guide.md)
+
+Reframes the Edit Agent's job from "produce a paper cut once" to "be a partner across
+indefinite rounds." The three phases (Rough Cut → Discussion → Reduction) loop. Each
+round emits a versioned `trimmed-quotes-v[N].json` and triggers a fresh FCPXML run.
+Jeff watches the FCPXML in FCP, optionally appends to `review-notes.md`, and re-launches
+the Edit Agent for round N+1. No fixed cap on rounds.
+
+The Edit ↔ FCPXML loop is named explicitly in the pipeline diagram, not just "loop-back
+support" as a footnote.
+
+**Edit and FCPXML stay separate Cowork sessions.** The architectural intent is
+preserved: separate context windows (Edit's editorial reasoning doesn't bleed into
+FCPXML's largely-deterministic XML transformation), and the model split (Opus for
+editing, Sonnet for FCPXML) is real cost optimization.
+
+**Friction reduction:** every handoff closes with a "Next agent + model + launch prompt"
+footer (see Lesson 9 below) so Jeff copy-pastes between sessions instead of reconstructing
+context. n8n + Claude API (Phase 4) automates the cascade entirely.
+
+**Why:** v4.0 introduced the three-phase Rough Cut → Discussion → Reduction structure
+but treated it as linear. Jeff's reality across projects is multi-round — react,
+revise, react, revise. v5.0 makes this the expected operating mode, not the special case.
+
+### Live HTML artifact as Edit Agent work surface (SKILL-edit.md)
+
+The HTML artifact is no longer an end-of-session deliverable. It's created at session
+start from `tagged-quotes-v[N].json`, updated via `update_artifact` after every editorial
+decision, and bidirectional via `sendPrompt()` — clicking "drop" or "accept proposed
+trim" in the artifact sends the corresponding chat message back to the Edit Agent.
+
+**Auto-scroll to current focus.** When the agent says "let's discuss Alice #6," the
+artifact auto-scrolls to and highlights #6. Jeff never has to ask "which one is that
+again?"
+
+**Full quote text always inlined in chat on first reference.** Even with the live
+viewer, the agent quotes the verbatim text the first time a quote enters discussion in
+chat. Subsequent references can use just the ID once the quote's been brought into view.
+Solves the "agent abbreviates and Jeff has to ask for the full text" pain Jeff
+identified in the v5.0 review.
+
+**End-of-session, final state saved as `[project-slug]_quotes_view.html`** in the
+handoffs folder — same as today, so the artifact persists and reloads next session.
+
+**Why:** Jeff observation — *"the editing agent frequently refers to quotes by number
+and abbreviates what the quote is. I repeatedly am asking for the full context. The
+ideal workflow would be that the editing agent creates the quote viewer so I can
+reference what's being discussed and when decisions are made the quote viewer is
+automatically updated. Think of it like a word doc where we are editing the work product
+together."* Cowork's `mcp__cowork__create_artifact` and `update_artifact` plus the
+artifact's `sendPrompt()` capability make this fully achievable today.
+
+**Out of scope, flagged for follow-up:** `scripts/quotes_viewer_template.jsx` rewrite
+to support bidirectional buttons, segment-level reorder UI, status badges, source
+attribution per segment in composite entries, runtime-recommendation toggle. The
+SKILL specifies the contract; the template catches up in a Phase 3 code change.
+
+### Wide rough cut + per-quote runtime recommendation (SKILL-edit.md)
+
+The wide rough cut from v4.0 is preserved — it's the inventory view that lets Jeff see
+what was left on the table. Layered on top: the Edit Agent tags each quote with a
+`runtime_recommendation` field — `must-keep`, `probable-keep`, `probable-cut`, or
+`optional` — toward 2× target runtime. The viewer adds a toggle: "show full inventory"
+vs. "show recommended tight cut." Jeff sees both views.
+
+**Why:** v4.0 said *"first pass is a rough cut, not a draft"* and intentionally let it
+run long. On International Institute the rough cut landed at 20:47 against a ~5-minute
+target — 4× over, not the 25–30% the v4.0 calibration anticipated. Jeff's framing of
+the trade-off: a 2× rough cut is the ideal endpoint, but a wide rough cut shows what's
+on the table; the runtime recommendation gives the agent room to develop tighter
+judgment without taking visibility away.
+
+### Title-card-as-shortener pattern (SKILL-edit.md)
+
+Promoted from incidental to a named editorial move. Trigger: backstory or contextual
+material that reads cleaner on screen than spoken — a stat, a date, a piece of context,
+a backstory beat that doesn't need a face. The Edit Agent proposes title cards in the
+rough cut when this pattern fits, not just as act dividers.
+
+**Why:** International Institute's final edit replaced four spoken backstory beats with
+on-screen title cards — including one verbatim from the v3 interstitial the Edit Agent
+had drafted. Pattern is general (not specific to non-native English speakers, as Jeff
+clarified during the review).
+
+### Suggesting context beats (SKILL-edit.md)
+
+The Edit Agent identifies narrative gaps where external context (a stat, a date, a
+piece of framing) would land harder than spoken material. Surfaces them in
+`edit-handoff-v[N].md` with location, intent, and `(research needed)` tag. The agent
+does NOT do the research — Jeff fills in.
+
+**Why:** International Institute's final used research-sourced title cards
+("Fewer than 1% of the world's refugees are resettled," U.S. Refugee Admissions
+Program suspension stats) for stakes-raising. Doing the research in-agent would
+burn context window. Identifying the opportunity and letting Jeff fill in is the
+right division of labor.
+
+### Brief is starting points, not constraints (SKILL-creative-context.md)
+
+Replaced "must stay / immovable / locked in / permanent" language in the
+creative-brief-summary output spec with "currently planned to stay / load-bearing in
+current structure / tentatively committed / current default."
+
+**Why:** International Institute's brief flagged three beats as "immovable" (Stephen
+Miller, the seizure-medication block, the "I was the luckiest" hinge). All three were
+dropped in Jeff's final FCP edit. His framing: *"editing is iterative. You make
+decisions up front. You look at them in the context of the larger edit. You adjust or
+change those decisions based on how the whole is sitting."* The brief carries editorial
+intent at session-start time; commitments are starting points, not constraints.
+
+### Creative Context Agent Phase 0 — Discovery (SKILL-creative-context.md)
+
+New Phase 0 step before brief construction. Searches Google Drive for project documents
+(by folder path or keyword) and Gmail for relevant threads (by project name + client
+domain). Surfaces candidates as a list with one-line summaries; Jeff approves which to
+ingest. Falls back to manual upload if Drive/Gmail connectors aren't connected.
+
+**Why:** Jeff observation — *"the creative agent often asks for relevant background
+info. I would like for it to automatically look for meeting notes in the google drive
+project folder as well as relevant emails."* Cowork's Drive and Gmail MCPs are
+available; the Discovery step makes use of them with explicit Jeff-approval before
+ingestion.
+
+### FCPXML Agent handles both multicam and single-clip footage (SKILL-fcpxml-params.md, SKILL-fcpxml.md)
+
+Per-interview `clip_type` detection in the Params Agent. Multicam (existing default):
+`<media>` containing `<multicam>` with `<mc-angle>` children — generates `<mc-clip>`
+references with angle selection. Single-clip: top-level `<asset>` resource — generates
+`<asset-clip>` references directly with format, tcFormat, audioRole. Captions match
+against direct children of `<asset-clip>` rather than nested under multicam structures.
+Mixed projects (some multicam, some single-clip) handled per-interview, not project-wide.
+
+**Validation samples:** `documentary-junior-editor/design-samples/single-clip/` carries
+`Ben_captioned_interview.fcpxml` (single-cam captioned interview from Nanos 2026 Boston)
+and `Sample_narrative.fcpxml` (sample narrative timeline using single-clip sources) as
+authoritative reference.
+
+**Why:** Jeff observation — *"I came across one issue in another project where the
+interview files were not a multi-cam but a single clip. The .xml agent definitely
+struggled with this. Would be great if handling both scenarios was baked into that
+agent's skill."* The Nanos project sample XMLs were uploaded during the v5.0 review
+and live in the skill folder for Phase 3 implementation reference.
+
+**Out of scope, flagged for follow-up:** `scripts/build_fcpxml.py` and
+`scripts/build_v2_fcpxml.py` clip_type branching. The SKILL specifies the contract;
+the scripts catch up in a Phase 3 code change.
+
+### Every agent declares model in frontmatter; every handoff closes with a "Next" footer (every SKILL file)
+
+Audit and fix: every SKILL frontmatter has a correct `model:` field. Every handoff
+document closes with a footer naming the next agent, the model to use, and a paste-able
+launch prompt for the next Cowork session.
+
+Single source of truth — the same `model:` field consumed by Jeff in Cowork today
+(reads it in the SKILL frontmatter; sees the recommendation in the handoff footer)
+and by n8n via API call later (reads frontmatter as the API model parameter).
+
+**Why:** Jeff observation — *"I've been trying to select the appropriate model when
+launching each task but sometimes use Opus by default when it's not necessary. Is it
+possible to have each agent in the system launch the next agent with the right model
+selected?"* Cross-session automation isn't possible in Cowork (only Jeff starts sessions),
+but making the model recommendation visible at every transition is.
+
+### Reference example: International Institute of Minnesota (Nonprofit Fundraising)
+
+Second `Nonprofit Fundraising` example after Pacer Center. Three speakers
+(Alice Mupenzi, Blaine Joseph, Jane Graupman); 2026 Fund-a-Need gala video. Final edit
+hand-refined in FCP from a 20:47 rough cut to a 5:12 fund-a-need pitch — 76% reduction,
+13 quotes removed, 10 added (all from previously-tagged-but-unselected pool, zero
+orphans pulled), 7 narrative title cards (most replacing spoken stats), all three
+act-divider titles dropped, 1 sentence-level reorder inside Alice #11, 3 brief-locked
+beats overridden in FCP.
+
+Validates: the runtime-recommendation layer (rough cut at 4× target was a survey of
+strong material, not a tightening pass), the title-card-as-shortener pattern, the
+"brief is starting points" framing, and the segment-level reorder data model.
+
+### Cardinal Rule status
+
+Zero violations across the International Institute pipeline. Verified across all per-speaker
+tagged-quotes outputs, the merged synthesis output, all three trimmed-quotes versions
+(v1, v2, v3), both rough-cut FCPXMLs (v1, v2), and Jeff's final FCP edit. Alice #11's
+sentence-level reorder is permitted by the Cardinal Rule (verbatim words, only order
+changed) — not a violation.
+
+### Follow-ups flagged but not done in v5.0
+
+- `scripts/transcribe.py` — read the git-crypt'd key from `secrets/assembly_ai.key`;
+  drop legacy `~/Desktop/storyboard-ops/file-api/.env` lookup. Phase 3 code change.
+- `scripts/build_fcpxml.py` and `scripts/build_v2_fcpxml.py` — branched clip_type
+  generation; segment-aware clip emission per timeline entry. Phase 3 code change.
+- `scripts/quotes_viewer_template.jsx` — bidirectional `sendPrompt()` buttons,
+  current-focus highlighting, status badges, segment-level reorder UI, source
+  attribution per segment in composite entries, runtime-recommendation toggle.
+  Phase 3 code change.
+- `SPEC-pipeline-v4.md` — n8n spec carries forward from v4.0; should be updated to
+  reflect v5.0 changes (eight agents, pipeline-state.json schema, multi-round Edit↔FCPXML
+  loop). Pending Jeff's approval before touching n8n deployment surface.
+- One-time per-machine setup: `brew install git-crypt`; export master key on primary Mac;
+  `git-crypt unlock` on each additional Mac. Documented in cowork-session-guide.md;
+  Jeff runs it once per machine.
+
+### Version bumps summary
+
+- `SKILL.md` → v5.0
+- `SKILL-transcription.md` → v5.0 (NEW)
+- `SKILL-creative-context.md` → v5.0
+- `SKILL-transcript.md` → v5.0
+- `SKILL-synthesis.md` → v5.0
+- `SKILL-edit.md` → v5.0
+- `SKILL-edit-pipeline.md` → v5.0
+- `SKILL-fcpxml-params.md` → v5.0
+- `SKILL-fcpxml.md` → v5.0
+- `SKILL-review.md` → v5.0
+- `cowork-session-guide.md` → v5.0
+- `CHANGELOG.md` → v5.0
+
+Scripts remain at v4.0.x pending the Phase 3 follow-up code changes listed above.
+
+---
+
 ## v4.0.1 — 2026-04-17
 
 Template implementation of the v4.0 Review/Edit dual-mode viewer spec.

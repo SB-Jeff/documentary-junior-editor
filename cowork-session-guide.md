@@ -1,14 +1,17 @@
 # Documentary Junior Editor — Cowork Session Guide
+### Version 5.0 | April 2026
 
 ## Overview
 
 This guide walks through running the full documentary editing pipeline in Cowork sessions. Each agent runs as a separate Cowork session. Jeff drives every creative decision — the agents do the heavy lifting between decision points.
 
+The pipeline has eight agents. Each agent declares its required model in its SKILL frontmatter. Every handoff document closes with a "Next agent + model + launch prompt" footer so transitions between sessions are paste-and-pick rather than reconstructed from memory.
+
 ---
 
 ## Before You Start: Confirm the Skill Is Up to Date
 
-The `documentary-junior-editor` skill evolves between projects — the v4.0 release that introduced the Rough Cut → Discussion → Reduction workflow is a recent example. Before launching any new project (or any new session within an active project), confirm the local copy of `documentary-junior-editor/` matches the latest on GitHub. If it doesn't, pull first.
+The `documentary-junior-editor` skill evolves between projects — v5.0 (segments + timeline entries, the new Transcription Agent, universal versioning) is a recent example. Before launching any new project (or any new session within an active project), confirm the local copy of `documentary-junior-editor/` matches the latest on GitHub. If it doesn't, pull first.
 
 The repo lives at **github.com/SB-Jeff/documentary-junior-editor** and is normally cloned to two places on a working Mac:
 
@@ -38,6 +41,27 @@ If your local copy has uncommitted changes you want to keep first, see [After Se
 
 ---
 
+## One-Time Per-Machine Setup: git-crypt for AssemblyAI Key
+
+The Transcription Agent reads its AssemblyAI key from `documentary-junior-editor/secrets/assembly_ai.key`, which is git-crypt encrypted in the `storyboard-ops` repo. Each Mac you work on needs a one-time setup:
+
+```bash
+brew install git-crypt
+# On primary Mac (one-time): export the master key
+cd ~/Desktop/storyboard-ops
+git-crypt export-key ~/git-crypt-storyboard-ops.key
+# Move that .key file to a safe location (1Password / USB / encrypted drive)
+
+# On every Mac (including primary, after fresh clone): unlock once
+git-crypt unlock ~/path/to/git-crypt-storyboard-ops.key
+```
+
+After unlocking, `git pull` retrieves `secrets/assembly_ai.key` in cleartext form for the agent to read. If you skip the unlock step, the Transcription Agent fails fast with the exact remediation command — no troubleshooting required.
+
+**You only do this once per machine.** It's not part of the per-project setup.
+
+---
+
 ## Project Folder Structure
 
 Before starting, confirm the project SSD has this structure:
@@ -51,11 +75,12 @@ Before starting, confirm the project SSD has this structure:
   graphics/
   handoffs/                      ← single project: write here directly
                                    multi-project SSD: use handoffs/[project-slug]/
+                                   pipeline-state.json lives here
   media/                         ← all raw footage (flat, no camera subfolders)
   music/
   transcripts/
-    audio/                       ← exported .mp3 per interview subject
-    text/                        ← transcripts land here (auto or manual)
+    audio/                       ← exported audio per interview subject (.mp3, .wav, .m4a, .mov, .mp4)
+    text/                        ← transcripts land here (Transcription Agent fills this in)
   XML/
     exports/                     ← captioned source FCPXMLs (one per speaker) + sample XML
     imports/                     ← generated rough-cut FCPXMLs land here
@@ -68,34 +93,36 @@ Before the editing pipeline can start, the Media Agent (or manual prep) must hav
 
 1. **Footage ingested** to `media/` folder
 2. **FCP library created** with Interview and B-roll events
-3. **Multicams built** (one per interview subject, audio-synced)
-4. **Audio exported** — one .mp3 per interview subject, saved to `transcripts/audio/`
-5. **Captioned FCPXMLs exported** — one .fcpxmld per interview subject, saved to `XML/exports/` (used later by FCPXML Agent)
-6. **Sample XML exported** — one per project, saved to `XML/exports/` (used later by FCPXML Agent for format/ID reference)
+3. **Multicams built** (one per interview subject, audio-synced) — *or single-clip interviews where multicams aren't needed; the pipeline handles both shapes*
+4. **Audio exported** — one audio file per interview subject in `transcripts/audio/`
+5. **Captioned FCPXMLs exported** — one .fcpxmld per interview subject, saved to `XML/exports/`
+6. **Sample XML exported** — one per project, saved to `XML/exports/` (FCPXML Params Agent reads this for format/ID reference and clip_type detection)
 
 ---
 
 ## Pipeline Steps
 
-### Step 0: Auto-Transcription
+### Step 0: Transcription Agent
 
-**What it does:** Sends each .mp3 in `transcripts/audio/` to AssemblyAI for transcription with speaker diarization. Saves formatted .txt transcripts to `transcripts/text/`. Skips any audio file that already has a matching .txt.
+**Skill file:** `SKILL-transcription.md`
+**Model:** Sonnet 4.6
+**Session type:** Cowork — runs first when audio is present, no transcripts on disk
 
-**Starter prompt — copy and paste into a new Cowork session:**
+**What it does:** Detects audio files in `transcripts/audio/`, derives speaker names from filenames and confirms with Jeff, extracts audio from any video containers (.mov, .mp4) using ffmpeg in the sandbox, calls AssemblyAI with retry logic, validates each transcript (non-empty, has timecodes, has speaker labels, plausible word count), and writes to `transcripts/text/`. Emits `handoffs/transcription-summary-v[N].md`.
 
-> Transcribe the interview audio files for this project. The audio files are in `transcripts/audio/` and the transcripts should be saved to `transcripts/text/`. Use the transcription script at `documentary-junior-editor/scripts/transcribe.py`. Before running it: (1) install the required Python packages if not already installed (`pip3 install assemblyai python-dotenv --break-system-packages --user`), (2) locate the AssemblyAI API key — check `~/Desktop/storyboard-ops/file-api/.env` first, then check for a `.env` file in `documentary-junior-editor/`. Run the script against the project folder, monitor for errors, and verify that one .txt file was created per .mp3 in `transcripts/text/`. Report the speaker count and utterance count for each transcript when done.
+Reads the AssemblyAI key from `documentary-junior-editor/secrets/assembly_ai.key` (git-crypt decrypted). If git-crypt isn't unlocked on this Mac, fails fast with the exact remediation command.
 
-**First-time setup notes (the starter prompt handles this, but for reference):**
-1. Python packages needed: `assemblyai` and `python-dotenv`
-2. The script searches for the API key in multiple locations automatically:
-   - `documentary-junior-editor/.env` (project-local)
-   - `~/Desktop/storyboard-ops/file-api/.env` (repo — Mac mini, Mac Studio, MacBook Pro)
-3. If neither location has the key, set it explicitly: `ASSEMBLYAI_API_KEY=your_key`
+**Starter prompt — copy and paste into a new Cowork session (set model to Sonnet 4.6):**
+
+> You are the Transcription Agent. Read `documentary-junior-editor/SKILL-transcription.md` and follow it exactly. The project folder is mounted. Detect audio files in `transcripts/audio/`, derive speaker names from filenames and confirm with me, run AssemblyAI on each via the sandbox, and save formatted transcripts to `transcripts/text/`. Save `handoffs/transcription-summary-v1.md` (or higher version if running again). Update `handoffs/pipeline-state.json` accordingly.
 
 **What to check when it's done:**
-- One .txt file per .mp3 in `transcripts/text/`
+- One .txt file per audio file in `transcripts/text/`
+- `handoffs/transcription-summary-v[N].md` reports speaker count and validation results per transcript
 - Open each transcript and spot-check speaker labels and timestamps
 - Flag any interviews with audio issues before proceeding
+
+**Trigger:** the Creative Context Agent on launch checks for audio without transcripts. If found, it pauses and gives you this starter prompt directly. You don't need to run Step 0 manually unless you want to.
 
 ---
 
@@ -105,61 +132,76 @@ Before the editing pipeline can start, the Media Agent (or manual prep) must hav
 **Model:** Opus 4.6
 **Session type:** Cowork — collaborative with Jeff
 
+**What's new in v5.0:** Phase 0 Discovery — the agent searches Google Drive (project folder by path or by keyword) and Gmail (project name + client domain) for relevant context, surfaces candidates with one-line summaries, and lets you approve which to ingest. Falls back to manual upload if Drive/Gmail connectors aren't connected.
+
 **Inputs needed in project folder:**
-- Interview transcripts in `transcripts/text/`
-- Creative Launch transcript or notes (if available — Jeff can provide context conversationally if not)
-- Interview guide (if available)
+- Interview transcripts in `transcripts/text/` (Transcription Agent produces these if needed; the Creative Context Agent will pause for it on launch if missing)
+- *Optional:* Creative Launch transcript or notes, interview guide, messaging framework — Discovery picks these up automatically if they're in your Drive project folder, or you can upload manually
 
-**Starter prompt — copy and paste into a new Cowork session:**
+**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.6):**
 
-> You are the Creative Context Agent. Read `documentary-junior-editor/SKILL-creative-context.md` and follow it exactly. The project folder is mounted — read all available documents (Creative Launch transcript, interview guide, interview transcripts in `transcripts/text/`, and any reference examples in `documentary-junior-editor/reference-examples/`). Then work with me to develop and approve a 3-act narrative structure. If this SSD already hosts another project under `handoffs/`, establish the project slug for this deliverable up front and write all outputs to `handoffs/[project-slug]/` instead of flat `handoffs/`. Save the approved structure to `act-structure.md` and the creative brief to `creative-brief-summary.md`.
+> You are the Creative Context Agent. Read `documentary-junior-editor/SKILL-creative-context.md` and follow it exactly. The project folder is mounted. First, run Phase 0 Discovery — search Google Drive and Gmail for project context (project name: [PROJECT NAME], client domain: [CLIENT DOMAIN if any]) and surface candidates for my approval. Then read all approved documents plus the interview transcripts in `transcripts/text/`, plus reference examples in `documentary-junior-editor/reference-examples/`. Work with me to develop and approve a 3-act narrative structure. Save `creative-brief-summary-v1.md` and `act-structure-v1.md` (or higher version) to `handoffs/`. Update `handoffs/pipeline-state.json`. If audio is detected without transcripts, pause and give me the Transcription Agent launch prompt before proceeding. If this SSD already hosts another project, establish the project slug for this deliverable up front and write all outputs to `handoffs/[project-slug]/` instead of flat `handoffs/`.
 
 **What happens:**
-1. Agent reads all available project documents and transcripts
-2. Agent confirms whether the SSD is single-project or multi-project, and establishes the project slug if needed
-3. Agent proposes a 3-act narrative structure
-4. Jeff and agent iterate until the structure is approved
+1. Audio-detection check: if audio is present without transcripts, pause and provide Transcription Agent launch prompt
+2. Phase 0 Discovery: search Drive + Gmail, surface candidates, you approve
+3. Agent reads approved documents, transcripts, and reference examples
+4. Agent confirms whether the SSD is single-project or multi-project, establishes the project slug if needed
+5. Agent proposes a 3-act narrative structure
+6. Jeff and agent iterate until the structure is approved
+7. Agent emits versioned outputs and updates `pipeline-state.json`
 
-**Outputs saved to `handoffs/` (or `handoffs/[project-slug]/` for multi-project SSDs):**
-- `act-structure.md` — Jeff-approved act labels and narrative roadmaps
-- `creative-brief-summary.md` — editorial context and priorities
+**Outputs saved to `handoffs/` (or `handoffs/[project-slug]/`):**
+- `creative-brief-summary-v[N].md` — editorial context and priorities (in v5.0 framing — "starting points, not constraints")
+- `act-structure-v[N].md` — Jeff-approved act labels and narrative roadmaps
+- `pipeline-state.json` updated
 
 **Done when:** Jeff has approved the act structure and both handoff files are saved.
 
 ---
 
-### Step 2: Transcript Agent (one session per interview subject)
+### Step 2: FCPXML Params Agent + Transcript Agents (parallel fan-out)
+
+These two run in parallel after the Creative Context Agent completes. They have no dependency on each other; only on the Creative Context outputs.
+
+#### Step 2a: FCPXML Params Agent
+
+**Skill file:** `SKILL-fcpxml-params.md`
+**Model:** Sonnet 4.6
+**Session type:** Cowork — autonomous
+
+**What's new in v5.0:** Per-interview `clip_type` detection — multicam vs. single-clip. The output `fcpxml-params-v[N].md` carries a `## Clip Types` table per interview, with the existing format/ID fields adjusted per clip type.
+
+**Starter prompt — copy and paste into a new Cowork session (set model to Sonnet 4.6):**
+
+> You are the FCPXML Params Agent. Read `documentary-junior-editor/SKILL-fcpxml-params.md` and follow it exactly. The project folder is mounted. Read the sample narrative XML and per-interview captioned XMLs from `XML/exports/`. For each interview, detect whether it's multicam or single-clip and extract the appropriate FCPXML parameters (media reference IDs, angle IDs for multicam, asset ref ID + format for single-clip). Save `fcpxml-params-v1.md` (or higher) to `handoffs/`. Update `handoffs/pipeline-state.json`.
+
+#### Step 2b: Transcript Agent (one session per interview subject)
 
 **Skill file:** `SKILL-transcript.md`
 **Model:** Sonnet 4.6
 **Session type:** Cowork — runs per speaker, can run in parallel
 
-Run one Cowork session per interview subject. Each session processes only its assigned transcript.
+**What's new in v5.0:** Segment decomposition at tag time. Each tagged quote includes a `segments[]` array with verbatim text and per-segment timecodes — the source pool the Edit Agent's timeline entries reference.
 
 **Inputs:**
-- `handoffs/act-structure.md` (from Step 1)
-- `handoffs/creative-brief-summary.md` (from Step 1)
+- `handoffs/act-structure-v[N].md` (latest version from Step 1)
+- `handoffs/creative-brief-summary-v[N].md` (latest version from Step 1)
 - One transcript from `transcripts/text/`
 
-**Starter prompt — copy and paste into a new Cowork session (one per speaker):**
+**Starter prompt — copy and paste into a new Cowork session (one per speaker, set model to Sonnet 4.6):**
 
-> You are the Transcript Agent. Read `documentary-junior-editor/SKILL-transcript.md` and follow it exactly. Your assigned interview is `transcripts/text/[SPEAKER NAME].txt`. Read `handoffs/act-structure.md` and `handoffs/creative-brief-summary.md` for context, then read the reference examples in `documentary-junior-editor/reference-examples/`. Catalog every usable quote from the assigned transcript — tagged by act label, verbatim, with rationale. Save all four required output files to `handoffs/`: tagged quotes JSON, orphans, discards, and content summary. Verify all four files exist on disk before reporting completion.
+> You are the Transcript Agent. Read `documentary-junior-editor/SKILL-transcript.md` and follow it exactly. Your assigned interview is `transcripts/text/[SPEAKER NAME].txt`. Read the latest `handoffs/act-structure-v[N].md` and `handoffs/creative-brief-summary-v[N].md` for context, plus reference examples in `documentary-junior-editor/reference-examples/`. Catalog every usable quote from the assigned transcript — tagged by act label, verbatim, with rationale, and decompose each into `segments[]` per the v5.0 schema. Save all four required output files (versioned `-v[N]`) to `handoffs/`: tagged quotes JSON with segments, orphans, discards, and content summary. Verify all four files exist on disk before reporting completion. Update `handoffs/pipeline-state.json`.
 
 *(Replace `[SPEAKER NAME]` with the actual speaker name. For multi-project SSDs, replace `handoffs/` with `handoffs/[project-slug]/` throughout.)*
 
-**What happens:**
-1. Agent reads the approved act structure and its assigned transcript
-2. Catalogs every usable quote — tagged by act label, verbatim, with rationale
-3. Flags orphan quotes that don't fit any act
-4. Summarizes what was excluded and why
-
 **Outputs saved to `handoffs/` (four files per speaker):**
-- `[speaker-slug]-tagged-quotes.json`
-- `[speaker-slug]-orphans.md`
-- `[speaker-slug]-discards.md`
-- `[speaker-slug]-summary.md`
+- `[speaker-slug]-tagged-quotes-v[N].json` (with segments[])
+- `[speaker-slug]-orphans-v[N].md`
+- `[speaker-slug]-discards-v[N].md`
+- `[speaker-slug]-summary-v[N].md`
 
-**Done when:** All four files per speaker are verified on disk. Wait for ALL speakers to complete before moving to Step 3.
+**Done when:** All four files per speaker are verified on disk for every speaker. Wait for ALL speakers' Transcript Agents AND the FCPXML Params Agent to complete before moving to Step 3.
 
 ---
 
@@ -169,121 +211,96 @@ Run one Cowork session per interview subject. Each session processes only its as
 **Model:** Sonnet 4.6
 **Session type:** Cowork — mostly autonomous, surfaces cross-interview insights
 
-**Inputs:**
-- All per-speaker outputs from Step 2 (`handoffs/*-tagged-quotes.json`, etc.)
-- `handoffs/act-structure.md`
-- `handoffs/creative-brief-summary.md`
+**What's new in v5.0:** Segments preserved through the merge. Cross-speaker version-consistency check (warns if speakers based on different Creative Context versions).
 
-**Starter prompt — copy and paste into a new Cowork session:**
+**Starter prompt — copy and paste into a new Cowork session (set model to Sonnet 4.6):**
 
-> You are the Synthesis Agent. Read `documentary-junior-editor/SKILL-synthesis.md` and follow it exactly. All per-speaker Transcript Agent sessions are complete. Discover all per-speaker files in `handoffs/`, validate that each speaker has all four required files, then merge them into combined handoff documents. Produce the cross-interview narrative assessment. Save all merged outputs to `handoffs/`: `tagged-quotes.json`, `orphan-quotes.md`, `discard-summary.md`, and `transcript-summary.md`.
-
-**What happens:**
-1. Validates that all per-speaker files are present (four files per speaker)
-2. Merges per-speaker tagged quotes into a single renumbered list
-3. Merges orphan lists, discard summaries, and content summaries
-4. Produces a cross-interview narrative assessment — patterns, redundancies, and opportunities that only become visible when all interviews are seen together
+> You are the Synthesis Agent. Read `documentary-junior-editor/SKILL-synthesis.md` and follow it exactly. All per-speaker Transcript Agent sessions are complete. Discover all per-speaker files in `handoffs/`, validate all four required files per speaker plus that all speakers were tagged against the same Creative Context version, then merge into combined handoff documents preserving the per-quote `segments[]` arrays. Produce the cross-interview narrative assessment. Save versioned merged outputs (`tagged-quotes-v[N].json`, `orphan-quotes-v[N].md`, `discard-summary-v[N].md`, `transcript-summary-v[N].md`) to `handoffs/`. Update `handoffs/pipeline-state.json`.
 
 **Outputs saved to `handoffs/`:**
-- `tagged-quotes.json` — merged, renumbered across all speakers
-- `orphan-quotes.md` — combined orphans
-- `discard-summary.md` — combined discards
-- `transcript-summary.md` — combined summary with narrative assessment
+- `tagged-quotes-v[N].json` — merged, renumbered across all speakers, segments preserved
+- `orphan-quotes-v[N].md` — combined orphans
+- `discard-summary-v[N].md` — combined discards
+- `transcript-summary-v[N].md` — combined summary with narrative assessment
 
 **Done when:** All merged files are saved. Jeff reviews the narrative assessment before proceeding.
 
 ---
 
-### Step 4: Edit Agent — Rough Cut → Discussion → Reduction
+### Step 4: Edit Agent ↔ FCPXML Agent (multi-round loop)
 
-**Skill file:** `SKILL-edit.md` (v4.0)
+The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves the cut. Each round emits versioned outputs; previous rounds stay on disk.
+
+#### Step 4a: Edit Agent
+
+**Skill file:** `SKILL-edit.md`
 **Model:** Opus 4.6
 **Session type:** Cowork — deeply collaborative with Jeff
 
-This is the core creative session. As of v4.0, the Edit Agent runs in **three explicit phases** that Jeff and the agent move through together:
-
-1. **Rough Cut.** First-pass selection that includes every quote that plausibly earns its place. Expect the rough cut to land at 1.5×–2× the target runtime — that's the design, not a failure. A rough cut that lands at target means quotes got missed.
-2. **Discussion.** Collaborative review of the rough cut. The agent brings a proposal — which beats it would cut first if forced to reduce, which are load-bearing, which are uncertain, and why — so Jeff has a reactable surface. The viewer's **Review mode** is the primary surface here. The question is "does this tell the story?"
-3. **Reduction.** Targeted trimming, splitting, and reordering against the agreed target runtime, informed by the Discussion. The viewer's **Edit mode** is the primary surface here. The question shifts to "which words come out?"
-
-The interactive viewer that the agent builds (template at `documentary-junior-editor/scripts/quotes_viewer_template.jsx`) supports both modes via a toggle at the top — Review mode renders selected quotes as continuous narrative with no controls; Edit mode is the full interactive interface with trim controls, drag handles, splits, and interstitial placement. Both modes read from the same data block, so changes in one reflect in the other immediately.
+**What's new in v5.0:**
+- **Quotes are clay; the timeline is the work product.** The data model is segments + timeline entries. The agent never says "split #11 into parts" — it produces new timeline entries when manipulation requires it. Splitting is implicit.
+- **The HTML artifact is the work surface, not the deliverable.** Created at session start, updated via `update_artifact` after every decision, bidirectional via `sendPrompt()`. Auto-scrolls to and highlights current focus quote.
+- **Full quote text always inlined in chat on first reference.** No more "what does that quote actually say?"
+- **Wide rough cut + per-quote runtime recommendation.** `must-keep / probable-keep / probable-cut / optional` toward 2× target. Viewer toggles between full inventory and recommended-tight view.
+- **Title-card-as-shortener** as a named pattern; agent proposes title cards in the rough cut when content reads cleaner on screen than spoken.
+- **Context-beat suggestions** — agent flags narrative gaps where research-sourced context would land harder; surfaces in `edit-handoff.md` with `(research needed)` tag.
+- **Brief is starting points** — language softened from v4.0 "must stay" to "currently planned to stay."
+- **Three-phase Rough Cut → Discussion → Reduction loops**, not linear. Each round emits a new versioned `trimmed-quotes-v[N].json` and triggers a fresh FCPXML run.
 
 **Inputs:**
-- `handoffs/tagged-quotes.json` (merged, from Step 3)
-- `handoffs/act-structure.md`
-- `handoffs/creative-brief-summary.md`
-- `handoffs/transcript-summary.md` (with narrative assessment)
+- `handoffs/tagged-quotes-v[N].json` (latest merged, with segments)
+- `handoffs/act-structure-v[N].md`
+- `handoffs/creative-brief-summary-v[N].md`
+- `handoffs/transcript-summary-v[N].md`
+- For re-entry rounds: `handoffs/review-notes.md` (your notes from watching the previous FCPXML)
 - Reference examples in `documentary-junior-editor/reference-examples/`
 
-**Starter prompt — copy and paste into a new Cowork session:**
+**Starter prompt — round 1 (set model to Opus 4.6):**
 
-> You are the Edit Agent. Read `documentary-junior-editor/SKILL-edit.md` (v4.0) and follow it exactly. Read all handoff documents from `handoffs/` — act structure, creative brief summary, transcript summary, and the merged `tagged-quotes.json`. Also read the reference examples in `documentary-junior-editor/reference-examples/`. Build the interactive JSX artifact (template at `documentary-junior-editor/scripts/quotes_viewer_template.jsx`) with Review/Edit mode toggle, default landing on Review. Then take us through the three phases — Rough Cut (over-inclusive first pass, no runtime gating), Discussion (collaborative review with a proposal of what to cut first), and Reduction (targeted trim against agreed runtime). Run the Cardinal Rule verification before saving the final outputs. Save: `handoffs/edit-handoff.md`, `handoffs/trimmed-quotes.json`, and `handoffs/[project-slug]_quotes_view.html`.
+> You are the Edit Agent. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly. Read all latest handoff documents from `handoffs/` per `pipeline-state.json` — act structure, creative brief summary, transcript summary, and the merged tagged-quotes (with segments) — plus reference examples in `documentary-junior-editor/reference-examples/`. Build the live HTML artifact at session start (per the v5.0 spec — bidirectional, auto-scroll to focus, full quote text inlined in chat on first reference). Take us through Rough Cut → Discussion → Reduction. Run Cardinal Rule verification before saving. Save `handoffs/edit-handoff-v1.md`, `handoffs/trimmed-quotes-v1.json` (timeline entries with segments), and `handoffs/[project-slug]_quotes_view.html` (final state of the artifact). Update `handoffs/pipeline-state.json`.
 
-**Re-entry prompt — if revisiting the edit after reviewing the FCPXML in FCP:**
+**Re-entry prompt — round 2+ (after watching FCPXML in FCP):**
 
-> You are the Edit Agent. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly. This is a re-entry session. Read `handoffs/edit-handoff.md` for context from the previous session and `handoffs/review-notes.md` for my notes from watching the FCPXML cut, then load the full `handoffs/tagged-quotes.json` into the interactive artifact. I want to make changes to the paper cut based on my review in Final Cut Pro.
+> You are the Edit Agent. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly. This is round [N+1]. Read `handoffs/edit-handoff-v[N].md` for context from the previous round, `handoffs/review-notes.md` for my notes from watching the FCPXML cut, the latest `handoffs/trimmed-quotes-v[N].json`, and `handoffs/pipeline-state.json`. Load the live HTML artifact from `handoffs/[project-slug]_quotes_view.html`. Work with me on revisions. Save `handoffs/edit-handoff-v[N+1].md`, `handoffs/trimmed-quotes-v[N+1].json`, and update the artifact. Update `handoffs/pipeline-state.json`.
 
-**What happens:**
-1. Agent loads all quotes into the interactive JSX artifact (with Review/Edit toggle)
-2. **Rough Cut phase:** agent produces an over-inclusive first pass — every quote that plausibly belongs, no runtime gating
-3. **Discussion phase:** Jeff reads the rough cut in Review mode; agent surfaces what it would cut first and why
-4. **Reduction phase:** agent and Jeff trim, split, reorder, and deselect in Edit mode against the agreed target runtime
-5. Cardinal Rule verification runs on all trimmed quotes before save
+**Outputs saved to `handoffs/` per round:**
+- `edit-handoff-v[N].md` — structured handoff for the FCPXML Agent (paper cut state, notes, key files)
+- `trimmed-quotes-v[N].json` — timeline of entries with `segments[]`, all editorial decisions
+- `[project-slug]_quotes_view.html` — live artifact's final state for this round (overwrites; same name across rounds)
 
-**Outputs saved to `handoffs/` (three files):**
-- `edit-handoff.md` — structured handoff for the FCPXML Agent (paper cut state, notes, key files)
-- `trimmed-quotes.json` — final paper cut with all editorial decisions
-- `[project-slug]_quotes_view.html` — self-contained HTML viewer capturing the final state
-
-**Done when:** Jeff approves the paper cut, the Cardinal Rule verification passes, and all three output files are saved.
-
----
-
-### Step 5: FCPXML Agent
+#### Step 4b: FCPXML Agent
 
 **Skill file:** `SKILL-fcpxml.md` (+ `SKILL-fcpxml-params.md` for reference IDs)
 **Model:** Sonnet 4.6
 **Session type:** Cowork — mostly autonomous
 
-**Inputs:**
-- `handoffs/trimmed-quotes.json` (from Step 4)
-- `handoffs/edit-handoff.md` (from Step 4)
-- `handoffs/act-structure.md`
-- `handoffs/fcpxml-params.md` (generated from sample XML — contains reference IDs)
-- Captioned FCPXMLs in `XML/exports/` (for timecode cross-reference)
-- Sample XML in `XML/exports/` (for format/ID reference)
+**What's new in v5.0:**
+- **Branched generation by `clip_type`.** Multicam → `<mc-clip>` references with angle selection (existing). Single-clip → `<asset-clip>` references directly with format, tcFormat, audioRole. Captions match against direct children of `<asset-clip>` in the single-clip case. Mixed projects handled per-interview.
+- **Segment-aware clip generation.** Each timeline entry's `segments[]` produces one clip per source segment in entry order. Internal drops within an entry produce gaps in the source-clip play but stay within the entry's clip cluster.
+- **Caption-matcher TC-window optimization** promoted to standard practice (±15s buffer per quote).
 
-**Starter prompt — copy and paste into a new Cowork session:**
+**Starter prompt — round N (set model to Sonnet 4.6):**
 
-> You are the FCPXML Agent. Read `documentary-junior-editor/SKILL-fcpxml-params.md` and follow it exactly. First, read the sample narrative XML from `XML/exports/` and extract the FCPXML parameters (media reference IDs, angle IDs, format info) for each speaker. Save the parameters to `handoffs/fcpxml-params.md`. Then read `handoffs/trimmed-quotes.json`, `handoffs/edit-handoff.md`, and `handoffs/act-structure.md`, cross-reference timecodes against the captioned FCPXMLs, and generate an import-ready `.fcpxml` file. Save the output to `XML/imports/[project-slug]_rough_cut.fcpxml` (match the naming convention in `edit-handoff.md` if it specifies one).
-
-**What happens:**
-1. Agent reads the paper cut and source XMLs
-2. Generates an import-ready FCPXML
-3. Notifies Jeff when the cut is ready to review in FCP
+> You are the FCPXML Agent. Read `documentary-junior-editor/SKILL-fcpxml-params.md` and `documentary-junior-editor/SKILL-fcpxml.md` and follow them exactly. The project folder is mounted. Per `handoffs/pipeline-state.json`, read the latest `handoffs/fcpxml-params-v[N].md`, `handoffs/trimmed-quotes-v[N].json` (timeline entries with segments), `handoffs/edit-handoff-v[N].md`, and `handoffs/act-structure-v[N].md`. Cross-reference timecodes against the captioned FCPXMLs in `XML/exports/`, branch generation logic by per-interview `clip_type`, and emit one clip per source segment per timeline entry. Save the output to `XML/imports/[project-slug]_rough_cut_v[N].fcpxml` (or `_reduction_v[N].fcpxml` if the round was a Reduction emission). Update `handoffs/pipeline-state.json`.
 
 **Output:**
-- Final `.fcpxml` file in `XML/imports/`, ready to import into Final Cut Pro
+- `[project-slug]_rough_cut_v[N].fcpxml` (or `_reduction_v[N].fcpxml`) in `XML/imports/`, ready to import into Final Cut Pro
 
-**Done when:** Jeff imports the FCPXML into FCP and confirms it loads correctly.
+**Done when:** Jeff imports the FCPXML into FCP, watches it, and either approves (proceed to Step 5 — Skill Review) or appends notes to `handoffs/review-notes.md` and re-launches the Edit Agent for the next round.
 
 ---
 
-### Step 6: Skill Review Agent (post-project)
+### Step 5: Skill Review Agent (post-project)
 
 **Skill file:** `SKILL-review.md`
-**Model:** Sonnet 4.6
-**Session type:** Cowork — runs after the project is complete
+**Model:** Opus 4.6
+**Session type:** Cowork — runs after Jeff approves the final cut
 
-**Starter prompt — copy and paste into a new Cowork session:**
+**What's new in v5.0:** Reads versioned diffs across all rounds — `act-structure-v1.md` vs. `v2.md`, `trimmed-quotes-v1.json` vs. `v2.json` vs. `v3.json`, etc. — as first-class data for lessons-learned extraction.
 
-> You are the Skill Review Agent. Read `documentary-junior-editor/SKILL-review.md` and follow it exactly. This project is complete. Review the handoff files in `handoffs/`, the final edit output, and any notes I share about what worked and what didn't. Extract editorial patterns and lessons learned. Create a `Final_Edit.txt` and `lessons-learned.md` in a new folder under `documentary-junior-editor/reference-examples/[project-name]/`, and copy the raw transcripts there too. If any patterns should update the main skill files, propose the changes for my review.
+**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.6):**
 
-**What happens:**
-1. Reviews session logs from all pipeline steps
-2. Extracts editorial patterns and lessons learned
-3. Updates reference examples and knowledge base in the skill folder
-4. Proposes changes to SKILL files and CHANGELOG.md if patterns warrant it
+> You are the Skill Review Agent. Read `documentary-junior-editor/SKILL-review.md` and follow it exactly. This project is complete. Review the handoff files in `handoffs/` (all versions, not just latest), the final FCP edit if I provide one, `handoffs/pipeline-state.json` for the round-by-round trajectory, and any notes I share. Extract editorial patterns and lessons learned. Create a `Final_Edit.txt` and `lessons-learned.md` in a new folder under `documentary-junior-editor/reference-examples/[project-name]/`, and copy the raw transcripts there too. If patterns warrant changes to the SKILL files, propose them for my review. End with the GitHub push command.
 
 **This is the self-learning loop** — every completed project makes the skill smarter for the next one. **Don't skip the commit step that follows** (see [After Session Review](#after-session-review-commit-skill-updates-back-to-github) below) — without it, the lessons stay trapped on whichever machine ran the review.
 
@@ -293,19 +310,23 @@ The interactive viewer that the agent builds (template at `documentary-junior-ed
 
 | Step | Agent | Model | Collaborative? | Key Output |
 |------|-------|-------|----------------|------------|
-| 0 | Auto-Transcription | — (script) | No | .txt transcripts |
-| 1 | Creative Context | Opus 4.6 | Yes | act-structure.md |
-| 2 | Transcript (×N) | Sonnet 4.6 | Light | per-speaker tagged quotes |
-| 3 | Synthesis | Sonnet 4.6 | Light | merged tagged-quotes.json |
-| 4 | Edit | Opus 4.6 | Yes — heavy (3 phases) | trimmed-quotes.json + edit-handoff.md + HTML viewer |
-| 5 | FCPXML | Sonnet 4.6 | Light | .fcpxml file |
-| 6 | Skill Review | Sonnet 4.6 | Light | updated skill knowledge |
+| 0 | Transcription | Sonnet 4.6 | Light (speaker confirmation) | .txt transcripts + summary |
+| 1 | Creative Context | Opus 4.6 | Yes | act-structure-v[N].md (with Phase 0 Discovery) |
+| 2a | FCPXML Params | Sonnet 4.6 | No | fcpxml-params-v[N].md (with clip_type) |
+| 2b | Transcript (×N speakers) | Sonnet 4.6 | Light | per-speaker tagged quotes (with segments) |
+| 3 | Synthesis | Sonnet 4.6 | Light | merged tagged-quotes-v[N].json |
+| 4a | Edit (round N) | Opus 4.6 | Yes — heavy (3 phases, live artifact) | trimmed-quotes-v[N].json + edit-handoff-v[N].md |
+| 4b | FCPXML (round N) | Sonnet 4.6 | No | rough_cut_v[N].fcpxml |
+| ↺ | (Jeff watches; loops 4a → 4b until approved) |  |  |  |
+| 5 | Skill Review | Opus 4.6 | Light | updated reference-examples + SKILL files |
+
+`pipeline-state.json` in `handoffs/` tracks current versions and dependency edges throughout. Stale-state warnings surface in agent launches.
 
 ---
 
 ## After Session Review: Commit Skill Updates Back to GitHub
 
-The Skill Review Agent (Step 6) often produces changes to skill files, reference examples, or `CHANGELOG.md`. **These changes need to be committed back to GitHub** so the next project — and any other machine you run on — picks them up automatically via the freshness check at the start of the next session.
+The Skill Review Agent (Step 5) often produces changes to skill files, reference examples, or `CHANGELOG.md`. **These changes need to be committed back to GitHub** so the next project — and any other machine you run on — picks them up automatically via the freshness check at the start of the next session.
 
 If you skip this step, the lessons learned from this project stay trapped on whichever machine ran the review. The next project's agent will read stale skill files and make the same mistakes again.
 
@@ -338,18 +359,32 @@ git pull
 
 ## Troubleshooting
 
-**Transcription fails:** Confirm the `assemblyai` and `python-dotenv` packages are installed (`pip3 install assemblyai python-dotenv --break-system-packages --user`). Confirm `~/Desktop/storyboard-ops/file-api/.env` exists with the AssemblyAI key. Check internet connection.
+**Transcription Agent fails immediately with git-crypt message:** Run `git-crypt unlock ~/path/to/master-key.key` on this Mac (one-time per machine). After unlocking, `git pull` retrieves the AssemblyAI key file in cleartext. The agent's error message includes the exact command to run.
 
-**Transcript Agent won't start:** Verify both `handoffs/act-structure.md` and `handoffs/creative-brief-summary.md` exist from Step 1. (For multi-project SSDs: check `handoffs/[project-slug]/`.)
+**Transcription Agent skips files unexpectedly:** It skips audio files that already have a matching .txt in `transcripts/text/`. To force re-transcription, delete or rename the existing .txt first.
 
-**Synthesis Agent flags missing files:** Each speaker needs exactly four files in `handoffs/`. Go back to the Transcript Agent session for the flagged speaker and verify all files were saved.
+**Creative Context Agent says "audio detected without transcripts":** Run the Transcription Agent first using the launch prompt the agent gave you. Then return to Creative Context and re-launch.
 
-**Edit Agent can't find quotes:** Confirm `handoffs/tagged-quotes.json` exists and is valid JSON (the merged output from the Synthesis Agent, not per-speaker files).
+**Creative Context Discovery doesn't find Drive/Gmail content:** Check that the Google Drive and Gmail MCP connectors are connected to this Cowork session. If not, connect them or paste the relevant docs manually — Discovery falls back gracefully.
 
-**Edit Agent's first pass is too short / hits target on first try:** The agent is treating the first pass as a draft instead of a rough cut. Remind it of the v4.0 three-phase workflow — Rough Cut should run 1.5×–2× target. Reduction is a separate, later phase.
+**Transcript Agent or Synthesis Agent surfaces a stale-state warning:** An upstream agent has run since this agent last did. Either re-run from the upstream version (the warning's recommendation), or proceed with the mismatch acknowledged. The warning includes both options.
 
-**Viewer doesn't show the Review/Edit toggle:** The agent built an old-style viewer. Have it re-read `SKILL-edit.md` (v4.0+) and rebuild — the dual-mode toggle is required as of v4.0.
+**Synthesis Agent flags missing files:** Each speaker needs four `-v[N]` files in `handoffs/`. Go back to the Transcript Agent session for the flagged speaker and verify all files were saved at the expected version.
+
+**Edit Agent's first pass is too short / hits target on first try:** The agent is treating the first pass as a draft instead of a rough cut. Remind it of the v5.0 three-phase workflow — Rough Cut should run 1.5×–2× target. Reduction is a separate, later phase. Also check the v5.0 runtime-recommendation field — quotes should be wide-tagged, not pre-trimmed.
+
+**Edit Agent abbreviates quotes in chat:** v5.0 says full quote text should be inlined on first reference. If the agent is consistently abbreviating, remind it of the live-artifact + first-reference-inlined contract from `SKILL-edit.md`.
+
+**Live HTML artifact doesn't update mid-session:** The agent should call `mcp__cowork__update_artifact` after every editorial decision. If you see chat decisions without artifact updates, the agent has drifted — remind it of the "viewer is the work surface, not the deliverable" framing.
+
+**FCPXML Agent generates wrong clip references for a single-clip interview:** Check that `fcpxml-params-v[N].md` has `clip_type: single_clip` for that interview (FCPXML Params Agent should detect this automatically; if it didn't, re-run with explicit instruction). The FCPXML Agent branches on `clip_type` per interview.
+
+**FCPXML caption matcher times out on long interviews:** v5.0 standard practice is to narrow the per-quote search window using `startTC`/`endTC` ±15s. If the agent isn't doing this, remind it of `SKILL-fcpxml.md` Phase 3 Timing Extraction guidance.
 
 **FCPXML won't import into FCP:** Check that `fcpxml-params.md` was generated from the correct sample XML for this project. Reference IDs must match the FCP library.
 
 **`git fetch` fails on the SSD with `bad object refs/Icon?`:** Finder icon artifacts in `.git/`. See the cleanup snippet in [After Session Review](#after-session-review-commit-skill-updates-back-to-github).
+
+---
+
+*v5.0 — April 2026 — see CHANGELOG.md for detailed version history.*
