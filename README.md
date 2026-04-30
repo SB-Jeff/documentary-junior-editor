@@ -26,18 +26,37 @@ SSD folder, run the transcription script, and commit improvements back.
 ### One-time setup
 
 ```bash
-# 1. Clone the repo to your Desktop (the convention the project SSD setup assumes)
+# 1. SSH access to GitHub — one keypair per machine. The comment helps you
+#    identify it later in https://github.com/settings/keys.
+ssh-keygen -t ed25519 -C "your-email — $(scutil --get ComputerName)" -f ~/.ssh/id_ed25519 -N ""
+pbcopy < ~/.ssh/id_ed25519.pub
+#    Then paste the public key at https://github.com/settings/ssh/new
+
+# 2. Clone the repo via SSH
 cd ~/Desktop
-git clone https://github.com/SB-Jeff/documentary-junior-editor.git
+git clone git@github.com:SB-Jeff/documentary-junior-editor.git
+cd documentary-junior-editor
 
-# 2. Install Python dependencies for the helper scripts
+# 3. Install git-crypt and unlock the encrypted secrets
+brew install git-crypt
+#    Get the master key from your team's secure store. For Storyboard Films,
+#    it's in Apple Passwords under "git-crypt master key — documentary-junior-editor"
+#    (synced via iCloud Keychain across team Macs). Copy the password value to
+#    clipboard, then:
+pbpaste | base64 -d > /tmp/git-crypt-master.key
+git-crypt unlock /tmp/git-crypt-master.key
+rm /tmp/git-crypt-master.key
+#    The AssemblyAI key in secrets/assembly_ai.key is now readable on this machine.
+
+# 4. Install Python dependencies for the helper scripts
 pip3 install assemblyai python-dotenv openpyxl
-
-# 3. Create a .env file for your AssemblyAI key (used by transcribe.py)
-echo "ASSEMBLYAI_API_KEY=your_key_here" > ~/Desktop/documentary-junior-editor/.env
 ```
 
-The `.env` file is gitignored — each machine needs its own.
+The decrypted `secrets/assembly_ai.key` is what the Transcription Agent
+(`SKILL-transcription.md`) reads. Older scripts (e.g., `scripts/transcribe.py`)
+may still read `ASSEMBLYAI_API_KEY` from a `.env` file — that path is being
+phased out in favor of git-crypt. If you need to run a legacy script before it's
+updated, mirror the same key value into a gitignored `.env` file.
 
 ### What NOT to do
 
