@@ -41,24 +41,51 @@ If your local copy has uncommitted changes you want to keep first, see [After Se
 
 ---
 
-## One-Time Per-Machine Setup: git-crypt for AssemblyAI Key
+## One-Time Per-Machine Setup
 
-The Transcription Agent reads its AssemblyAI key from `documentary-junior-editor/secrets/assembly_ai.key`, which is git-crypt encrypted in the `storyboard-ops` repo. Each Mac you work on needs a one-time setup:
+Two one-time setup steps per Mac. After these are done, future projects just work.
+
+### 1. Grant Claude Full Disk Access
+
+Cowork's Bash sandbox bind-mounts your project folder into a Linux VM. macOS blocks
+this for external SSDs unless the parent app has Full Disk Access. Without this, you
+get cryptic `Could not open source directory` errors and every transcription session
+falls back to host-side Terminal.
+
+- Open **System Settings → Privacy & Security → Full Disk Access**.
+- Click **+** and add **Claude** from `/Applications/`.
+- Toggle Claude ON.
+- Quit Claude entirely (Cmd+Q), then relaunch.
+
+Verify by running `ls /sessions/*/mnt/` from the Bash tool in a Cowork session — your
+connected SSD folder should appear. If you see only `outputs/`, Full Disk Access
+didn't take — check that you actually quit and relaunched Claude.
+
+### 2. Create `documentary-junior-editor/.env`
+
+The Transcription Agent reads `ASSEMBLYAI_API_KEY` from
+`documentary-junior-editor/.env` via python-dotenv. The file is gitignored.
 
 ```bash
-brew install git-crypt
-# On primary Mac (one-time): export the master key
-cd ~/Desktop/storyboard-ops
-git-crypt export-key ~/git-crypt-storyboard-ops.key
-# Move that .key file to a safe location (1Password / USB / encrypted drive)
-
-# On every Mac (including primary, after fresh clone): unlock once
-git-crypt unlock ~/path/to/git-crypt-storyboard-ops.key
+echo 'ASSEMBLYAI_API_KEY=<your-key-here>' \
+  > ~/Desktop/documentary-junior-editor/.env
 ```
 
-After unlocking, `git pull` retrieves `secrets/assembly_ai.key` in cleartext form for the agent to read. If you skip the unlock step, the Transcription Agent fails fast with the exact remediation command — no troubleshooting required.
+Substitute `<your-key-here>` with the AssemblyAI key from
+https://www.assemblyai.com/app/account.
+
+When you copy the skill folder onto a project SSD, the `.env` travels with it. If
+you start fresh from a `git clone` (which does NOT include the gitignored `.env`),
+you'll need to recreate the `.env` once on that copy.
 
 **You only do this once per machine.** It's not part of the per-project setup.
+
+### Deprecated: `secrets/assembly_ai.key` + git-crypt
+
+v5.0 used a git-crypt-encrypted key file in `secrets/assembly_ai.key`. v5.1 replaces
+this with the `.env` flow above. The legacy file can be deleted on the next Skill
+Review pass. If you encounter older docs referencing `git-crypt unlock`, ignore them
+— `.env` is the supported path.
 
 ---
 
@@ -108,13 +135,15 @@ Before the editing pipeline can start, the Media Agent (or manual prep) must hav
 **Model:** Sonnet 4.6
 **Session type:** Cowork — runs first when audio is present, no transcripts on disk
 
-**What it does:** Detects audio files in `transcripts/audio/`, derives speaker names from filenames and confirms with Jeff, extracts audio from any video containers (.mov, .mp4) using ffmpeg in the sandbox, calls AssemblyAI with retry logic, validates each transcript (non-empty, has timecodes, has speaker labels, plausible word count), and writes to `transcripts/text/`. Emits `handoffs/transcription-summary-v[N].md`.
+**What it does:** Detects audio files in `transcripts/audio/`, derives speaker names from filenames and confirms with Jeff, then presents a single bash command pointing at `documentary-junior-editor/start-editing` for Jeff to run in Terminal. After Jeff runs the command and reports back, the agent reads the new transcripts, validates each (non-empty, has timecodes, has speaker labels, plausible word count), and writes `handoffs/transcription-summary-v[N].md`.
 
-Reads the AssemblyAI key from `documentary-junior-editor/secrets/assembly_ai.key` (git-crypt decrypted). If git-crypt isn't unlocked on this Mac, fails fast with the exact remediation command.
+The host-side launcher reads the AssemblyAI key from `documentary-junior-editor/.env` (no git-crypt). If the file is missing, the agent fails fast and tells Jeff exactly what to put in it.
+
+**Why a launcher and not direct sandbox execution:** Cowork's outbound network allowlist does not include AssemblyAI. Any sandbox-side call to `api.assemblyai.com` returns 403 from the proxy. Until the allowlist changes, transcription runs on the host. The launcher consolidates everything to one bash command with no copy-paste hazards (path has no extension; no chat auto-linking).
 
 **Starter prompt — copy and paste into a new Cowork session (set model to Sonnet 4.6):**
 
-> You are the Transcription Agent. Read `documentary-junior-editor/SKILL-transcription.md` and follow it exactly. The project folder is mounted. Detect audio files in `transcripts/audio/`, derive speaker names from filenames and confirm with me, run AssemblyAI on each via the sandbox, and save formatted transcripts to `transcripts/text/`. Save `handoffs/transcription-summary-v1.md` (or higher version if running again). Update `handoffs/pipeline-state.json` accordingly.
+> Start editing. The project folder is mounted. Read `documentary-junior-editor/SKILL-transcription.md` and follow it exactly. Detect audio files in `transcripts/audio/`, confirm speaker names with me, then give me the single bash command to run the launcher. After I report back that it's done, validate the new transcripts and save `handoffs/transcription-summary-v1.md` (or higher version if running again). Update `handoffs/pipeline-state.json` accordingly.
 
 **What to check when it's done:**
 - One .txt file per audio file in `transcripts/text/`

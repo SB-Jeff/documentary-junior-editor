@@ -199,8 +199,10 @@ documentary-junior-editor/
 ├── SKILL-fcpxml.md                 ← FCPXML Agent instructions
 ├── SKILL-review.md                 ← Skill Review Agent instructions
 ├── CHANGELOG.md                    ← version history
-├── secrets/                        ← git-crypt encrypted in storyboard-ops
-│   └── assembly_ai.key             ← AssemblyAI key, read by Transcription Agent
+├── .env                            ← ASSEMBLYAI_API_KEY=... (gitignored, per-Mac)
+├── start-editing                   ← one-command host-side launcher (no extension)
+├── secrets/                        ← DEPRECATED in v5.1; remove on next review pass
+│   └── assembly_ai.key             ← legacy git-crypt path; replaced by .env
 ├── design-samples/                 ← reference fixtures for skill implementation
 │   └── single-clip/                ← Ben + Sample (Nanos 2026 Boston) — single-clip FCPXML reference
 ├── reference-examples/             ← knowledge base of completed projects
@@ -369,22 +371,29 @@ regardless of which computer you are working on.
 
 Before starting a new editing session:
 
-1. **Pull the skill from GitHub.** Run `git pull` in `~/Desktop/storyboard-ops` to ensure
-   the latest skill files and knowledge base. Then copy the skill folder into the new
-   project folder on your SSD:
-   `storyboard-ops/skills/documentary-junior-editor` → `[Project SSD]/documentary-junior-editor/`.
+1. **Pull the skill from GitHub.** Run `git pull` in `~/Desktop/documentary-junior-editor`
+   to ensure the latest skill files and knowledge base. Then copy the skill folder
+   into the new project folder on your SSD:
+   `~/Desktop/documentary-junior-editor` → `[Project SSD]/documentary-junior-editor/`.
 
    Always pull from the repo — never from a previous project folder. This ensures you
    always have the latest skill files regardless of which Mac you're on.
 
-2. **One-time per Mac: ensure git-crypt is unlocked.** The `secrets/assembly_ai.key` file
-   is git-crypt encrypted in `storyboard-ops`. Each Mac needs `git-crypt` installed
-   (`brew install git-crypt`) and the master key imported once
-   (`git-crypt unlock ~/path/to/master-key`). After that, `git pull` retrieves the file
-   in cleartext form for the agent to read. If a fresh Mac hasn't been unlocked, the
-   Transcription Agent fails with a clear message telling you what to do.
+2. **One-time per Mac: grant Claude Full Disk Access.** macOS otherwise blocks the
+   Cowork sandbox from reading external SSDs (the Read tool works through Cowork's
+   broker, but the Bash sandbox bind-mount fails with "Could not open source
+   directory" until Full Disk Access is granted). Open *System Settings → Privacy
+   & Security → Full Disk Access*, add Claude, toggle it ON, then quit and relaunch
+   Claude. Verify by running `ls /sessions/.../mnt/` from the Bash tool — the SSD
+   project folder should appear.
 
-3. **Confirm required files are present** in the project folder. The Transcription Agent
+3. **One-time per Mac: create `documentary-junior-editor/.env`.** A single line:
+   `ASSEMBLYAI_API_KEY=<your-key>`. The key comes from the AssemblyAI dashboard
+   at https://www.assemblyai.com/app/account. The `.env` file is gitignored and
+   read by `scripts/transcribe.py` via python-dotenv. There is no git-crypt
+   step in v5.1+.
+
+4. **Confirm required files are present** in the project folder. The Transcription Agent
    handles the audio-to-text path; the rest you provide:
    - `transcripts/audio/` — one audio file per interview subject (`.mp3`, `.wav`, `.m4a`,
      `.mov`, `.mp4`); the Transcription Agent will produce the matching .txt files.
@@ -397,7 +406,7 @@ Before starting a new editing session:
      Discovery searches Google Drive and Gmail for these automatically — you can also
      drop them into the project folder if discovery isn't connected.
 
-4. **Start a Creative Context Agent session** in Cowork.
+5. **Start a Creative Context Agent session** in Cowork.
    - Point Cowork at the project folder on your SSD.
    - On launch, the Creative Context Agent checks for audio without transcripts.
      If found, it pauses and gives you the launch prompt for the Transcription Agent.
@@ -408,7 +417,7 @@ Before starting a new editing session:
    - All outputs are versioned (`creative-brief-summary-v[N].md`, `act-structure-v[N].md`)
      and tracked in `pipeline-state.json`.
 
-5. **The pipeline cascades from there.** FCPXML Params Agent and one Transcript Agent per
+6. **The pipeline cascades from there.** FCPXML Params Agent and one Transcript Agent per
    interview run in parallel. Synthesis Agent merges. Edit Agent and FCPXML Agent run as
    a multi-round loop until the cut is right. Skill Review Agent runs at the end to
    capture lessons and update the knowledge base.
@@ -453,7 +462,32 @@ fallback if n8n has issues.
 
 See `CHANGELOG.md` for full version history.
 
-Current version: 5.0 — April 2026
+Current version: 5.1 — April 2026
+
+### v5.1 highlights (workflow reliability)
+
+- **Host-side launcher pattern for Transcription Agent.** Cowork's sandbox has an
+  outbound network allowlist that does not include AssemblyAI; sandbox-side
+  transcription returns 403 from the proxy. The Transcription Agent now presents
+  Jeff with a single bash command (`bash <project>/documentary-junior-editor/start-editing`),
+  which runs preflight + transcription on the host. Path has no extension to
+  avoid chat-client auto-linking. The agent owns everything around that one
+  invocation — detection, scope confirmation, post-run validation, handoff doc.
+- **Replaced git-crypt with `.env`.** AssemblyAI key now lives in
+  `documentary-junior-editor/.env` as `ASSEMBLYAI_API_KEY=...` (gitignored).
+  Removes the one-time-per-Mac unlock dance, the master-key-storage problem,
+  and the SSD-copy-not-decrypted edge case. Legacy `secrets/assembly_ai.key`
+  file is deprecated; remove on next Skill Review pass.
+- **Full Disk Access required.** Documented in Setting Up a New Project as a
+  one-time per-Mac prerequisite. Without it, Cowork's Bash sandbox cannot
+  bind-mount external SSDs and every agent fails on shell calls. Read tool
+  works (different broker), but no agent can actually run scripts. Granting
+  Full Disk Access to Claude in macOS Privacy & Security removes the
+  blocker entirely.
+- **Repo URL standardized.** Canonical clone is
+  `github.com/SB-Jeff/documentary-junior-editor` at
+  `~/Desktop/documentary-junior-editor/`. Older `storyboard-ops` references
+  removed.
 
 ### v5.0 highlights (major)
 
@@ -463,8 +497,9 @@ Current version: 5.0 — April 2026
   quotes. Splitting is implicit. Cardinal Rule preserved verbatim; framing expanded.
 - **New Transcription Agent at pipeline position 0.** Replaces the prompt-driven Step 0
   script invocation. Owns audio detection, speaker confirmation, format conversion,
-  AssemblyAI calls with retry logic, output validation. Reads the API key from a
-  git-crypt-encrypted file in `storyboard-ops`. Runs entirely in the Cowork sandbox.
+  AssemblyAI calls with retry logic, output validation.
+  *(Note: as of v5.1, transcription itself runs via host-side launcher, not in
+  the sandbox — see v5.1 highlights above.)*
 - **Universal pipeline versioning.** Every handoff is `-v[N]` suffixed; no agent ever
   overwrites. `pipeline-state.json` tracks current versions and dependency edges across
   all eight agents. Stale-state warnings surface in Cowork; n8n consumes the same file
@@ -509,9 +544,11 @@ Current version: 5.0 — April 2026
 
 ### Known issues carried into v5.0
 
-- **`scripts/transcribe.py` legacy key path** — `SKILL-transcription.md` documents the
-  encrypted-key flow but the script still looks at `~/Desktop/storyboard-ops/file-api/.env`.
-  Phase 3 follow-up code change.
+- **`scripts/transcribe.py` legacy key path** — RESOLVED in v5.1. The script's
+  `.env` chain (skill folder, repo, `~/Desktop/storyboard-ops/file-api/.env`)
+  now correctly finds the key at `documentary-junior-editor/.env`. The
+  legacy `storyboard-ops` lookup is harmless (just unused) and can be
+  pruned on next Skill Review.
 - **`scripts/build_fcpxml.py` clip_type branching** — `SKILL-fcpxml.md` documents the
   multicam / single_clip code paths but the Python script supports only multicam.
   Phase 3 follow-up code change.

@@ -1,0 +1,150 @@
+#!/bin/bash
+# Documentary Junior Editor — one-command session launcher.
+#
+# Usage:  bash <full-path-to>/start-editing
+#
+# What it does:
+#  1. Validates the project folder layout (audio/, text/, .env, scripts/).
+#  2. Verifies the AssemblyAI API key is loadable from .env.
+#  3. Ensures Python deps are installed (assemblyai, python-dotenv).
+#  4. Detects audio files without transcripts and runs them through
+#     scripts/transcribe.py with full progress output.
+#  5. Reports outcome — what was transcribed, what was skipped, errors.
+#
+# Exit codes:
+#   0  success (or nothing to do)
+#   1  preflight failed (missing folder/file)
+#   2  transcription errors (some or all files failed)
+
+set -u  # error on undefined variables; do NOT use set -e (we want to keep going past benign issues)
+
+# Resolve project root from the script's own location:
+#   script is at <PROJECT_ROOT>/documentary-junior-editor/start-editing
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_DIR="$SCRIPT_DIR"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+AUDIO_DIR="$PROJECT_ROOT/transcripts/audio"
+TEXT_DIR="$PROJECT_ROOT/transcripts/text"
+ENV_FILE="$SKILL_DIR/.env"
+TRANSCRIBE_SCRIPT="$SKILL_DIR/scripts/transcribe.py"
+
+# --- Pretty output -----------------------------------------------------------
+say()    { printf "\033[1;36m==> %s\033[0m\n" "$*"; }
+warn()   { printf "\033[1;33m!!  %s\033[0m\n" "$*" >&2; }
+fail()   { printf "\033[1;31mxx  %s\033[0m\n" "$*" >&2; exit 1; }
+ok()     { printf "\033[1;32m++  %s\033[0m\n" "$*"; }
+
+echo
+say "Documentary Junior Editor — starting session"
+echo "    Project root:  $PROJECT_ROOT"
+echo "    Skill folder:  $SKILL_DIR"
+echo
+
+# --- Step 1: layout preflight ------------------------------------------------
+say "Step 1/5  Project layout preflight"
+
+[ -d "$AUDIO_DIR" ] || fail "Audio folder missing: $AUDIO_DIR"
+[ -d "$SKILL_DIR/scripts" ] || fail "scripts/ folder missing: $SKILL_DIR/scripts"
+[ -f "$TRANSCRIBE_SCRIPT" ] || fail "transcribe script missing: $TRANSCRIBE_SCRIPT"
+
+# Create text dir if absent (transcribe.py also creates it, but we want a clean preflight)
+mkdir -p "$TEXT_DIR"
+ok   "Folders look good"
+
+# --- Step 2: API key preflight ----------------------------------------------
+say "Step 2/5  API key preflight"
+
+if [ ! -f "$ENV_FILE" ]; then
+    fail ".env file missing at: $ENV_FILE
+       Expected: ASSEMBLYAI_API_KEY=<your-key-here>
+       Create the file and re-run."
+fi
+
+# Source .env for this script's own use
+set -a
+# shellcheck source=/dev/null
+. "$ENV_FILE"
+set +a
+
+if [ -z "${ASSEMBLYAI_API_KEY:-}" ]; then
+    fail "ASSEMBLYAI_API_KEY is empty or missing in $ENV_FILE"
+fi
+
+ok "API key loaded (${#ASSEMBLYAI_API_KEY} chars)"
+
+# --- Step 3: Python deps -----------------------------------------------------
+say "Step 3/5  Python dependency check"
+
+if ! command -v python3 >/dev/null 2>&1; then
+    fail "python3 not found on PATH"
+fi
+
+needs_install=0
+python3 -c "import assemblyai" 2>/dev/null || needs_install=1
+python3 -c "import dotenv"     2>/dev/null || needs_install=1
+
+if [ "$needs_install" -eq 1 ]; then
+    say "Installing missing Python deps (assemblyai, python-dotenv)..."
+    if ! pip3 install --quiet assemblyai python-dotenv 2>&1; then
+        warn "pip3 install failed; trying with --break-system-packages"
+        pip3 install --break-system-packages assemblyai python-dotenv \
+            || fail "Could not install Python deps"
+    fi
+fi
+ok "Python deps OK"
+
+# --- Step 4: detect work -----------------------------------------------------
+say "Step 4/5  Scanning for audio files needing transcription"
+
+shopt -s nullglob
+audio_files=("$AUDIO_DIR"/*.mp3 "$AUDIO_DIR"/*.wav "$AUDIO_DIR"/*.m4a "$AUDIO_DIR"/*.aac "$AUDIO_DIR"/*.flac)
+shopt -u nullglob
+
+if [ "${#audio_files[@]}" -eq 0 ]; then
+    warn "No audio files found in $AUDIO_DIR"
+    warn "Drop audio into that folder and re-run."
+    exit 0
+fi
+
+todo=0
+for af in "${audio_files[@]}"; do
+    stem="$(basename "$af")"
+    stem="${stem%.*}"
+    if [ ! -f "$TEXT_DIR/$stem.txt" ]; then
+        echo "    [QUEUED]   $(basename "$af")"
+        todo=$((todo+1))
+    else
+        echo "    [SKIP]     $(basename "$af")  (transcript exists)"
+    fi
+done
+
+if [ "$todo" -eq 0 ]; then
+    ok "All audio files already transcribed. Nothing to do."
+    echo
+    echo "Tell Claude in chat that transcription is complete; it will validate"
+    echo "and write the handoff doc."
+    exit 0
+fi
+
+echo
+say "Step 5/5  Running AssemblyAI transcription ($todo file(s))"
+echo "    This typically takes 1-3 minutes per file. Output below is live."
+echo
+
+ASSEMBLYAI_API_KEY="$ASSEMBLYAI_API_KEY" python3 -u "$TRANSCRIBE_SCRIPT" "$PROJECT_ROOT"
+result=$?
+
+echo
+if [ "$result" -eq 0 ]; then
+    ok "Transcription complete."
+    echo
+    echo "    Tell Claude in chat that transcription finished. It will read the"
+    echo "    new transcripts, validate, and write the handoff doc."
+    exit 0
+else
+    warn "Transcription finished with errors (exit $result). Some files may be missing."
+    echo
+    echo "    Tell Claude in chat — it will check what landed and tell you what to retry."
+    exit 2
+fi
