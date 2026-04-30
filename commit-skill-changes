@@ -1,0 +1,99 @@
+#!/bin/bash
+# Sync SSD-side SKILL changes into the canonical ~/Desktop/documentary-junior-editor
+# clone, show diffs, then commit and push on confirmation.
+#
+# Files synced (just the v5.1 launcher work):
+#   - start-editing                  (new file)
+#   - SKILL.md                       (edited)
+#   - SKILL-transcription.md         (edited)
+#   - cowork-session-guide.md        (edited)
+#
+# Does NOT sync .env (gitignored anyway), .DS_Store, .git/, or anything else.
+
+set -u
+
+SSD_DIR="/Volumes/TCCS_2026/TCCS_2026/documentary-junior-editor"
+DESK_DIR="$HOME/Desktop/documentary-junior-editor"
+
+say()   { printf "\033[1;36m==> %s\033[0m\n" "$*"; }
+warn()  { printf "\033[1;33m!!  %s\033[0m\n" "$*" >&2; }
+fail()  { printf "\033[1;31mxx  %s\033[0m\n" "$*" >&2; exit 1; }
+ok()    { printf "\033[1;32m++  %s\033[0m\n" "$*"; }
+
+[ -d "$SSD_DIR" ]  || fail "SSD copy not found: $SSD_DIR"
+[ -d "$DESK_DIR" ] || fail "Desktop clone not found: $DESK_DIR — run 'git clone git@github.com:SB-Jeff/documentary-junior-editor.git ~/Desktop/documentary-junior-editor' first"
+[ -d "$DESK_DIR/.git" ] || fail "$DESK_DIR is not a git repo"
+
+cd "$DESK_DIR" || fail "could not cd to $DESK_DIR"
+
+say "Step 1/5  Pre-flight: git status of Desktop clone"
+git status --short
+# Count tracked-file changes only (exclude '??' untracked entries — they don't
+# conflict with our v5.1 commits since we only stage four specific files).
+tracked_dirty=$(git status --porcelain | grep -v '^??' | wc -l | tr -d ' ')
+untracked=$(git status --porcelain | grep -c '^??' || true)
+
+if [ "$tracked_dirty" -gt 0 ]; then
+    warn "Desktop clone has uncommitted changes to TRACKED files. Review above and decide:"
+    warn "  (a) Stash them now and proceed: 'git stash && bash $0' "
+    warn "  (b) Commit them first (separately from these v5.1 changes), then re-run."
+    fail "Aborting — refusing to overwrite local changes blindly."
+fi
+
+if [ "$untracked" -gt 0 ]; then
+    warn "$untracked untracked file(s) present — ignoring (they won't be committed by this script)."
+fi
+ok "No dirty tracked files. Safe to proceed."
+
+say "Step 2/5  Pull latest from origin/main to avoid divergence"
+git pull --ff-only origin main || fail "pull failed — resolve manually and re-run"
+
+say "Step 3/5  Sync skill files from SSD into Desktop clone"
+# Sync top-level *.md, start-editing, commit-skill-changes itself, and scripts/*
+# Excludes: .env (gitignored), .DS_Store, .git, secrets/, reference-examples,
+# design-samples (those are committed via Skill Review or by hand).
+rsync -av --delete-after \
+    --include='*.md' \
+    --include='start-editing' \
+    --include='commit-skill-changes' \
+    --include='scripts/' \
+    --include='scripts/*.py' \
+    --include='scripts/*.jsx' \
+    --exclude='*' \
+    "$SSD_DIR/" "$DESK_DIR/" | grep -E '^(>f|deleting)' || echo "    (no file changes detected)"
+
+say "Step 4/5  Diff what's staged"
+# Stage everything that's both new/changed AND tracked-or-eligible.
+# Don't `git add -A` because that picks up untracked files unrelated to skill work.
+# Instead, add only the categories we sync.
+git add -- '*.md' start-editing commit-skill-changes scripts/ 2>/dev/null || true
+git diff --cached --stat
+echo
+git diff --cached | head -200
+echo
+echo "    (truncated to first 200 lines of diff — 'git diff --cached' for full)"
+echo
+
+read -r -p "Commit and push these changes? [y/N] " ans
+case "$ans" in
+    y|Y|yes|YES) ;;
+    *) fail "Aborted by user. Run 'git restore --staged .' to unstage." ;;
+esac
+
+say "Step 5/5  Commit and push"
+
+# Read commit message from a file if present, else use a default.
+msg_file="$SSD_DIR/.commit-message"
+if [ -f "$msg_file" ]; then
+    git commit -F "$msg_file" || fail "commit failed"
+    rm -f "$msg_file"  # consumed
+else
+    git commit -m "skill: SSD-side updates" || fail "commit failed"
+fi
+
+git push origin main || fail "push failed — try 'git push' manually"
+
+ok "Pushed to origin/main. Future projects pulling from GitHub will get the new flow."
+echo
+echo "    Note: secrets/assembly_ai.key is still in the repo (encrypted). Leaving"
+echo "    it for now — the next Skill Review pass can prune it cleanly."

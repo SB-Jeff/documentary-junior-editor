@@ -11,7 +11,7 @@ The pipeline has eight agents. Each agent declares its required model in its SKI
 
 ## Before You Start: Confirm the Skill Is Up to Date
 
-The `documentary-junior-editor` skill evolves between projects — v5.0 (segments + timeline entries, the new Transcription Agent, universal versioning) is a recent example. Before launching any new project (or any new session within an active project), confirm the local copy of `documentary-junior-editor/` matches the latest on GitHub. If it doesn't, pull first.
+The `documentary-junior-editor` skill evolves between projects — v5.1 (host-side launcher, .env replacing git-crypt, Full Disk Access prerequisite) is the most recent example. Before launching any new project (or any new session within an active project), confirm the local copy of `documentary-junior-editor/` matches the latest on GitHub. If it doesn't, pull first.
 
 The repo lives at **github.com/SB-Jeff/documentary-junior-editor** and is normally cloned to two places on a working Mac:
 
@@ -158,7 +158,7 @@ The host-side launcher reads the AssemblyAI key from `documentary-junior-editor/
 ### Step 1: Creative Context Agent
 
 **Skill file:** `SKILL-creative-context.md`
-**Model:** Opus 4.6
+**Model:** Opus 4.7
 **Session type:** Cowork — collaborative with Jeff
 
 **What's new in v5.0:** Phase 0 Discovery — the agent searches Google Drive (project folder by path or by keyword) and Gmail (project name + client domain) for relevant context, surfaces candidates with one-line summaries, and lets you approve which to ingest. Falls back to manual upload if Drive/Gmail connectors aren't connected.
@@ -167,7 +167,7 @@ The host-side launcher reads the AssemblyAI key from `documentary-junior-editor/
 - Interview transcripts in `transcripts/text/` (Transcription Agent produces these if needed; the Creative Context Agent will pause for it on launch if missing)
 - *Optional:* Creative Launch transcript or notes, interview guide, messaging framework — Discovery picks these up automatically if they're in your Drive project folder, or you can upload manually
 
-**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.6):**
+**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.7):**
 
 > You are the Creative Context Agent. Read `documentary-junior-editor/SKILL-creative-context.md` and follow it exactly. The project folder is mounted. First, run Phase 0 Discovery — search Google Drive and Gmail for project context (project name: [PROJECT NAME], client domain: [CLIENT DOMAIN if any]) and surface candidates for my approval. Then read all approved documents plus the interview transcripts in `transcripts/text/`, plus reference examples in `documentary-junior-editor/reference-examples/`. Work with me to develop and approve a 3-act narrative structure. Save `creative-brief-summary-v1.md` and `act-structure-v1.md` (or higher version) to `handoffs/`. Update `handoffs/pipeline-state.json`. If audio is detected without transcripts, pause and give me the Transcription Agent launch prompt before proceeding. If this SSD already hosts another project, establish the project slug for this deliverable up front and write all outputs to `handoffs/[project-slug]/` instead of flat `handoffs/`.
 
@@ -263,7 +263,7 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 #### Step 4a: Edit Agent
 
 **Skill file:** `SKILL-edit.md`
-**Model:** Opus 4.6
+**Model:** Opus 4.7
 **Session type:** Cowork — deeply collaborative with Jeff
 
 **What's new in v5.0:**
@@ -284,7 +284,7 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 - For re-entry rounds: `handoffs/review-notes.md` (your notes from watching the previous FCPXML)
 - Reference examples in `documentary-junior-editor/reference-examples/`
 
-**Starter prompt — round 1 (set model to Opus 4.6):**
+**Starter prompt — round 1 (set model to Opus 4.7):**
 
 > You are the Edit Agent. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly. Read all latest handoff documents from `handoffs/` per `pipeline-state.json` — act structure, creative brief summary, transcript summary, and the merged tagged-quotes (with segments) — plus reference examples in `documentary-junior-editor/reference-examples/`. Build the live HTML artifact at session start (per the v5.0 spec — bidirectional, auto-scroll to focus, full quote text inlined in chat on first reference). Take us through Rough Cut → Discussion → Reduction. Run Cardinal Rule verification before saving. Save `handoffs/edit-handoff-v1.md`, `handoffs/trimmed-quotes-v1.json` (timeline entries with segments), and `handoffs/[project-slug]_quotes_view.html` (final state of the artifact). Update `handoffs/pipeline-state.json`.
 
@@ -322,12 +322,12 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 ### Step 5: Skill Review Agent (post-project)
 
 **Skill file:** `SKILL-review.md`
-**Model:** Opus 4.6
+**Model:** Opus 4.7
 **Session type:** Cowork — runs after Jeff approves the final cut
 
 **What's new in v5.0:** Reads versioned diffs across all rounds — `act-structure-v1.md` vs. `v2.md`, `trimmed-quotes-v1.json` vs. `v2.json` vs. `v3.json`, etc. — as first-class data for lessons-learned extraction.
 
-**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.6):**
+**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.7):**
 
 > You are the Skill Review Agent. Read `documentary-junior-editor/SKILL-review.md` and follow it exactly. This project is complete. Review the handoff files in `handoffs/` (all versions, not just latest), the final FCP edit if I provide one, `handoffs/pipeline-state.json` for the round-by-round trajectory, and any notes I share. Extract editorial patterns and lessons learned. Create a `Final_Edit.txt` and `lessons-learned.md` in a new folder under `documentary-junior-editor/reference-examples/[project-name]/`, and copy the raw transcripts there too. If patterns warrant changes to the SKILL files, propose them for my review. End with the GitHub push command.
 
@@ -340,14 +340,14 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 | Step | Agent | Model | Collaborative? | Key Output |
 |------|-------|-------|----------------|------------|
 | 0 | Transcription | Sonnet 4.6 | Light (speaker confirmation) | .txt transcripts + summary |
-| 1 | Creative Context | Opus 4.6 | Yes | act-structure-v[N].md (with Phase 0 Discovery) |
+| 1 | Creative Context | Opus 4.7 | Yes | act-structure-v[N].md (with Phase 0 Discovery) |
 | 2a | FCPXML Params | Sonnet 4.6 | No | fcpxml-params-v[N].md (with clip_type) |
 | 2b | Transcript (×N speakers) | Sonnet 4.6 | Light | per-speaker tagged quotes (with segments) |
 | 3 | Synthesis | Sonnet 4.6 | Light | merged tagged-quotes-v[N].json |
-| 4a | Edit (round N) | Opus 4.6 | Yes — heavy (3 phases, live artifact) | trimmed-quotes-v[N].json + edit-handoff-v[N].md |
+| 4a | Edit (round N) | Opus 4.7 | Yes — heavy (3 phases, live artifact) | trimmed-quotes-v[N].json + edit-handoff-v[N].md |
 | 4b | FCPXML (round N) | Sonnet 4.6 | No | rough_cut_v[N].fcpxml |
 | ↺ | (Jeff watches; loops 4a → 4b until approved) |  |  |  |
-| 5 | Skill Review | Opus 4.6 | Light | updated reference-examples + SKILL files |
+| 5 | Skill Review | Opus 4.7 | Light | updated reference-examples + SKILL files |
 
 `pipeline-state.json` in `handoffs/` tracks current versions and dependency edges throughout. Stale-state warnings surface in agent launches.
 
@@ -388,7 +388,11 @@ git pull
 
 ## Troubleshooting
 
-**Transcription Agent fails immediately with git-crypt message:** Run `git-crypt unlock ~/path/to/master-key.key` on this Mac (one-time per machine). After unlocking, `git pull` retrieves the AssemblyAI key file in cleartext. The agent's error message includes the exact command to run.
+**Transcription Agent fails with "AssemblyAI API key file is missing":** Create `documentary-junior-editor/.env` on this Mac with one line: `ASSEMBLYAI_API_KEY=<your-key>`. Get the key from https://www.assemblyai.com/app/account. The `.env` file is gitignored, so it doesn't travel via `git clone` — but it does travel via `cp -R` from your Desktop clone to a new project SSD.
+
+**Launcher fails with "Could not open source directory" or sandbox-side bash errors:** Claude doesn't have Full Disk Access. Open System Settings → Privacy & Security → Full Disk Access, add Claude, toggle ON, quit Claude entirely (Cmd+Q), and relaunch. One-time per Mac.
+
+**Launcher returns 403 Forbidden from AssemblyAI:** The key in `.env` is invalid, revoked, or has hit a quota. Rotate the key in the AssemblyAI dashboard, update `.env`, re-run.
 
 **Transcription Agent skips files unexpectedly:** It skips audio files that already have a matching .txt in `transcripts/text/`. To force re-transcription, delete or rename the existing .txt first.
 

@@ -476,9 +476,9 @@ agents read from `tagged-quotes-v[N].json`.
 ## Next step
 
 - **Next agent:** Edit Agent
-- **Next agent's model:** opus-4.6
+- **Next agent's model:** opus-4.7
 - **Next agent's launch prompt** (copy into a new Cowork session, set the
-  model to opus-4.6 first):
+  model to opus-4.7 first):
 
 > Read `documentary-junior-editor/SKILL-edit.md` and run the Edit Agent for
 > this project. The Synthesis Agent has emitted

@@ -11,7 +11,7 @@ description: |
   entries data model, multi-round iteration, trimming guidelines, selection
   principles, title-card-as-shortener, suggested context beats, runtime
   recommendations, handoff format) is preserved from SKILL-edit.md v5.0.
-model: opus-4.6
+model: opus-4.7
 ---
 
 # Edit Agent (Pipeline)

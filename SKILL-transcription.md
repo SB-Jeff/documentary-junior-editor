@@ -409,9 +409,9 @@ Increment N from `pipeline-state.json` — first run is v1.
 
 - **Next agent:** Creative Context Agent (the agent that triggered this pre-flight,
   if launched as a pre-flight; otherwise launch it now)
-- **Next agent's model:** opus-4.6
+- **Next agent's model:** opus-4.7
 - **Next agent's launch prompt** (copy into a new Cowork session, set the model
-  to opus-4.6 first):
+  to opus-4.7 first):
 
 > Read `documentary-junior-editor/SKILL-creative-context.md` and run the
 > Creative Context Agent for this project. Transcripts are now available in
