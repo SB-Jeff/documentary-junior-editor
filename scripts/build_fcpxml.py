@@ -61,15 +61,21 @@ EXIT_GEN_ERROR = 5
 # fcpxml-params.md parser
 # ---------------------------------------------------------------------------
 
-# Canonical section names -> tolerant substrings matched case-insensitively
+# Canonical section names -> tolerant substrings matched case-insensitively.
+# Ordering matters within a list: the most specific match goes first so that
+# e.g. "event uid" doesn't get swallowed by the generic "event" match.
 _PARAM_SECTIONS = {
-    "speaker_refs": ["media ref ids", "media refs", "media ref id"],
-    "speaker_angles": ["angle ids", "angle id", "angles"],
-    "reference_file": ["reference fcpxml", "reference file", "sample narrative",
-                       "reference"],
+    "speaker_refs":     ["media ref ids", "media refs", "media ref id"],
+    "speaker_angles":   ["angle ids", "angle id", "angles"],
+    "asset_refs":       ["asset ref ids", "asset refs", "asset ref id"],
+    "asset_names":      ["asset names", "asset name"],
+    "clip_types":       ["clip types", "clip type"],
+    "reference_file":   ["reference fcpxml", "reference file",
+                         "sample narrative", "reference"],
     "library_location": ["library location", "library"],
-    "event_name": ["event name", "event"],
-    "format_ref": ["format reference", "format ref", "format"],
+    "event_uid":        ["event uid", "event uuid"],
+    "event_name":       ["event name", "event"],
+    "format_ref":       ["format reference", "format ref", "format"],
 }
 
 
@@ -171,6 +177,65 @@ def _parse_kv_list(body: str):
     return result
 
 
+def _parse_md_table(body: str) -> list:
+    """
+    Parse a GitHub-flavored markdown table into a list of dicts keyed by
+    column header. Returns [] if no recognizable table is found.
+
+    Tolerant of:
+      - leading and trailing pipes (`| col | col |`)
+      - the header-separator row (`|---|---|`) — skipped automatically
+      - extra whitespace and backtick/bold markup inside cells (stripped via
+        _strip_markup)
+      - rows with fewer columns than the header (missing cells become "")
+
+    Example input:
+        | Interview / speaker | Source filename       | clip_type   |
+        |---------------------|-----------------------|-------------|
+        | Alice Mupenzi       | Alice_Mupenzi.fcpxml  | multicam    |
+        | Ben                 | Ben_interview.fcpxml  | single_clip |
+
+    Returns:
+        [
+          {"Interview / speaker": "Alice Mupenzi",
+           "Source filename": "Alice_Mupenzi.fcpxml",
+           "clip_type": "multicam"},
+          ...
+        ]
+    """
+    if not body:
+        return []
+
+    rows = []
+    headers = None
+    sep_re = re.compile(r"^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$")
+
+    for raw in body.split("\n"):
+        line = raw.strip()
+        if not line or "|" not in line:
+            if headers is not None and rows:
+                # Blank line after the table body — stop scanning.
+                break
+            continue
+        if sep_re.match(line):
+            # Header-separator row; skip but expect data rows next.
+            continue
+        # Split on pipes, dropping a single leading or trailing empty cell
+        # from `| a | b |` style tables.
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        cells = [_strip_markup(c) for c in cells]
+        if headers is None:
+            headers = cells
+            continue
+        # Pad short rows with empty strings so dict keys are stable.
+        if len(cells) < len(headers):
+            cells = cells + [""] * (len(headers) - len(cells))
+        row = dict(zip(headers, cells[: len(headers)]))
+        rows.append(row)
+
+    return rows
+
+
 def _parse_scalar(body: str) -> str:
     """Extract a single non-empty value from a section body."""
     if not body:
@@ -184,6 +249,45 @@ def _parse_scalar(body: str) -> str:
         line = re.sub(r"^\d+\.\s+", "", line)
         return _strip_markup(line)
     return ""
+
+
+def _resolve_reference_file(value: str) -> str:
+    """
+    Resolve a reference-file path from fcpxml-params.md to the extracted
+    .fcpxml filename that lives in xml_dir/ after Phase 0 extraction.
+
+    Handles three input shapes (Phase 0 of SKILL-fcpxml.md is assumed to have
+    run extract_fcpxml.py on the xml dir before this script is invoked):
+
+    1. Bare .fcpxml filename ("Sample_narrative.fcpxml") → return as-is
+    2. .fcpxmld package path ("Sample_narrative.fcpxmld") → strip the trailing
+       "d" → "Sample_narrative.fcpxml"
+    3. .fcpxmld/Info.fcpxml path ("Sample_narrative.fcpxmld/Info.fcpxml") →
+       resolve to "Sample_narrative.fcpxml" (the file extract_fcpxml.py
+       produces by renaming Info.fcpxml to match the package name)
+
+    Calling os.path.basename() blindly on case 3 returns "Info.fcpxml" and
+    loses the package name, which then breaks the downstream
+    `xml_dir / params["reference_file"]` join in main(). This helper avoids
+    that bug while still accepting all the path shapes the FCPXML Params Agent
+    has been observed to emit.
+    """
+    value = value.strip().rstrip("/").rstrip("\\")
+    # Case 3: <pkg>.fcpxmld/Info.fcpxml — collapse to <pkg>.fcpxml
+    norm = value.replace("\\", "/")
+    if norm.endswith("/Info.fcpxml"):
+        parent = os.path.dirname(norm)
+        pkg = os.path.basename(parent)
+        if pkg.endswith(".fcpxmld"):
+            return pkg[: -len(".fcpxmld")] + ".fcpxml"
+        # Info.fcpxml without an .fcpxmld parent is unexpected; fall through
+    # Case 2: bare .fcpxmld package (with or without directory prefix) →
+    # convert to the extracted .fcpxml name
+    base = os.path.basename(norm)
+    if base.endswith(".fcpxmld"):
+        return base[: -len(".fcpxmld")] + ".fcpxml"
+    # Case 1 (or anything else) — return the basename verbatim
+    return base
 
 
 def parse_params_md(path: str) -> dict:
@@ -202,35 +306,112 @@ def parse_params_md(path: str) -> dict:
 
     sections = _split_sections(text)
 
-    refs_body = _find_section(sections, _PARAM_SECTIONS["speaker_refs"])
-    angles_body = _find_section(sections, _PARAM_SECTIONS["speaker_angles"])
-    ref_body = _find_section(sections, _PARAM_SECTIONS["reference_file"])
-    lib_body = _find_section(sections, _PARAM_SECTIONS["library_location"])
-    evt_body = _find_section(sections, _PARAM_SECTIONS["event_name"])
-    fmt_body = _find_section(sections, _PARAM_SECTIONS["format_ref"])
+    refs_body         = _find_section(sections, _PARAM_SECTIONS["speaker_refs"])
+    angles_body       = _find_section(sections, _PARAM_SECTIONS["speaker_angles"])
+    asset_refs_body   = _find_section(sections, _PARAM_SECTIONS["asset_refs"])
+    asset_names_body  = _find_section(sections, _PARAM_SECTIONS["asset_names"])
+    clip_types_body   = _find_section(sections, _PARAM_SECTIONS["clip_types"])
+    ref_body          = _find_section(sections, _PARAM_SECTIONS["reference_file"])
+    lib_body          = _find_section(sections, _PARAM_SECTIONS["library_location"])
+    evt_body          = _find_section(sections, _PARAM_SECTIONS["event_name"])
+    evt_uid_body      = _find_section(sections, _PARAM_SECTIONS["event_uid"])
+    fmt_body          = _find_section(sections, _PARAM_SECTIONS["format_ref"])
 
-    speaker_refs = _parse_kv_list(refs_body) if refs_body is not None else {}
+    speaker_refs   = _parse_kv_list(refs_body) if refs_body is not None else {}
     speaker_angles = _parse_kv_list(angles_body) if angles_body is not None else {}
+    asset_refs     = _parse_kv_list(asset_refs_body) if asset_refs_body is not None else {}
+    asset_names    = _parse_kv_list(asset_names_body) if asset_names_body is not None else {}
 
-    if not speaker_refs:
+    # ── Clip Types: parsed as a markdown table (v5+) ──────────────────────────
+    # Backward-compatible default: if the section is missing entirely, treat
+    # every speaker in 'Media Ref IDs' as multicam, and every speaker in
+    # 'Asset Ref IDs' as single_clip. Legacy multicam-only params files keep
+    # working unchanged.
+    clip_types = {}
+    if clip_types_body is not None:
+        rows = _parse_md_table(clip_types_body)
+        for row in rows:
+            # The handoff format uses "Interview / speaker" but be tolerant of
+            # near-variants (spacing, capitalisation, alt punctuation).
+            speaker_key = None
+            for k in row.keys():
+                if re.search(r"speaker|interview|name", k, re.IGNORECASE):
+                    speaker_key = k
+                    break
+            type_key = None
+            for k in row.keys():
+                if re.search(r"clip[_ ]?type|type", k, re.IGNORECASE):
+                    type_key = k
+                    break
+            if not speaker_key or not type_key:
+                continue
+            speaker = row[speaker_key].strip()
+            ctype = row[type_key].strip().lower()
+            if not speaker:
+                continue
+            if ctype not in {"multicam", "single_clip", "single-clip"}:
+                raise ValueError(
+                    f"Unknown clip_type {row[type_key]!r} for speaker "
+                    f"{speaker!r} in 'Clip Types' table. Expected "
+                    "'multicam' or 'single_clip'."
+                )
+            clip_types[speaker] = "single_clip" if ctype.replace("-", "_") == "single_clip" else "multicam"
+
+    # Apply the legacy default for any speaker not explicitly listed.
+    for s in speaker_refs:
+        clip_types.setdefault(s, "multicam")
+    for s in asset_refs:
+        clip_types.setdefault(s, "single_clip")
+
+    # ── At least one speaker must be configured ──────────────────────────────
+    if not speaker_refs and not asset_refs:
         raise ValueError(
-            "Missing 'Media Ref IDs' in fcpxml-params.md. Expected a section "
-            "like '## Media Ref IDs' followed by '- <Speaker>: r<N>' list items."
-        )
-    if not speaker_angles:
-        raise ValueError(
-            "Missing 'Angle IDs' in fcpxml-params.md. Expected a section like "
-            "'## Angle IDs' followed by '- <Speaker>: <angleID>' list items."
+            "Missing speaker configuration in fcpxml-params.md. Expected at "
+            "least one of '## Media Ref IDs' (for multicam interviews) or "
+            "'## Asset Ref IDs' (for single_clip interviews) with "
+            "'- <Speaker>: r<N>' list items."
         )
 
-    # Every speaker with a ref must have an angle
-    missing_angles = [s for s in speaker_refs if s not in speaker_angles]
-    if missing_angles:
+    # ── Per-speaker validation by clip_type ──────────────────────────────────
+    multicam_speakers = [s for s, t in clip_types.items() if t == "multicam"]
+    single_clip_speakers = [s for s, t in clip_types.items() if t == "single_clip"]
+
+    if multicam_speakers and not speaker_refs:
         raise ValueError(
-            f"Angle IDs missing for speaker(s): {', '.join(missing_angles)}. "
-            "Every speaker in 'Media Ref IDs' must have a matching entry in "
-            "'Angle IDs'."
+            "Multicam speakers declared in 'Clip Types' "
+            f"({', '.join(multicam_speakers)}) but no 'Media Ref IDs' section "
+            "found. Each multicam speaker must have a media ref ID."
         )
+    if multicam_speakers and not speaker_angles:
+        raise ValueError(
+            "Multicam speakers declared in 'Clip Types' "
+            f"({', '.join(multicam_speakers)}) but no 'Angle IDs' section "
+            "found. Each multicam speaker must have an angle ID."
+        )
+
+    for s in multicam_speakers:
+        if s not in speaker_refs:
+            raise ValueError(
+                f"Multicam speaker {s!r} has no entry in 'Media Ref IDs'. "
+                "Every multicam speaker must have a media ref ID."
+            )
+        if s not in speaker_angles:
+            raise ValueError(
+                f"Multicam speaker {s!r} has no entry in 'Angle IDs'. "
+                "Every multicam speaker must have an angle ID."
+            )
+
+    for s in single_clip_speakers:
+        if s not in asset_refs:
+            raise ValueError(
+                f"Single-clip speaker {s!r} has no entry in 'Asset Ref IDs'. "
+                "Every single_clip speaker must have an asset ref ID."
+            )
+        if s not in asset_names:
+            raise ValueError(
+                f"Single-clip speaker {s!r} has no entry in 'Asset Names'. "
+                "Every single_clip speaker must have an asset name."
+            )
 
     reference_file = _parse_scalar(ref_body) if ref_body is not None else ""
     if not reference_file:
@@ -238,28 +419,38 @@ def parse_params_md(path: str) -> dict:
             "Missing 'Reference FCPXML' in fcpxml-params.md. Expected a section "
             "like '## Reference FCPXML' followed by the filename."
         )
-    # Use just the basename — the script joins with xml_dir
-    reference_file = os.path.basename(reference_file)
+    # Resolve to the extracted .fcpxml filename in xml_dir. Handles bare
+    # .fcpxml, bare .fcpxmld, and .fcpxmld/Info.fcpxml shapes — see the
+    # _resolve_reference_file docstring for the bug this fixes.
+    reference_file = _resolve_reference_file(reference_file)
 
     return {
-        "speaker_refs": speaker_refs,
-        "speaker_angles": speaker_angles,
-        "reference_file": reference_file,
+        "speaker_refs":     speaker_refs,
+        "speaker_angles":   speaker_angles,
+        "asset_refs":       asset_refs,
+        "asset_names":      asset_names,
+        "clip_types":       clip_types,
+        "reference_file":   reference_file,
         "library_location": _parse_scalar(lib_body) if lib_body is not None else "",
-        "event_name": _parse_scalar(evt_body) if evt_body is not None else "",
-        "format_ref": _parse_scalar(fmt_body) if fmt_body is not None else "",
+        "event_name":       _parse_scalar(evt_body) if evt_body is not None else "",
+        "event_uid":        _parse_scalar(evt_uid_body) if evt_uid_body is not None else "",
+        "format_ref":       _parse_scalar(fmt_body) if fmt_body is not None else "",
     }
 
 
 # ---------------------------------------------------------------------------
-# trimmed-quotes.json loader
+# Source-pool loader (tagged-quotes-v[N].json) — needed for v5 schema
 # ---------------------------------------------------------------------------
 
-def load_quotes(path: str):
+def load_source_pool(path: str) -> dict:
     """
-    Load trimmed-quotes.json, drop interstitials (with a warning), and return
-    the ordered list of quote dicts. Accepts either a top-level list or
-    {"quotes": [...]}.
+    Load tagged-quotes-v[N].json (the v5 source pool) and return a dict keyed
+    by `num` (i.e. `source_quote_id`). Each value is the raw source-quote
+    dict — `speaker`, `part`, `startTC`, `endTC`, `segments[]`.
+
+    Accepts both a top-level list (canonical) and an object with a `quotes`
+    key (defensive — some intermediate Synthesis outputs have been seen in
+    that shape).
     """
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -271,6 +462,291 @@ def load_quotes(path: str):
     else:
         raise ValueError(
             f"{path} must be a JSON list or an object with a 'quotes' key."
+        )
+
+    pool = {}
+    for q in items:
+        if not isinstance(q, dict):
+            continue
+        num = q.get("num")
+        if num is None:
+            continue
+        # Preserve both str and int forms so str lookups from
+        # source_quote_id work regardless of how the timeline emitted them.
+        pool[str(num)] = q
+        pool[num] = q
+    return pool
+
+
+def _apply_word_trims(text: str, head_trim_words: int, tail_trim_words: int) -> str:
+    """
+    Apply head/tail word trims to a segment's verbatim text.
+
+    Snaps to whitespace-delimited word boundaries. Degenerate trims (head or
+    tail greater than or equal to the word count) collapse to an empty
+    string rather than raising, so the caller can decide whether to drop the
+    segment or surface a warning.
+    """
+    if head_trim_words <= 0 and tail_trim_words <= 0:
+        return text
+    words = text.split()
+    if head_trim_words and head_trim_words >= len(words):
+        return ""
+    if tail_trim_words and tail_trim_words >= len(words):
+        return ""
+    if head_trim_words:
+        words = words[head_trim_words:]
+    if tail_trim_words:
+        words = words[:-tail_trim_words]
+    return " ".join(words)
+
+
+def _v5_entry_to_segment_quotes(
+    entry: dict,
+    pool: dict,
+    seq_counter: list,
+) -> list:
+    """
+    Expand a v5 spoken-quote entry into a list of v4-shaped quote dicts —
+    **one per kept segment**, in playback order.
+
+    This is the per-segment generation pass: every segment that survives
+    after head/tail-word trims becomes its own v4-shaped dict, which
+    downstream adapt_quote() → build_spine() turns into its own `<mc-clip>`
+    (or `<asset-clip>` once clip_type branching lands). One v5 entry can
+    therefore produce N spine clips for N kept segments. This matches the
+    Phase 3 "per-segment clip count" verification in SKILL-fcpxml.md.
+
+    `seq_counter` is a single-element list used as a mutable counter so the
+    caller can keep a stable global ordering across all entries (Python
+    closures can't rebind an integer from an inner scope cleanly).
+
+    Skips (with a stderr warning) segments whose trims fully collapse the
+    text. Raises ValueError on hard data errors (missing source quote,
+    missing segment idx, no segments[] on source).
+    """
+    source_quote_id = entry.get("source_quote_id")
+    if source_quote_id is None:
+        raise ValueError(
+            f"v5 spoken-quote entry {entry.get('entry_id')!r} has no "
+            "source_quote_id"
+        )
+
+    source = pool.get(source_quote_id) or pool.get(str(source_quote_id))
+    if source is None:
+        raise ValueError(
+            f"v5 entry {entry.get('entry_id')!r} references "
+            f"source_quote_id {source_quote_id!r} which is not in the "
+            "source pool. Provide the matching tagged-quotes-v[N].json via "
+            "--source-pool."
+        )
+
+    source_segments = {s["idx"]: s for s in source.get("segments", [])}
+    if not source_segments:
+        raise ValueError(
+            f"Source quote {source_quote_id!r} has no segments[]. The "
+            "source pool must be segment-decomposed for v5 schema support."
+        )
+
+    speaker = entry.get("speaker") or source.get("speaker", "")
+    part = entry.get("part") or source.get("part", "")
+    entry_id = entry.get("entry_id", "")
+
+    out = []
+    for seg_ref in entry.get("segments", []):
+        idx = seg_ref.get("source_segment_idx")
+        seg = source_segments.get(idx)
+        if seg is None:
+            raise ValueError(
+                f"Entry {entry_id!r} references segment idx {idx!r} which "
+                f"is not present on source quote {source_quote_id!r}."
+            )
+        head = int(seg_ref.get("head_trim_words", 0) or 0)
+        tail = int(seg_ref.get("tail_trim_words", 0) or 0)
+        trimmed_text = _apply_word_trims(seg["text"], head, tail)
+        if not trimmed_text:
+            print(
+                f"Warning: entry {entry_id!r} segment idx {idx} collapsed "
+                f"to empty text after trims (head={head}, tail={tail}); "
+                "skipping this segment.",
+                file=sys.stderr,
+            )
+            continue
+
+        seq_counter[0] += 1
+        notes_bits = [f"entry={entry_id}", f"seg={idx}"]
+        if head:
+            notes_bits.append(f"head_trim={head}")
+        if tail:
+            notes_bits.append(f"tail_trim={tail}")
+        notes = " ".join(notes_bits)
+
+        out.append({
+            "num": source_quote_id,
+            "speaker": speaker,
+            "part": part,
+            "sequence": seq_counter[0],
+            "original": seg["text"],
+            "trimmed": trimmed_text,
+            "startTC": seg.get("startTC", "") or source.get("startTC", ""),
+            "endTC": seg.get("endTC", "") or source.get("endTC", ""),
+            "notes": notes,
+            # Preserve v5 links for downstream steps (clip_type branching,
+            # resource-ID remap, act-boundary cards, UID multicam refs).
+            "_v5_entry": entry,
+            "_v5_source_quote": source,
+            "_v5_segment_idx": idx,
+            "_v5_segment": seg,
+        })
+
+    if not out:
+        raise ValueError(
+            f"Entry {entry_id!r} (source_quote_id {source_quote_id!r}) "
+            "produced zero kept segments after applying trims. Check "
+            "head_trim_words / tail_trim_words on its segments."
+        )
+    return out
+
+
+# ---------------------------------------------------------------------------
+# trimmed-quotes.json loader (schema-aware: v4 + v5)
+# ---------------------------------------------------------------------------
+
+def load_quotes(path: str, source_pool: dict = None) -> dict:
+    """
+    Load trimmed-quotes.json and normalize it into a structured dict that the
+    rest of the pipeline consumes.
+
+    Accepts three input shapes:
+
+    1. **v5 schema** — `{"schema_version": 5, "round": N, "entries": [...]}`.
+       Entries are heterogeneous: spoken-quote (has `source_quote_id` and
+       `segments[]`), `title_card`, `interstitial`, `context_beat`.
+       Spoken-quote entries are reconstructed against `source_pool`
+       (required for v5) into v4-shaped quote dicts so the existing
+       adapt_quote() / generate_fcpxml() flow can consume them. Non-spoken
+       entries are returned separately under `non_spoken_entries` for
+       higher-level handling (currently warned-and-skipped; proper
+       title-card / interstitial / context-beat rendering lands in a later
+       step of the schema rewrite).
+
+    2. **v4 legacy object** — `{"quotes": [...]}`. Each item carries v4
+       fields directly (`num`, `trimmed`, `original`, `sequence`, etc.).
+       Interstitials (`type: "interstitial"`) are dropped with a warning —
+       same behavior as the v4-only loader.
+
+    3. **v4 legacy list** — a bare top-level JSON list of v4 quote dicts.
+
+    Returns:
+        {
+          "schema_version": 4 | 5,
+          "quotes": [<v4-shaped dict>, ...],   # spoken-quote material only
+          "non_spoken_entries": [<v5 entry>, ...],  # title_card/interstitial/context_beat
+          "metadata": {  # only populated for v5
+            "round": int | None,
+            "project_slug": str | None,
+            "target_runtime_seconds": int | None,
+            "estimated_runtime_seconds": int | None,
+          },
+        }
+
+    Raises ValueError with a specific message when the schema is detected as
+    v5 but `source_pool` was not provided, or when an entry references data
+    not present in the pool.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # ---- v5 schema detection ------------------------------------------------
+    is_v5 = (
+        isinstance(data, dict)
+        and (
+            data.get("schema_version") == 5
+            or ("entries" in data and "quotes" not in data)
+        )
+    )
+
+    if is_v5:
+        return _load_v5(data, source_pool, path)
+
+    # ---- v4 fallback --------------------------------------------------------
+    return _load_v4(data, path)
+
+
+def _load_v5(data: dict, source_pool: dict, path: str) -> dict:
+    """Normalize a v5 timeline into the load_quotes() return shape."""
+    entries = data.get("entries")
+    if not isinstance(entries, list):
+        raise ValueError(
+            f"{path} looks like v5 schema but has no 'entries' list."
+        )
+
+    if source_pool is None:
+        raise ValueError(
+            f"{path} is v5 schema (schema_version=5 or entries[]) but no "
+            "source pool was provided. Pass --source-pool pointing at the "
+            "matching tagged-quotes-v[N].json so segments can be looked up."
+        )
+
+    quotes = []
+    non_spoken = []
+    seq_counter = [0]  # mutable so _v5_entry_to_segment_quotes can bump it
+    for idx, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue
+        if "source_quote_id" in entry:
+            # Spoken-quote entry — expand into one v4-shaped dict per kept
+            # segment. The list extension preserves playback order.
+            quotes.extend(
+                _v5_entry_to_segment_quotes(entry, source_pool, seq_counter)
+            )
+        elif entry.get("type") in {"title_card", "interstitial", "context_beat"}:
+            non_spoken.append(entry)
+        else:
+            print(
+                f"Warning: v5 entry at index {idx} has no source_quote_id "
+                f"and an unrecognized type {entry.get('type')!r}; skipping.",
+                file=sys.stderr,
+            )
+
+    # Non-spoken entries aren't yet rendered by this script — surface what
+    # got dropped so the FCPXML Agent can flag the gap to the user.
+    type_counts = {}
+    for e in non_spoken:
+        type_counts[e.get("type", "?")] = type_counts.get(e.get("type", "?"), 0) + 1
+    if type_counts:
+        print(
+            "Warning: v5 non-spoken entries are not yet rendered by "
+            f"build_fcpxml.py (counts: {type_counts}). Spine generated "
+            "without them. Title-card / interstitial / context-beat "
+            "rendering lands in a follow-up step of the v5 schema rewrite.",
+            file=sys.stderr,
+        )
+
+    return {
+        "schema_version": 5,
+        "quotes": quotes,
+        "non_spoken_entries": non_spoken,
+        "metadata": {
+            "round": data.get("round"),
+            "project_slug": data.get("project_slug"),
+            "target_runtime_seconds": data.get("target_runtime_seconds"),
+            "estimated_runtime_seconds": data.get("estimated_runtime_seconds"),
+        },
+    }
+
+
+def _load_v4(data, path: str) -> dict:
+    """Normalize legacy v4 trimmed-quotes input into the load_quotes() return shape."""
+    if isinstance(data, dict) and "quotes" in data:
+        items = data["quotes"]
+    elif isinstance(data, list):
+        items = data
+    else:
+        raise ValueError(
+            f"{path} must be a JSON list, an object with a 'quotes' key, or "
+            "a v5 object with an 'entries' key (got "
+            f"{type(data).__name__})."
         )
 
     quotes = []
@@ -294,7 +770,12 @@ def load_quotes(path: str):
     if quotes and all("sequence" in q for q in quotes):
         quotes.sort(key=lambda q: q["sequence"])
 
-    return quotes
+    return {
+        "schema_version": 4,
+        "quotes": quotes,
+        "non_spoken_entries": [],
+        "metadata": {},
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -372,8 +853,13 @@ def adapt_quote(q: dict, fallback_seq: int) -> dict:
     and generate_fcpxml() consume.
 
     Source shape (this script's input):
-        {"num", "speaker", "part", "sequence", "original", "trimmed", "split",
-         "startTC", "endTC"}
+        v4: {"num", "speaker", "part", "sequence", "original", "trimmed",
+             "split", "startTC", "endTC"}
+        v5-derived: same shape produced by _v5_entry_to_segment_quotes(),
+            plus a populated "notes" string with entry/segment traceability
+            (e.g. "entry=e_001 seg=0 head_trim=3"). The notes field is
+            forwarded into the paper_cut so build_spine() / downstream
+            logging can show which v5 entry+segment a clip came from.
 
     Target shape (generate_fcpxml.py consumes, matching read_paper_cut_tab):
         {"seq_num", "quote_num", "speaker", "section", "quote", "start_tc",
@@ -391,7 +877,7 @@ def adapt_quote(q: dict, fallback_seq: int) -> dict:
         "quote": quote_text,
         "start_tc": q.get("startTC", ""),
         "end_tc": q.get("endTC", ""),
-        "notes": "",
+        "notes": q.get("notes", ""),
     }
 
 
@@ -400,11 +886,18 @@ def adapt_quote(q: dict, fallback_seq: int) -> dict:
 # ---------------------------------------------------------------------------
 
 def count_mc_clips(output_path: str) -> int:
-    """Count <mc-clip> elements in the generated FCPXML via regex."""
+    """
+    Count spine clip elements (<mc-clip> + <asset-clip>) in the generated
+    FCPXML via regex. Name preserved for backward compat with main()'s
+    success-line print; the count is now total spine clips, not just
+    multicam.
+    """
     try:
         with open(output_path, "r", encoding="utf-8") as f:
             content = f.read()
-        return len(re.findall(r"<mc-clip\b", content))
+        mc = len(re.findall(r"<mc-clip\b", content))
+        asset = len(re.findall(r"<asset-clip\b", content))
+        return mc + asset
     except Exception:
         return 0
 
@@ -439,6 +932,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--params", required=True, help="Path to fcpxml-params.md")
     p.add_argument("--act-structure", required=True,
                    help="Path to act-structure.md")
+    p.add_argument("--source-pool",
+                   help=(
+                       "Path to tagged-quotes-v[N].json (the v5 source pool). "
+                       "Required when trimmed-quotes.json is v5 schema; "
+                       "ignored for v4 legacy input."
+                   ))
     p.add_argument("--xml-dir", required=True,
                    help="Directory containing source caption .fcpxml files")
     p.add_argument("--output", required=True, help="Output .fcpxml file path")
@@ -476,11 +975,40 @@ def main(argv=None) -> int:
             return EXIT_BAD_PARAMS
 
         stage = "loading trimmed-quotes.json"
-        quotes_raw = load_quotes(args.quotes)
+        # Peek at the timeline file to decide whether the source pool is
+        # required. v5 input needs the pool; v4 doesn't. Loading the pool
+        # here (before load_quotes) means we surface a missing-pool error
+        # against the source-pool path, not against the timeline path.
+        source_pool = None
+        if args.source_pool:
+            _require_exists(args.source_pool, "tagged-quotes (source pool)")
+            source_pool = load_source_pool(args.source_pool)
+
+        try:
+            timeline = load_quotes(args.quotes, source_pool=source_pool)
+        except ValueError as ve:
+            print(f"[build_fcpxml] timeline error: {ve}", file=sys.stderr)
+            return EXIT_BAD_PARAMS
+
+        quotes_raw = timeline["quotes"]
         if not quotes_raw:
-            print("[build_fcpxml] no quotes to render after filtering interstitials",
-                  file=sys.stderr)
+            print(
+                "[build_fcpxml] no spoken-quote entries to render "
+                f"(schema_version={timeline['schema_version']}). "
+                "Spine would be empty.",
+                file=sys.stderr,
+            )
             return EXIT_GENERIC
+
+        if timeline["schema_version"] == 5:
+            print(
+                f"[build_fcpxml] v5 timeline: "
+                f"{len(quotes_raw)} spoken-quote entries, "
+                f"{len(timeline['non_spoken_entries'])} non-spoken entries "
+                f"(round={timeline['metadata'].get('round')}, "
+                f"project_slug={timeline['metadata'].get('project_slug')!r})",
+                file=sys.stderr,
+            )
 
         stage = "parsing act-structure.md"
         act_labels = parse_act_structure(args.act_structure)
@@ -507,8 +1035,18 @@ def main(argv=None) -> int:
         ]
 
         stage = "locating source caption files"
+        # Locate one source FCPXML per configured speaker (multicam +
+        # single_clip). Use clip_types as the authoritative speaker list so
+        # we don't miss single_clip speakers that have no media_ref entry.
+        # Sort for deterministic iteration so the same project always
+        # produces the same merged-resources ID layout across runs.
+        all_speakers = sorted(
+            set(params["speaker_refs"].keys())
+            | set(params["asset_refs"].keys())
+            | set(params["clip_types"].keys())
+        )
         source_fcpxmls = {}
-        for speaker in params["speaker_refs"].keys():
+        for speaker in all_speakers:
             src_path = find_speaker_fcpxml(speaker, xml_dir)
             source_fcpxmls[speaker] = parse_source_fcpxml(str(src_path), speaker)
 
@@ -534,6 +1072,20 @@ def main(argv=None) -> int:
                 speaker_refs=params["speaker_refs"],
                 speaker_angles=params["speaker_angles"],
                 project_name=args.project_name,
+                clip_types=params["clip_types"],
+                asset_refs=params["asset_refs"],
+                asset_names=params["asset_names"],
+                # SKILL Phase 2.1.5 — canonical act labels drive
+                # act-boundary title cards on every emission.
+                act_labels=act_labels,
+                # SKILL Phase 2.1.6 — library/event values from the
+                # params md target the destination FCP library so multicam
+                # UIDs are recognized as the existing library multicams
+                # rather than re-imported as duplicates.
+                library_location=params.get("library_location") or None,
+                event_name=params.get("event_name") or None,
+                event_uid=params.get("event_uid") or None,
+                format_ref=params.get("format_ref") or None,
             )
         except Exception as ge:
             print(f"[build_fcpxml] generation failed: {ge}", file=sys.stderr)
