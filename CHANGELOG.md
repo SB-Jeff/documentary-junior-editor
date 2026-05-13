@@ -1,5 +1,148 @@
 # Documentary Junior Editor — Changelog
 
+## v5.3 — 2026-05-13
+
+Viewer template rewrite + supporting SKILL changes, all landing as a single
+release. Major user-facing change: the quote viewer is now React-rewritten
+against the v5.0 data model with v4.0.1-style editorial affordances restored
+(whole-quote cards, drag-to-reorder, scissors split, character-range trim
+editor), plus several new capabilities (Rough/Tight sub-toggle, round
+dropdown with Save-as-new, unified Send-to-agent panel, direct-write Export).
+
+### Viewer rewrite (`scripts/quotes_viewer_template.jsx`)
+
+Replaces the v4.0.1 canonical template entirely. Universal component, same
+across all projects. Three top-level views — **Edit** (default), **Review**,
+**Quote Library** — driven by a tab-style mode toggle in the header. Header
+is two-tone (gray identity/nav row, white filter/cut row) with content
+centered to match the main pane.
+
+- **Edit view** uses v4.0.1-style quote-block cards: whole-quote display
+  (no segment breakdown in UI), drag-and-drop reorder via the left-edge
+  drag handle (not the whole card — fixes the text-selection-hijack
+  failure mode), ↑/↓ move buttons within an act, scissors split into
+  sub-quotes with `#5a`/`#5b`-style IDs (entry IDs are derived from
+  source num; the legacy `e_NNN` namespace is retired), character-range
+  trim editor (highlight + Delete, snaps to word boundaries, supports
+  middle drops), clickable recommendation badge that toggles
+  must-keep ↔ probable-keep, act-reassign dropdown, per-card
+  Comment-on-this button.
+- **Two-tier recommendation system.** Collapses the v5.0 four-tier
+  (`must-keep` / `probable-keep` / `probable-cut` / `optional`) to
+  two-tier (`must-keep` / `probable-keep` only). Reduction is now about
+  demoting recommendations to land Tight Cut at target runtime, not
+  about dropping entries. The build script auto-migrates legacy
+  four-tier data on first build.
+- **Rough/Tight sub-toggle** in the Edit view header. Rough = must-keep
+  + probable-keep (the agent's wider selection). Tight = must-keep only.
+  The Cut block shows the active cut's entry count + runtime, with the
+  Export button folded in.
+- **Round dropdown** in the header. Loads versions baked at build time
+  from `editing-versions/v[N].json`. Includes "+ Save current as new
+  round" which writes a new round file directly to disk via
+  `window.cowork.callMcpTool('mcp__workspace__bash', ...)` — no paste,
+  no chat round-trip. Switching rounds with unsynced tweaks prompts to
+  confirm; pending tweaks are scoped per-round.
+- **Send-to-agent panel** (bottom-right docked, collapsible) unifies
+  the prior dual Sync + Discuss surfaces into one: pending tweaks list,
+  editorial commentary textarea, single Send button. Send composes a
+  chat message that includes ops + optional commentary + full timeline
+  JSON + version stamp, copied to clipboard for paste. The panel's
+  collapsed state shows a yellow warning border when there are pending
+  tweaks (replaces the prior header pill).
+- **Export is self-contained.** Click Export and the viewer writes the
+  current working state to the round's JSON file via `callMcpTool`,
+  then invokes `build_fcpxml.py` directly. **Does not require Sync
+  first** — state alignment happens as part of Export. Sync stays as a
+  separate, intentional act of "here's my reasoning, learn from it."
+- **Quote Library view** (formerly "Source Pool" — renamed for
+  clarity) shows every catalogued quote with whole-quote text,
+  rationale, and act tag. Segments are not exposed in the UI (backend
+  data only). Orphans appear in a dedicated section at the bottom of
+  the list, not as an Act filter chip (orphan is an editorial verdict,
+  not an act).
+- **Graceful degradation outside Cowork.** Save, Export, and other
+  `callMcpTool` actions show clear "only available inside Cowork"
+  messages when the viewer is opened as a static HTML file in a regular
+  browser. The viewer remains read-only-functional for review purposes.
+
+### New `scripts/build_quotes_viewer.py`
+
+Companion build script that wraps the canonical .jsx template into a
+self-contained HTML artifact (React 18 + Babel-standalone + inline CSS).
+Replaces the previous ad-hoc wrapping that the Edit Agent did at session
+time. Auto-discovers project data from the handoffs folder, migrates v5.0
+segment-based trims to character-range trims for the new viewer, collapses
+four-tier recommendations to two-tier, and emits a ready-to-load HTML file.
+
+Invocation:
+
+```
+python3 scripts/build_quotes_viewer.py \
+    --slug <project-slug> \
+    --ssd-root <project-ssd-root> \
+    --output <handoffs/[slug]/[slug]_quotes_view.html>
+```
+
+The Edit Agent runs this once at Phase 2 session start, then calls
+`mcp__cowork__create_artifact` with the output.
+
+### SKILL-edit.md changes
+
+- **Phase 2 rewritten.** Documents the new build-script invocation,
+  enumerates the v5.0 viewer's capabilities, removes the obsolete
+  "Viewer template — Phase 3 follow-up" section (gap closed).
+- **Phase 3 (Rough Cut) updated.** Two-tier recommendation system
+  documented; Rough/Tight semantics explained; removed `probable-cut`
+  and `optional` tier descriptions.
+- **Phase 5 (Reduction) reframed.** Reduction is now about demoting
+  recommendations to land the Tight Cut at target runtime, not about
+  dropping entries. Drop-entry retained only for "shouldn't have been
+  pulled in at all" cases. Segment-level trim/drop guidance replaced
+  with the viewer's character-range editor + split workflow.
+- **Data model section** updated to document `_editCuts`, `_subLabel`,
+  the entry_id namespace migration (`e_NNN` retired in favor of
+  source-num-derived IDs with letter suffixes for splits), and the
+  two-tier recommendation values.
+
+### Out of scope, parked for separate review
+
+- **`build_fcpxml.py` v5.0-awareness update.** The script still expects
+  v4.0.1-shape JSON. The viewer's Export button calls it but the script
+  fails at the load step against v5.0 entries. Highest-priority parked
+  work; blocks actual FCPXML round-trip testing of the new viewer.
+- **Editing Coach Agent.** New SKILL for evaluating post-project
+  feedback and proposing SKILL updates. Designed during this review but
+  deferred to a separate ship. Scope: read `editorial-feedback-v[N].md`
+  + Final_Edit comparison across reference examples, propose
+  `skill-update-proposal-v[N].md` for human review. Per-project cadence
+  initially; scales back when patterns stabilize.
+- **Feedback file persistence layer** (`editorial-feedback-v[N].md`).
+  The viewer's Send-to-agent panel can already produce the commentary;
+  the agent-side handling that appends it to a per-project feedback
+  file at session end, and reads it at next session start, is the
+  follow-up work.
+- **FCPXML Agent elimination.** Pipeline simplification flagged during
+  review; deferred until `build_fcpxml.py` is hardened enough that the
+  viewer's direct-invoke path can replace the agent's orchestration
+  layer.
+- **Cowork session guide updates** for the new viewer interactions
+  (Save-as-new-round, Comment-on-this, Export semantics). Pending.
+
+### Reference artifacts produced during this session
+
+- `handoffs/tccs-dr-pan-testimonials/viewer_and_refinement_punch_list.md`
+  — the design-review punch list used to drive the rewrite.
+- `handoffs/tccs-dr-pan-testimonials/tccs-dr-pan-testimonials_v4_viewer.html`
+  — v4.0.1 comparison viewer rendered with TCCS data, used to validate
+  the trim-and-split workflow before committing to the rewrite.
+- `handoffs/tccs-dr-pan-testimonials/tccs-dr-pan-testimonials_mockup_v1.html`
+  — full integrated mockup of the rewritten viewer.
+- `handoffs/tccs-dr-pan-testimonials/tccs-dr-pan-testimonials_header_redesign.html`
+  — header layout exploration with side-by-side variants.
+- `handoffs/tccs-dr-pan-testimonials/tccs-dr-pan-testimonials_send_panel_sketch.html`
+  — Send-to-agent panel design sketch.
+
 ## v5.2 — 2026-05-13
 
 Skill Review pass for the TCCS Dr Pan & Testimonials project. Folds in the

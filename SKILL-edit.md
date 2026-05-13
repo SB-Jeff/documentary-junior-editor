@@ -307,12 +307,20 @@ the cut.
 
 A timeline entry has:
 
-- `entry_id` — unique within this timeline (e.g. `"e_001"`, `"e_002"`...)
+- `entry_id` — unique within this timeline. Derived from the source quote
+  num (e.g. `"1"`, or `"1a"` / `"1b"` for split sub-quotes) — not the legacy
+  `e_NNN` namespace, which is retired.
 - `source_quote_id` — references exactly one source quote
 - `segments[]` — ordered references to segments from that source quote, with
-  optional per-segment trims
-- `runtime_recommendation` — `must-keep`, `probable-keep`, `probable-cut`, or
-  `optional` (see Lesson 5 below)
+  optional per-segment trims. Used by the FCPXML Agent for clip generation;
+  the viewer derives a character-range trim representation on top of this.
+- `_editCuts` — character-range cuts on the entry's concatenated full-quote
+  text, populated by the viewer's character-range trim editor. Used by the
+  viewer for the editing UI; the FCPXML Agent reads `segments[]`.
+- `_subLabel` — `"a"`, `"b"`, etc. when this entry is one of a split set
+  from a single source quote; `null` otherwise.
+- `runtime_recommendation` — `must-keep` or `probable-keep` (two-tier
+  system; see "Runtime recommendations on every entry" in Phase 3).
 - `notes` — optional editorial notes
 
 **Crucially:** a timeline entry is a **contiguous-in-source-order play of
@@ -495,16 +503,60 @@ review and potentially reconsider them.
 
 ### Creating the live viewer
 
-Use `mcp__cowork__create_artifact` (HTML) at the start of Phase 2 with the
-full source pool baked in. The viewer auto-scrolls to and highlights the
-quote currently being discussed. Jeff can interact with the viewer; the
-viewer can send messages back into chat via `sendPrompt()`.
+The viewer is built from a canonical React template (`scripts/quotes_viewer_template.jsx`)
+wrapped into a self-contained HTML artifact by `scripts/build_quotes_viewer.py`.
+**Do not hand-wrap the template at session time.** Run the build script:
 
-The viewer template (`scripts/quotes_viewer_template.jsx`) is not yet aware of
-all the v5.0 expectations. Until the template's Phase 3 follow-up code change
-ships, the agent should configure the artifact at session start with whatever
-the template currently supports and document the gaps in chat. See "Viewer
-template — Phase 3 follow-up" below.
+```
+python3 scripts/build_quotes_viewer.py \
+  --slug <project-slug> \
+  --ssd-root <project-ssd-root> \
+  --output <handoffs/[slug]/[slug]_quotes_view.html>
+```
+
+The script auto-discovers `tagged-quotes-v*.json`, `trimmed-quotes-v*.json`,
+`pipeline-state.json`, and any `editing-versions/v*.json` files, migrates the
+v5.0 entries' segment-based trims to the viewer's character-range trim format,
+collapses the four-tier recommendation history (if present) to the canonical
+two-tier system (must-keep / probable-keep), and produces the HTML.
+
+After the script runs, call `mcp__cowork__create_artifact` with the generated
+HTML to surface the viewer in Jeff's session.
+
+### Viewer capabilities (v5.0)
+
+The viewer has three top-level views: **Edit** (the default, formerly Timeline),
+**Review** (selected quotes as continuous narrative), and **Quote Library**
+(all source + orphan quotes, raw material inventory).
+
+- **Edit view** uses v4.0.1-style quote-block cards: whole-quote display,
+  drag-and-drop reorder (initiated from the drag handle on the left edge,
+  not the card body), ↑/↓ move buttons, scissors split into sub-quotes
+  (`#5` → `#5a` + `#5b`), character-range trim editor (highlight text +
+  press Delete), clickable recommendation badge that toggles must-keep ↔
+  probable-keep, act-reassign dropdown, and a per-card Comment-on-this
+  button that focuses the Send-to-agent panel's commentary textarea.
+- **Rough/Tight sub-toggle** in the Edit view header filters by
+  recommendation tier. Rough = must-keep + probable-keep; Tight =
+  must-keep only. The Cut block also shows the active cut's entry count +
+  runtime and houses the Export button.
+- **Round dropdown** (top-left of header) loads versions baked into the
+  HTML at build time. Includes a "+ Save current as new round" option
+  that writes a new `editing-versions/v[N].json` directly to disk via
+  `window.cowork.callMcpTool('mcp__workspace__bash', ...)`.
+- **Send-to-agent panel** docked bottom-right is a unified surface for
+  pending-tweaks list + editorial commentary textarea + Send button.
+  Sends a composed chat message (paste-into-chat pattern) including the
+  ops list, optional commentary, full timeline JSON, and version stamp.
+- **Export** in the Edit view's Cut block is self-contained: it writes
+  the current working state directly to the round's JSON file via
+  `callMcpTool`, then invokes `build_fcpxml.py`. **Does not require Sync
+  first** — state alignment happens as part of Export.
+
+When the agent references a specific entry or source quote in chat, the
+viewer auto-scrolls to it and renders a focus highlight via
+`INITIAL_FOCUS` baked at build time, or via a re-build with updated
+focus.
 
 ### Updating the live viewer
 
@@ -523,15 +575,29 @@ Specifically, update the artifact after:
 - Any title-card-as-shortener proposal accepted
 - Any context-beat suggestion logged
 
-### Bidirectional interaction via `sendPrompt()`
+### Viewer-to-agent communication: the Send-to-agent panel
 
-The viewer can call `sendPrompt(text)` to push a message into chat as if Jeff
-typed it. Use this for buttons like "drop entry e_017", "promote
-recommendation to must-keep", "swap entries e_004 and e_005" — clicks become
-chat instructions the agent can act on.
+`sendPrompt()` is NOT available in Cowork artifacts (only in
+`mcp__visualize__show_widget` artifacts). The viewer therefore can't push
+messages into chat unilaterally. Instead, the viewer uses two distinct
+channels for talking back to the agent:
 
-When the viewer sends such a prompt, the agent treats it as Jeff's
-instruction, applies the change via `update_artifact`, and confirms in chat.
+- **Direct disk writes via `window.cowork.callMcpTool('mcp__workspace__bash', ...)`**
+  for state persistence: Save-as-new-round writes a new
+  `editing-versions/v[N].json`, Export overwrites the current round's
+  JSON and invokes `build_fcpxml.py`. These do not require chat
+  round-trip.
+- **The Send-to-agent panel (clipboard + paste)** for editorial
+  communication: pending tweaks list + optional commentary textarea +
+  Send button. The viewer composes a chat message with the ops, the
+  commentary, the full timeline JSON, and the version stamp; Send
+  copies it to clipboard for Jeff to paste into chat. This is the
+  channel for telling the agent *why* changes were made, so the agent
+  can learn from editorial reasoning across rounds.
+
+The rule of thumb: **paste-into-chat is for communication with the agent;
+direct writes are for persistence and tool invocation.** Save and Export
+use direct writes; Sync and Comment-on-this use the Send panel's paste flow.
 
 ### Auto-scroll and current-focus highlight
 
@@ -559,39 +625,6 @@ in any browser at any time without a Cowork session.
 The HTML build process (React 18 + Babel + Tailwind CDNs, console-warning
 suppression, etc.) is unchanged from v4.0.1. See `scripts/quotes_viewer_template.jsx`
 header comment for current build details.
-
-### Viewer template — Phase 3 follow-up
-
-The current `scripts/quotes_viewer_template.jsx` was last updated for v4.0.1
-(Review/Edit toggle bake-in). To support the v5.0 model fully, the template
-needs:
-
-- Segment-level UI: per-entry display of which segments are included, with
-  head/tail trim indicators
-- Source attribution per segment in composite-intercut display (so Jeff can
-  see at a glance that entry `e_011` is from quote #14 sitting between two
-  entries from #21)
-- Status badges per entry: must-keep / probable-keep / probable-cut /
-  optional
-- Runtime-recommendation toggle: "show full inventory" vs. "show recommended
-  tight cut" (tight cut = must-keep + probable-keep only)
-- Bidirectional buttons (`sendPrompt()` wiring)
-- Current-focus highlight + auto-scroll
-- A "title card" entry type alongside spoken-quote and interstitial entries
-- A "context beat (research needed)" placeholder entry type
-
-**This template rewrite is scoped as a Phase 3 follow-up code change.** It is
-out of scope for the v5.0 SKILL pass. Until the template ships:
-
-- The agent loads the source pool into the existing template's data block as
-  best it can, flattening segments into the legacy quote-with-trim shape for
-  display purposes
-- The agent maintains the true segment+entry data structure in chat and in
-  the emitted `trimmed-quotes-v[N].json` regardless
-- The handoff JSON is the source of truth for the FCPXML Agent — the legacy
-  viewer's display approximation does not affect downstream behavior
-- The agent flags the template gap in `edit-handoff-v[N].md` so Jeff knows
-  what the viewer can and cannot show until the template ships
 
 ---
 
@@ -646,25 +679,37 @@ every segment really earns its place.
 ### Runtime recommendations on every entry
 
 Every timeline entry gets a `runtime_recommendation` field, set when the
-entry is first proposed and revisable across rounds:
+entry is first proposed and revisable across rounds. The system is
+**two-tier**:
 
-- `must-keep` — the cut breaks without this beat; non-negotiable
-- `probable-keep` — strongly believed in, but could come out under pressure
-- `probable-cut` — included for visibility but the agent expects it to drop
-  in Reduction
-- `optional` — judgment call; could go either way
+- `must-keep` — the cut breaks without this beat; non-negotiable. Appears in
+  both Rough and Tight cuts; exported to FCPXML in both modes.
+- `probable-keep` — strongly believed in, but expendable under pressure.
+  Appears in Rough only; falls out of the Tight cut.
 
-The viewer adds a toggle: **"show full inventory"** (every entry visible,
-across all four recommendations) vs. **"show recommended tight cut"**
-(must-keep + probable-keep only). Jeff sees both views and can compare.
+The viewer's Cut sub-toggle in the Edit view header switches between
+**Rough** (must-keep + probable-keep, the agent's wider editorial selection)
+and **Tight** (must-keep only, closest to final). The toggle is a view
+filter *and* an export filter — the Export button in the Cut block invokes
+`build_fcpxml.py` against whichever cut is currently selected, so the
+exported FCPXML matches what's on screen.
+
+Entries the agent considered but doesn't recommend including should not be
+added to the timeline at all — leave them as orphans in the source pool
+where the editor can still inspect and rescue them. A timeline entry is a
+commitment; if you're considering cutting it, that's what `probable-keep`
+is for.
 
 The recommendations are the agent's editorial point of view, surfaced for
 the Discussion. They are not commitments — every recommendation can move
-across rounds.
+across rounds, and the editor changes them directly in the viewer by
+clicking the recommendation badge on each card.
 
-The total runtime of the must-keep + probable-keep set should target **2× the
-target runtime** in the rough cut. That gives the Reduction phase real room
-to land at target without the agent having pre-committed to the wrong cuts.
+The total runtime of the rough cut (must-keep + probable-keep) should
+target **2× the target runtime**. That gives the Reduction phase real room
+to land at target by demoting probable-keep entries that don't earn their
+keep into the dropped pool. The tight cut (must-keep only) is what
+ultimately ships.
 
 ### Selection Principles
 
@@ -831,7 +876,7 @@ and as a placeholder entry in the timeline.
   "intent": "Stat about how many U.S. families in similar circumstances are
              unhoused — would raise the stakes before Act 2.",
   "research_needed": true,
-  "runtime_recommendation": "optional",
+  "runtime_recommendation": "probable-keep",
   "estimated_seconds": 4
 }
 ```
@@ -959,7 +1004,7 @@ story?", not "which words come out?"
 
 Jeff will surface things the rough cut revealed — a beat he didn't know he
 wanted, a redundancy he can now see, an ordering change that opens a cut
-elsewhere, a swap where a probable-cut becomes a must-keep. Capture
+elsewhere, a probable-keep that should be promoted to must-keep. Capture
 decisions as they land; don't accumulate a backlog.
 
 The Discussion may also surface that your runtime recommendations are
@@ -971,17 +1016,30 @@ the change to the viewer immediately.
 
 ## Phase 5: Reduction
 
-Once Discussion has produced decisions, Reduction applies them. Trim,
-reorder, split into more entries, deselect against an agreed target
-runtime. The question shifts from "does this tell the story?" to "which
-words come out?" — Edit mode in the viewer is the primary surface for this
-phase. Runtime is now a real constraint.
+Once Discussion has produced decisions, Reduction applies them.
+**Reduction is primarily about tightening recommendations to land the Tight
+Cut at target runtime** — not about deciding what comes out of the timeline
+entirely. The question shifts from "does this tell the story?" to "what's
+the tightest version of this story?" The Edit view in the viewer (with the
+Cut sub-toggle flipped to Tight) is the primary surface for this phase.
 
-Selection, trimming, segment-level reorder, and timeline-entry restructuring
-still happen together inside Reduction — not in strict sequence. Trimming
-reveals redundancies that change selection, restructuring entries changes
-sequence count and pacing, and the editor needs the full quote pool at all
-times.
+**The Reduction mechanism is recommendation demotion, not entry drops.**
+For each entry that's currently `must-keep`, ask: does the cut break
+without this beat? If no, click the recommendation badge to demote it to
+`probable-keep`. The Tight cut's runtime tally ticks down. The entry stays
+in the timeline JSON, visible in the Rough view, available for rescue if
+the next round's discussion changes your mind. Demote-not-drop preserves
+the editorial signal across rounds.
+
+Use Drop entry only when the entry truly shouldn't have been pulled into
+the timeline at all — wrong speaker, wrong material, off-topic. For "this
+beat is expendable for runtime," demote to `probable-keep` instead.
+
+Trimming, splitting into sub-quotes, and entry reordering still happen
+during Reduction alongside the demotion work — they're complementary, not
+sequential. Trimming a quote may reveal that the surrounding entries don't
+need it as much; splitting an entry into 1a/1b may let one half land as
+must-keep while the other becomes probable-keep.
 
 ### When Jeff is satisfied with a section's selection, begin trimming it
 
@@ -997,23 +1055,33 @@ entry removes everything that dilutes the point and keeps everything that
 makes it land. Sometimes that is a single segment from a 45-second source
 quote. Sometimes the full quote is already tight and needs nothing removed.
 
-**What you can do at the segment level:**
+**Trimming via the viewer's character-range editor:**
 
-- **Drop a segment** from a timeline entry — exclude its idx from the
-  entry's segments list
-- **Head-trim a segment** — set `head_trim_words: N` to drop the first N
-  words
-- **Tail-trim a segment** — set `tail_trim_words: N` to drop the last N
-  words
+- **Highlight any words inside the entry's text and press Delete** to cut
+  them. Cuts snap to word boundaries. Cuts can be at the head, tail, or
+  anywhere in the middle. Multiple cut regions are supported.
+- **Highlight previously-cut text and press Delete again** to restore it.
+- Per-segment `head_trim_words` / `tail_trim_words` and segment-drop
+  behavior still exist in the underlying data model — they're what the
+  FCPXML Agent reads to generate clips. The viewer derives a
+  character-range representation on top of this and writes both back
+  when state is saved.
 
 **What you can do at the timeline level:**
 
 - **Reorder entries** anywhere in the timeline (within or across acts)
-- **Split into more entries** to express a sentence-level reorder of one
-  source quote, or to intercut between source quotes
-- **Add new entries** by referencing previously-unselected source quotes
-- **Remove entries** to reduce runtime
-- **Update `runtime_recommendation`** as your point of view sharpens
+  via drag-and-drop on the card's left-edge handle, or ↑/↓ buttons within
+  an act
+- **Split an entry into sub-quotes** (`#5` → `#5a` + `#5b`) via the
+  scissors button — place markers between words to define the split, and
+  the entry becomes multiple independently-positioned sub-entries
+- **Add new entries** by clicking "Add to timeline" on a Quote Library
+  card
+- **Reassign an entry's act** via the dropdown on the act tag
+- **Toggle recommendation** (must-keep ↔ probable-keep) via clicking the
+  recommendation badge on each card — the primary Reduction mechanism
+- **Drop entries** that shouldn't have been pulled in at all (use
+  recommendation demotion for "expendable for runtime" instead)
 
 **What you can never do:**
 
@@ -1023,8 +1091,6 @@ quote. Sometimes the full quote is already tight and needs nothing removed.
 - Reorder segments inside a timeline entry (an entry is
   contiguous-in-source-order by definition)
 - Mix segments from multiple source quotes into a single timeline entry
-- Drop words from the middle of a segment via trims (head/tail only — for
-  a middle drop, request finer source segmentation)
 - Paraphrase even a single phrase
 
 **Trimming principles:**
@@ -1143,7 +1209,7 @@ When the selection changes:
 - A previously unincluded source quote is pulled in to fill a gap revealed
   by trimming
 - An entry is restructured into multiple entries to enable an intercut
-- A `probable-cut` recommendation is upgraded to `must-keep` after a beat
+- A `probable-keep` recommendation is upgraded to `must-keep` after a beat
   it set up was deselected, leaving it standing alone with new weight
 
 Accommodate these changes fluidly. The full quote pool is always available
@@ -1326,7 +1392,7 @@ The finalized timeline for this round:
       "intent": "A stat about how many families face similar circumstances —
                  would raise the stakes before the protagonist's experience.",
       "research_needed": true,
-      "runtime_recommendation": "optional",
+      "runtime_recommendation": "probable-keep",
       "estimated_seconds": 4
     },
     {

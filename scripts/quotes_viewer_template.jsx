@@ -1,92 +1,174 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
 // ============================================================================
-// DATA BLOCK — Replace this section with project-specific data.
-// The React component below should NOT be modified when populating project data.
-// When baking in editor edits, only update this data block.
+// Documentary Junior Editor — Quote Viewer Template (v5.0)
+// ============================================================================
 //
-// The viewer renders in two modes driven by a Review/Edit toggle:
-//   • Review (default landing) — selected quotes as continuous narrative,
-//     act-scoped by default with a tab to read "All" end-to-end. No controls.
-//     This is the Discussion surface — "does this tell the story?"
-//   • Edit — the full interactive interface (section filter tabs, toolbar,
-//     quote cards with checkboxes, drag handles, section-reassign dropdowns,
-//     trim panels, split panels, interstitial placement, Selected Quotes
-//     bottom bar). This is the Reduction surface — "which words come out?"
-// Both modes read from the same state; edits in Edit mode reflect immediately
-// in Review and vice versa. Data block signatures are identical across modes.
+// React component rendered by build_quotes_viewer.py into a standalone HTML
+// artifact (React 18 + Babel-standalone + inline stylesheet). The build
+// script substitutes the data block at the top of this file with project data.
+//
+// THIS FILE has TWO sections:
+//   1. DATA BLOCK — replaced per-project at build time. Do not modify the
+//      shape of the constants; only update the values via the build script.
+//   2. REACT COMPONENT — universal, identical across projects. Bug fixes and
+//      feature changes happen here.
+//
+// Architecture (v5.0):
+//   - Three top-level views: Quote Library / Timeline / Review
+//   - Quote Library shows every source quote + orphans; segments backend-only
+//   - Timeline uses v4.0.1-style quote-block cards with character-range trim,
+//     scissors split, drag, ↑/↓, two-tier recommendation toggle
+//   - Rough/Tight sub-toggle filters Timeline by must-keep+probable-keep vs
+//     must-keep only; Export button is contextual to the active cut
+//   - Round dropdown loads from baked-in rounds; "Save as new round" writes
+//     directly to disk via window.cowork.callMcpTool (graceful no-op outside
+//     Cowork)
+//   - Send-to-agent panel: pending tweaks + editorial commentary in one
+//     surface; clipboard-based send (paste into chat)
+//   - Per-card Comment-on-this routes to the panel's commentary textarea
+//   - Export writes current working state to the round file then invokes
+//     build_fcpxml.py — self-contained, no Sync required first
+//
+// ============================================================================
+// DATA BLOCK — Replaced per-project by build_quotes_viewer.py at build time.
 // ============================================================================
 
-const PROJECT_TITLE = "Subject Name — Company Name";
+const PROJECT_TITLE = "Subject Name — Project Name";
 
-// Quotes array — grouped by section, ordered by editor's preferred sequence.
-// Each quote needs: num, speaker, quote (full verbatim text), startTC, endTC,
-// part (section name), rationale, selected (boolean).
-const initialQuotes = [
-  // Quotes are grouped by section. Section names come from act-structure.md.
-  // Do not hardcode section names — they are derived dynamically from the data.
-  // Example: { num: 1, speaker: "Speaker Name", quote: "Full verbatim quote text...", startTC: "0:15", endTC: "0:45", part: "Section Name", rationale: "Why this quote belongs here.", selected: false },
+// Project metadata (act labels, target runtime, speakers).
+const PROJECT_META = {
+  slug: "project-slug",
+  ssd_root: "/Volumes/PROJECT_SSD",  // for callMcpTool save/export paths
+  target_seconds: 120,
+  // Order matters — drives section ordering. "Orphan" should not appear here.
+  act_labels: ["Act 1", "Act 2", "Act 3"],
+  // Speaker list — used by the Speaker filter chips. slug values must match
+  // source_quote.speakerSlug for filtering to work.
+  speakers: [
+    // { name: "Speaker Name", slug: "speaker-slug", role: "patient", primary: true },
+  ],
+};
+
+// Source quote pool. Every catalogued quote, including orphans. The viewer
+// surfaces orphans in a dedicated section at the bottom of the Quote Library
+// view (not as a filter option). Each quote retains segments[] in the JSON for
+// downstream agents, but segments are not exposed in the viewer UI.
+//
+// Shape:
+//   {
+//     num: 1, originalNum: 1, speaker: "Name", speakerSlug: "slug",
+//     role: "patient", quote: "Full verbatim text.",
+//     startTC: "HH:MM:SS", endTC: "HH:MM:SS",
+//     part: "Act 1" | "Act 2" | "Act 3" | "Orphan",
+//     rationale: "Editorial note.",
+//     is_orphan: false,
+//     segments: [{ idx: 0, text: "...", startTC: "...", endTC: "..." }]
+//   }
+const SOURCE_QUOTES = [];
+
+// Round versions — each has its own timeline of entries. Latest round is
+// the default landing view. Older rounds remain selectable via dropdown.
+//
+// Round shape:
+//   {
+//     round_number: 1, version: "v...", round_label: "Round 1",
+//     timeline: [
+//       {
+//         entry_id: "1" | "1a" | "1b" | "T1",        // sub-letters denote splits
+//         source_quote_id: 1 | null,                 // null for interstitial/title-card
+//         type: "spoken" | "title_card" | "interstitial" | "context_beat",
+//         speaker: "Name",
+//         part: "Act 1",
+//         runtime_recommendation: "must-keep" | "probable-keep",
+//         _editCuts: [[startChar, endChar], ...],    // character-range trims
+//         _subLabel: "a" | "b" | null,
+//         notes: "Editorial note.",
+//         text: "..."                                // for non-spoken entry types
+//       }
+//     ]
+//   }
+const ROUNDS = [
+  // { round_number: 1, version: "v0", round_label: "Round 1", timeline: [] },
 ];
 
-// Pre-baked trims — keyed by quote number. Populated as the editor trims quotes.
-// Example: { 5: "Trimmed version of quote #5...", 8: "Trimmed version of quote #8..." }
-const initialTrims = {};
+// The round to render on load (most recent). Build script sets this to the
+// latest round's index.
+const INITIAL_ROUND_INDEX = 0;
 
-// Text interstitials — factual titles, credentials, or context lines that appear
-// between spoken quotes. These are NOT spoken quotes — they are on-screen text cards.
-// Each interstitial has: id (string, "T1", "T2", ...), text (the on-screen text),
-// part (section name), and afterId (the quote id it appears after, or null for start).
-// Example: [{ id: "T1", text: "Dr. Pan attended the University of Cincinnati College of Medicine.", part: "The Legacy", afterId: "3" }]
-const initialInterstitials = [];
+// Optional focus target — viewer auto-scrolls and flashes the focused element
+// on first render. Build script populates from the agent's current focus.
+//   { type: "entry" | "source", id: "1" }
+const INITIAL_FOCUS = null;
 
 // ============================================================================
-// RESTORED STATE — If resuming from a saved session, paste saved JSON here.
-// Leave as null for a fresh start. Claude can also populate this automatically
-// when regenerating the artifact with preserved editorial state.
-// ============================================================================
-// NOTE: When baking state, also populate initialInterstitials above with any
-// text interstitials created during the session.
-const RESTORED_STATE = null;
-
-// Section configuration — populated from act-structure.md approved labels.
-// Order determines display order in filters and section headers.
-// If empty or null, sections are derived dynamically from quote data (first appearance order).
-// Example: [{ name: "The Need" }, { name: "The Work" }, { name: "The Impact" }]
-const SECTION_CONFIG = null;
-
-// ============================================================================
-// REACT COMPONENT — Universal UI code. Same across all projects.
-// Do not modify this section when updating project data.
-// To fix bugs or add features, update this section without touching the data above.
+// REACT COMPONENT — Universal UI. Same across all projects.
+// To fix bugs or add features, update this section without touching the data
+// block above.
 // ============================================================================
 
-// Dynamic color palette — assigned to sections in order of appearance.
-const COLOR_PALETTE = [
-  { bg: "bg-blue-50", border: "border-blue-200", badge: "bg-blue-100 text-blue-800", stripe: "bg-blue-400", btnActive: "bg-blue-500 text-white" },
-  { bg: "bg-amber-50", border: "border-amber-200", badge: "bg-amber-100 text-amber-800", stripe: "bg-amber-400", btnActive: "bg-amber-500 text-white" },
-  { bg: "bg-emerald-50", border: "border-emerald-200", badge: "bg-emerald-100 text-emerald-800", stripe: "bg-emerald-400", btnActive: "bg-emerald-500 text-white" },
-  { bg: "bg-purple-50", border: "border-purple-200", badge: "bg-purple-100 text-purple-800", stripe: "bg-purple-400", btnActive: "bg-purple-500 text-white" },
-  { bg: "bg-rose-50", border: "border-rose-200", badge: "bg-rose-100 text-rose-800", stripe: "bg-rose-400", btnActive: "bg-rose-500 text-white" },
-  { bg: "bg-cyan-50", border: "border-cyan-200", badge: "bg-cyan-100 text-cyan-800", stripe: "bg-cyan-400", btnActive: "bg-cyan-500 text-white" },
+// --- Color tokens (Tailwind-free; rendered via inline styles + class names) ---
+const COLORS = {
+  surface: "#ffffff",
+  surface2: "#f5f5f4",
+  border: "#e7e5e4",
+  text: "#1c1917",
+  textMuted: "#57534e",
+  textSubtle: "#78716c",
+};
+
+// Speaker color palette — assigned in order of appearance.
+const SPEAKER_PALETTE = [
+  { bg: "#fef3c7", fg: "#7c2d12" },
+  { bg: "#dbeafe", fg: "#1e3a8a" },
+  { bg: "#d1fae5", fg: "#065f46" },
+  { bg: "#ede9fe", fg: "#5b21b6" },
+  { bg: "#fce7f3", fg: "#9d174d" },
 ];
-const ORPHAN_COLOR = { bg: "bg-gray-50", border: "border-gray-200", badge: "bg-gray-100 text-gray-800", stripe: "bg-gray-400", btnActive: "bg-gray-500 text-white" };
 
-// === Character-range cut helpers ===
-// editCuts is now a sorted array of [start, end] ranges marking cut characters.
-
-// Compute cut ranges from an existing trim (kept substring of original)
-function computeCutRanges(original, trimmed) {
-  if (!trimmed || trimmed === original) return [];
-  const trimIdx = original.indexOf(trimmed);
-  if (trimIdx < 0) return [];
-  const ranges = [];
-  if (trimIdx > 0) ranges.push([0, trimIdx]);
-  const trimEnd = trimIdx + trimmed.length;
-  if (trimEnd < original.length) ranges.push([trimEnd, original.length]);
-  return ranges;
+function buildSpeakerColors(speakers) {
+  const colors = {};
+  speakers.forEach((s, i) => {
+    colors[s.slug] = SPEAKER_PALETTE[i % SPEAKER_PALETTE.length];
+  });
+  return colors;
 }
 
-// Merge overlapping/adjacent ranges and sort
+// ============================================================================
+// Helpers — text, time, character ranges, etc.
+// ============================================================================
+
+function tcToSeconds(tc) {
+  if (!tc) return 0;
+  const parts = String(tc).split(":").map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return 0;
+}
+
+function tcFmt(startTC, endTC) {
+  if (!startTC) return "";
+  const a = String(startTC).replace(/^00:/, "");
+  const b = endTC ? String(endTC).replace(/^00:/, "") : "";
+  return b && b !== a ? `${a}–${b}` : a;
+}
+
+function fmtSec(s) {
+  if (!s || isNaN(s)) return "0s";
+  if (s < 60) return `${Math.round(s)}s`;
+  const m = Math.floor(s / 60);
+  const r = (s - m * 60).toFixed(0).padStart(2, "0");
+  return `${m}:${r}`;
+}
+
+function tokensOf(text) {
+  return (text || "").match(/\S+/g) || [];
+}
+
+// ============================================================================
+// Character-range cut helpers (v4.0.1 trim editor logic, ported)
+// ============================================================================
+
 function normalizeRanges(ranges) {
   if (ranges.length === 0) return [];
   const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
@@ -102,31 +184,18 @@ function normalizeRanges(ranges) {
   return merged;
 }
 
-// Toggle a range: cut chars become kept, kept chars become cut
-function toggleRange(existingCuts, selStart, selEnd) {
-  // Build a per-character cut map
-  const isCut = new Array(selEnd).fill(false);
-  existingCuts.forEach(([s, e]) => {
-    for (let i = Math.max(s, selStart); i < Math.min(e, selEnd); i++) isCut[i] = true;
-  });
-  // Invert within selection
-  const newCuts = existingCuts.map(r => [...r]); // clone
-  // Remove the selection range from existing cuts (restore cut parts)
-  // Then add the non-cut parts of the selection as new cuts
-  const toRemove = [[selStart, selEnd]];
-  // Subtract selection from existing cuts
+function toggleRange(existing, selStart, selEnd) {
   let result = [];
-  for (const [cs, ce] of existingCuts) {
+  for (const [cs, ce] of existing) {
     if (ce <= selStart || cs >= selEnd) {
-      result.push([cs, ce]); // no overlap
+      result.push([cs, ce]);
     } else {
       if (cs < selStart) result.push([cs, selStart]);
       if (ce > selEnd) result.push([selEnd, ce]);
     }
   }
-  // Add inverted parts: chars in selection that were NOT cut become cut
   let pos = selStart;
-  for (const [cs, ce] of existingCuts) {
+  for (const [cs, ce] of existing) {
     const overlapStart = Math.max(cs, selStart);
     const overlapEnd = Math.min(ce, selEnd);
     if (overlapStart >= overlapEnd) continue;
@@ -137,7 +206,16 @@ function toggleRange(existingCuts, selStart, selEnd) {
   return normalizeRanges(result);
 }
 
-// Build render segments: array of { text, cut } for display
+function snapToWordBounds(text, start, end) {
+  while (start > 0 && text[start - 1] !== " ") start--;
+  while (end < text.length && text[end] !== " ") end++;
+  while (end < text.length && text[end] === " ") end++;
+  if (start > 0 && end === text.length) {
+    while (start > 0 && text[start - 1] === " ") start--;
+  }
+  return [start, end];
+}
+
 function buildRenderSegments(original, cuts) {
   if (cuts.length === 0) return [{ text: original, cut: false }];
   const segs = [];
@@ -151,79 +229,123 @@ function buildRenderSegments(original, cuts) {
   return segs;
 }
 
-// Reconstruct kept text from original + cuts
 function buildKeptText(original, cuts) {
   if (cuts.length === 0) return original;
-  let result = '';
+  let result = "";
   let pos = 0;
   for (const [s, e] of cuts) {
     result += original.slice(pos, s);
     pos = e;
   }
   result += original.slice(pos);
-  return result.replace(/\s+/g, ' ').trim();
+  return result.replace(/\s+/g, " ").trim();
 }
 
-function buildSectionColors(quotes, config) {
-  const colors = {};
-  if (config && config.length > 0) {
-    config.forEach((s, i) => { colors[s.name] = COLOR_PALETTE[i % COLOR_PALETTE.length]; });
-  } else {
-    const seen = [];
-    quotes.forEach(q => { if (q.part && q.part !== "Orphan" && !seen.includes(q.part)) seen.push(q.part); });
-    seen.forEach((name, i) => { colors[name] = COLOR_PALETTE[i % COLOR_PALETTE.length]; });
+// ============================================================================
+// Source quote → derived helpers
+// ============================================================================
+
+function findSourceQuote(num) {
+  return SOURCE_QUOTES.find((q) => q.num === num) || null;
+}
+
+// "Full quote" text for a timeline entry — concatenated source segments.
+// This is what the character-range trim editor operates on.
+function fullQuoteText(entry) {
+  if (entry.type === "title_card" || entry.type === "interstitial") return entry.text || "";
+  if (entry.type === "context_beat") return `[CONTEXT BEAT — ${entry.intent || "research needed"}]`;
+  const src = findSourceQuote(entry.source_quote_id);
+  if (!src) return `[unresolved source #${entry.source_quote_id}]`;
+  return src.segments.map((s) => s.text).join(" ");
+}
+
+function trimmedQuoteText(entry) {
+  const original = fullQuoteText(entry);
+  const cuts = entry._editCuts || [];
+  if (cuts.length === 0) return original;
+  return buildKeptText(original, cuts);
+}
+
+function isTrimmed(entry) {
+  return (entry._editCuts || []).length > 0;
+}
+
+// Estimated runtime in seconds — proportional to kept tokens.
+function entrySeconds(entry) {
+  if (entry.type === "title_card" || entry.type === "interstitial" || entry.type === "context_beat") {
+    return entry.estimated_seconds || 0;
   }
-  colors["Orphan"] = ORPHAN_COLOR;
-  return colors;
+  const src = findSourceQuote(entry.source_quote_id);
+  if (!src) return 0;
+  const totalSec = src.segments.reduce(
+    (a, s) => a + Math.max(0, tcToSeconds(s.endTC) - tcToSeconds(s.startTC)),
+    0
+  );
+  const totalTokens = src.segments.reduce((a, s) => a + tokensOf(s.text).length, 0) || 1;
+  const keptTokens = tokensOf(trimmedQuoteText(entry)).length;
+  return totalSec * (keptTokens / totalTokens);
 }
 
-// Snap a character range to word boundaries within the original text
-function snapToWordBounds(text, start, end) {
-  // Expand start backward to beginning of word
-  while (start > 0 && text[start - 1] !== ' ') start--;
-  // Expand end forward to end of word
-  while (end < text.length && text[end] !== ' ') end++;
-  // Consume trailing spaces so cuts don't leave orphaned gaps
-  while (end < text.length && text[end] === ' ') end++;
-  // If we consumed trailing space but hit the end, also consume leading space
-  // so a cut at the start or end of text stays clean
-  if (start > 0 && end === text.length) {
-    while (start > 0 && text[start - 1] === ' ') start--;
+function entryActOf(entry) {
+  return entry.part || findSourceQuote(entry.source_quote_id)?.part || "—";
+}
+
+// ============================================================================
+// callMcpTool helpers — direct write to disk for Save/Export, with graceful
+// no-op fallback when the viewer is opened outside Cowork.
+// ============================================================================
+
+function hasCallMcpTool() {
+  return typeof window !== "undefined" &&
+    window.cowork &&
+    typeof window.cowork.callMcpTool === "function";
+}
+
+async function callBash(command) {
+  if (!hasCallMcpTool()) {
+    return { ok: false, reason: "Not running in Cowork — callMcpTool unavailable" };
   }
-  return [start, end];
+  try {
+    const result = await window.cowork.callMcpTool("mcp__workspace__bash", { command });
+    return { ok: true, result };
+  } catch (e) {
+    return { ok: false, reason: String(e) };
+  }
 }
 
-// === Edit Panel sub-component (handles Selection API + Delete key) ===
-function EditPanel({ editOriginal, editCuts, setEditCuts, onSave, onCancel }) {
+// ============================================================================
+// EditPanel — character-range trim editor (selection + Delete key)
+// ============================================================================
+
+function EditPanel({ entry, editCuts, setEditCuts, onSave, onCancel }) {
   const textRef = useRef(null);
+  const original = fullQuoteText(entry);
 
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || !textRef.current) return;
       if (!textRef.current.contains(sel.anchorNode) || !textRef.current.contains(sel.focusNode)) return;
       e.preventDefault();
 
-      // Walk the text container to compute character offsets from the selection
       const container = textRef.current;
       let charOffset = 0;
-      let selStart = null, selEnd = null;
+      let selStart = null;
+      let selEnd = null;
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
       while (walker.nextNode()) {
         const node = walker.currentNode;
         const len = node.textContent.length;
-        if (node === sel.anchorNode || node === sel.focusNode) {
-          const isAnchor = node === sel.anchorNode;
-          const isFocus = node === sel.focusNode;
-          if (isAnchor) {
-            const aOff = charOffset + sel.anchorOffset;
-            if (selStart === null) selStart = aOff; else selEnd = aOff;
-          }
-          if (isFocus) {
-            const fOff = charOffset + sel.focusOffset;
-            if (selStart === null) selStart = fOff; else selEnd = fOff;
-          }
+        if (node === sel.anchorNode) {
+          const off = charOffset + sel.anchorOffset;
+          if (selStart === null) selStart = off;
+          else selEnd = off;
+        }
+        if (node === sel.focusNode) {
+          const off = charOffset + sel.focusOffset;
+          if (selStart === null) selStart = off;
+          else selEnd = off;
         }
         charOffset += len;
       }
@@ -231,1202 +353,1062 @@ function EditPanel({ editOriginal, editCuts, setEditCuts, onSave, onCancel }) {
       if (selStart > selEnd) { const tmp = selStart; selStart = selEnd; selEnd = tmp; }
       if (selStart === selEnd) return;
 
-      // Snap to word boundaries so partial words can't be cut
-      [selStart, selEnd] = snapToWordBounds(editOriginal, selStart, selEnd);
-
-      setEditCuts(prev => toggleRange(prev, selStart, selEnd));
+      [selStart, selEnd] = snapToWordBounds(original, selStart, selEnd);
+      setEditCuts((prev) => toggleRange(prev, selStart, selEnd));
       sel.removeAllRanges();
     };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [setEditCuts]);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [original, setEditCuts]);
 
-  const segments = buildRenderSegments(editOriginal, editCuts);
+  const segments = buildRenderSegments(original, editCuts);
 
   return (
-    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-      <p className="text-xs text-gray-400 mb-1">Select text, then press Delete to cut or restore it.</p>
-      <div
-        ref={textRef}
-        className="text-sm leading-relaxed p-3 bg-gray-50 border border-gray-200 rounded mb-2 select-text cursor-text"
-        style={{ userSelect: 'text', WebkitUserSelect: 'text' }}
-      >
+    <div className="trim-panel" onClick={(e) => e.stopPropagation()}>
+      <p className="trim-hint">
+        Select text, then press <kbd>Delete</kbd> to cut or restore it. Cuts snap to word boundaries.
+      </p>
+      <div ref={textRef} className="trim-text">
         {segments.map((seg, i) => (
-          <span
-            key={i}
-            className={seg.cut
-              ? "text-red-400 line-through"
-              : "text-gray-800"
-            }
-          >{seg.text}</span>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={onSave}
-          className="text-xs px-3 py-1.5 rounded bg-gray-900 text-white hover:bg-gray-700"
-        >
-          Save
-        </button>
-        <button
-          onClick={onCancel}
-          className="text-xs px-3 py-1.5 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// === Split Panel sub-component (shows word boundaries to place split markers) ===
-function SplitPanel({ text, markers, setMarkers, onSplit, onCancel }) {
-  // Parse text into words with their character positions
-  const words = [];
-  let pos = 0;
-  const regex = /(\S+)(\s*)/g;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    words.push({
-      word: match[1],
-      space: match[2],
-      start: match.index,
-      end: match.index + match[1].length,
-      boundaryAfter: match.index + match[0].length, // char position after word+space
-    });
-  }
-
-  const toggleMarker = (charPos) => {
-    setMarkers(prev =>
-      prev.includes(charPos) ? prev.filter(m => m !== charPos) : [...prev, charPos].sort((a, b) => a - b)
-    );
-  };
-
-  // Build display: words with clickable split zones between them
-  const sortedMarkers = [...markers].sort((a, b) => a - b);
-
-  return (
-    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-      <p className="text-xs text-gray-400 mb-1">Click between words to place split markers. Click a marker again to remove it.</p>
-      <div className="text-sm leading-loose p-3 bg-gray-50 border border-gray-200 rounded mb-2">
-        {words.map((w, i) => (
-          <span key={i}>
-            <span className="text-gray-800">{w.word}</span>
-            {i < words.length - 1 && (
-              <span
-                onClick={() => toggleMarker(w.boundaryAfter)}
-                className={`inline-block cursor-pointer px-0.5 mx-0.5 rounded select-none ${
-                  sortedMarkers.includes(w.boundaryAfter)
-                    ? "bg-blue-500 text-white font-bold"
-                    : "text-gray-300 hover:bg-blue-100 hover:text-blue-500"
-                }`}
-                title={sortedMarkers.includes(w.boundaryAfter) ? "Remove split point" : "Add split point here"}
-              >
-                {sortedMarkers.includes(w.boundaryAfter) ? "✂" : "|"}
-              </span>
-            )}
-            {i < words.length - 1 && !sortedMarkers.includes(w.boundaryAfter) && (
-              <span> </span>
-            )}
+          <span key={i} className={seg.cut ? "trim-cut" : ""}>
+            {seg.text}
           </span>
         ))}
       </div>
-      {sortedMarkers.length > 0 && (
-        <p className="text-xs text-gray-500 mb-2">
-          Will create {sortedMarkers.length + 1} sub-quotes
-        </p>
-      )}
-      <div className="flex gap-2">
-        <button
-          onClick={onSplit}
-          disabled={sortedMarkers.length === 0}
-          className={`text-xs px-3 py-1.5 rounded ${
-            sortedMarkers.length > 0
-              ? "bg-blue-600 text-white hover:bg-blue-500"
-              : "bg-gray-200 text-gray-400 cursor-default"
-          }`}
-        >
-          Split into {sortedMarkers.length + 1} quotes
-        </button>
-        <button
-          onClick={onCancel}
-          className="text-xs px-3 py-1.5 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
-        >
-          Cancel
-        </button>
+      <div className="trim-actions">
+        <button className="btn btn-primary" onClick={onSave}>Save trim</button>
+        <button className="btn" onClick={onCancel}>Cancel</button>
+        {editCuts.length > 0 && (
+          <button className="btn btn-danger" onClick={() => setEditCuts([])}>
+            Reset cuts
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-// Apply restored state to initial data if available
-function getInitialQuotes() {
-  if (!RESTORED_STATE) return initialQuotes.map(q => ({ ...q, id: String(q.num) }));
-  const { quoteOrder, selections, sectionAssignments } = RESTORED_STATE;
-  const orderMap = {};
-  quoteOrder.forEach((num, idx) => { orderMap[num] = idx; });
-  const sorted = [...initialQuotes].sort((a, b) => {
-    const aIdx = orderMap[a.num] !== undefined ? orderMap[a.num] : 9999;
-    const bIdx = orderMap[b.num] !== undefined ? orderMap[b.num] : 9999;
-    return aIdx - bIdx;
-  });
-  return sorted.map(q => ({
-    ...q,
-    id: String(q.num),
-    selected: selections.includes(q.num),
-    part: sectionAssignments[q.num] || q.part,
-  }));
-}
+// ============================================================================
+// SplitPanel — word-boundary marker placement for entry split (v4.0.1 port)
+// ============================================================================
 
-function getInitialTrims() {
-  if (!RESTORED_STATE) return initialTrims;
-  return { ...initialTrims, ...RESTORED_STATE.trims };
-}
+function SplitPanel({ entry, markers, setMarkers, onSplit, onCancel }) {
+  const original = fullQuoteText(entry);
+  const words = [];
+  const re = /(\S+)(\s*)/g;
+  let m;
+  while ((m = re.exec(original)) !== null) {
+    words.push({ word: m[1], boundaryAfter: m.index + m[0].length });
+  }
+  const sorted = [...markers].sort((a, b) => a - b);
 
-export default function QuotesView() {
-  const sectionColors = buildSectionColors(initialQuotes, SECTION_CONFIG);
-  const sectionNames = Object.keys(sectionColors).filter(s => s !== "Orphan");
-
-  // === View mode ===
-  // "review" (default landing) — selected quotes as continuous narrative, no controls.
-  // "edit" — full interactive interface.
-  // Both modes share state below; no data drift between modes.
-  const [viewMode, setViewMode] = useState("review");
-
-  // Review-mode scope — one of the section names or "All".
-  // Defaults to the first section that has selected quotes on mount, so the
-  // Review landing drops the reader straight into the first act under discussion.
-  // Falls back to the first section name, or "All" if no sections exist.
-  const [reviewScope, setReviewScope] = useState(() => {
-    const init = getInitialQuotes();
-    const seen = [];
-    init.forEach(q => {
-      if (q.part && q.part !== "Orphan" && !seen.includes(q.part)) seen.push(q.part);
-    });
-    for (const name of seen) {
-      if (init.some(q => q.part === name && q.selected)) return name;
-    }
-    return seen[0] || "All";
-  });
-
-  const [filter, setFilter] = useState("All");
-  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
-  const [quotes, setQuotes] = useState(getInitialQuotes);
-  const [editedQuotes, setEditedQuotes] = useState(getInitialTrims);
-  const [editingNum, setEditingNum] = useState(null);
-  const [editOriginal, setEditOriginal] = useState("");
-  const [editCuts, setEditCuts] = useState([]);
-  const [reassigningNum, setReassigningNum] = useState(null);
-
-  // Save/Restore state
-  const [showSavePanel, setShowSavePanel] = useState(false);
-  const [savedJson, setSavedJson] = useState("");
-  const [restoreText, setRestoreText] = useState("");
-  const [saveConfirmation, setSaveConfirmation] = useState("");
-  const [showSelectedBar, setShowSelectedBar] = useState(false);
-
-  // Split quote state
-  const [splittingId, setSplittingId] = useState(null);
-  const [splitMarkers, setSplitMarkers] = useState([]); // char positions where splits occur
-
-  // Interstitial state — text cards between spoken quotes
-  const [interstitials, setInterstitials] = useState(initialInterstitials);
-  const [placingInterstitial, setPlacingInterstitial] = useState(false); // toolbar placement mode
-  const [pendingInterstitialAfter, setPendingInterstitialAfter] = useState(null); // clicked placement target
-  const [newInterstitialText, setNewInterstitialText] = useState("");
-  const [editingInterstitialId, setEditingInterstitialId] = useState(null);
-  const [editInterstitialText, setEditInterstitialText] = useState("");
-
-  const sections = ["All", ...sectionNames, "Orphan"];
-
-  const toggleSelect = (id) => {
-    setQuotes(prev => prev.map(q => q.id === id ? { ...q, selected: !q.selected } : q));
+  const toggleMarker = (pos) => {
+    setMarkers((prev) =>
+      prev.includes(pos) ? prev.filter((x) => x !== pos) : [...prev, pos].sort((a, b) => a - b)
+    );
   };
-
-  const [dragNum, setDragNum] = useState(null);
-  const [dropTarget, setDropTarget] = useState(null); // { num, half: "top"|"bottom" }
-
-  const handleDragStart = (id, e) => {
-    setDragNum(id);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", id);
-  };
-
-  const handleDragOver = (id, e) => {
-    e.preventDefault();
-    if (dragNum == null || id === dragNum) { setDropTarget(null); return; }
-    const dragQ = quotes.find(q => q.id === dragNum);
-    const overQ = quotes.find(q => q.id === id);
-    if (dragQ.part !== overQ.part) { setDropTarget(null); return; }
-    e.dataTransfer.dropEffect = "move";
-    const rect = e.currentTarget.getBoundingClientRect();
-    const half = (e.clientY - rect.top) < rect.height / 2 ? "top" : "bottom";
-    setDropTarget({ id, half });
-  };
-
-  const handleDrop = (id, e) => {
-    e.preventDefault();
-    if (dragNum == null || id === dragNum) { setDragNum(null); setDropTarget(null); return; }
-    const rect = e.currentTarget.getBoundingClientRect();
-    const half = (e.clientY - rect.top) < rect.height / 2 ? "top" : "bottom";
-    setQuotes(prev => {
-      const arr = [...prev];
-      const fromIdx = arr.findIndex(q => q.id === dragNum);
-      const toIdx = arr.findIndex(q => q.id === id);
-      if (arr[fromIdx].part !== arr[toIdx].part) return arr;
-      const [moved] = arr.splice(fromIdx, 1);
-      const newToIdx = arr.findIndex(q => q.id === id);
-      const insertIdx = half === "bottom" ? newToIdx + 1 : newToIdx;
-      arr.splice(insertIdx, 0, moved);
-      return arr;
-    });
-    setDragNum(null);
-    setDropTarget(null);
-  };
-
-  const handleDragEnd = () => { setDragNum(null); setDropTarget(null); };
-
-  const moveQuote = (id, direction, e) => {
-    if (e) e.stopPropagation();
-    setQuotes(prev => {
-      const arr = [...prev];
-      const idx = arr.findIndex(q => q.id === id);
-      const current = arr[idx];
-
-      if (direction === "up") {
-        for (let i = idx - 1; i >= 0; i--) {
-          if (arr[i].part === current.part) {
-            const temp = arr[idx];
-            arr[idx] = arr[i];
-            arr[i] = temp;
-            return arr;
-          }
-        }
-      } else {
-        for (let i = idx + 1; i < arr.length; i++) {
-          if (arr[i].part === current.part) {
-            const temp = arr[idx];
-            arr[idx] = arr[i];
-            arr[i] = temp;
-            return arr;
-          }
-        }
-      }
-      return arr;
-    });
-  };
-
-  const isFirstInSection = (id) => {
-    const q = quotes.find(q => q.id === id);
-    const idx = quotes.findIndex(q => q.id === id);
-    for (let i = idx - 1; i >= 0; i--) {
-      if (quotes[i].part === q.part) return false;
-    }
-    return true;
-  };
-
-  const isLastInSection = (id) => {
-    const q = quotes.find(q => q.id === id);
-    const idx = quotes.findIndex(q => q.id === id);
-    for (let i = idx + 1; i < quotes.length; i++) {
-      if (quotes[i].part === q.part) return false;
-    }
-    return true;
-  };
-
-  const reassignSection = (id, newSection, e) => {
-    e.stopPropagation();
-    setQuotes(prev => {
-      const quoteIdx = prev.findIndex(q => q.id === id);
-      const quote = { ...prev[quoteIdx], part: newSection };
-      const withoutQuote = [...prev.slice(0, quoteIdx), ...prev.slice(quoteIdx + 1)];
-
-      let insertIdx = withoutQuote.length;
-      for (let i = withoutQuote.length - 1; i >= 0; i--) {
-        if (withoutQuote[i].part === newSection) {
-          insertIdx = i + 1;
-          break;
-        }
-        if (i === 0) {
-          const sectionOrder = [...sectionNames, "Orphan"];
-          const newIdx = sectionOrder.indexOf(newSection);
-          insertIdx = 0;
-          for (let j = 0; j < withoutQuote.length; j++) {
-            if (sectionOrder.indexOf(withoutQuote[j].part) > newIdx) {
-              insertIdx = j;
-              break;
-            }
-            insertIdx = j + 1;
-          }
-        }
-      }
-
-      return [...withoutQuote.slice(0, insertIdx), quote, ...withoutQuote.slice(insertIdx)];
-    });
-    setReassigningNum(null);
-  };
-
-  const startEditing = (id, e) => {
-    e.stopPropagation();
-    const q = quotes.find(q => q.id === id);
-    if (!q) return;
-    setEditingNum(id);
-    setEditOriginal(q.quote);
-    setEditCuts(computeCutRanges(q.quote, editedQuotes[id]));
-  };
-
-  const saveEdit = (id) => {
-    const original = quotes.find(q => q.id === id).quote;
-    const kept = buildKeptText(original, editCuts);
-    if (kept === original || kept === '') {
-      setEditedQuotes(prev => { const next = { ...prev }; delete next[id]; return next; });
-    } else {
-      setEditedQuotes(prev => ({ ...prev, [id]: kept }));
-    }
-    setEditingNum(null);
-  };
-
-  const resetEdit = (id, e) => {
-    e.stopPropagation();
-    setEditedQuotes(prev => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    setEditingNum(null);
-  };
-
-  // === SPLIT QUOTE ===
-  const startSplit = (id, e) => {
-    e.stopPropagation();
-    setSplittingId(id);
-    setSplitMarkers([]);
-  };
-
-  const executeSplit = () => {
-    if (!splittingId || splitMarkers.length === 0) { setSplittingId(null); return; }
-    const q = quotes.find(q => q.id === splittingId);
-    if (!q) { setSplittingId(null); return; }
-
-    const original = q.quote;
-    const existingCuts = editedQuotes[q.id]
-      ? computeCutRanges(original, editedQuotes[q.id])
-      : [];
-
-    // Sort markers and create split boundaries
-    const sorted = [...splitMarkers].sort((a, b) => a - b);
-    const boundaries = [0, ...sorted, original.length];
-    const labels = "abcdefghijklmnopqrstuvwxyz";
-
-    const subQuotes = [];
-    const newEdits = {};
-
-    for (let i = 0; i < boundaries.length - 1; i++) {
-      const start = boundaries[i];
-      const end = boundaries[i + 1];
-      const subText = original.slice(start, end).trim();
-      if (!subText) continue;
-
-      const subId = `${q.num}${labels[i] || i}`;
-
-      // Adjust existing cuts to be relative to this sub-quote's portion
-      const subCuts = [];
-      for (const [cs, ce] of existingCuts) {
-        const overlapStart = Math.max(cs, start);
-        const overlapEnd = Math.min(ce, end);
-        if (overlapStart < overlapEnd) {
-          subCuts.push([overlapStart - start, overlapEnd - start]);
-        }
-      }
-
-      // If there are cuts for this sub-quote, compute the kept text
-      const subOriginal = original.slice(start, end);
-      if (subCuts.length > 0) {
-        const kept = buildKeptText(subOriginal, subCuts);
-        if (kept !== subOriginal) {
-          newEdits[subId] = kept;
-        }
-      }
-
-      subQuotes.push({
-        ...q,
-        id: subId,
-        num: q.num,
-        subLabel: labels[i] || String(i),
-        originalNum: q.num,
-        quote: subOriginal,
-        rationale: q.rationale + ` (split ${labels[i] || i} of ${boundaries.length - 1})`,
-      });
-    }
-
-    // Replace the original quote with sub-quotes in the array
-    setQuotes(prev => {
-      const idx = prev.findIndex(q => q.id === splittingId);
-      if (idx < 0) return prev;
-      return [...prev.slice(0, idx), ...subQuotes, ...prev.slice(idx + 1)];
-    });
-
-    // Update edited quotes: remove original, add sub-edits
-    setEditedQuotes(prev => {
-      const next = { ...prev };
-      delete next[splittingId];
-      Object.assign(next, newEdits);
-      return next;
-    });
-
-    setSplittingId(null);
-    setSplitMarkers([]);
-  };
-
-  // === INTERSTITIAL MANAGEMENT ===
-  const nextInterstitialId = () => {
-    const existing = interstitials.map(t => parseInt(t.id.replace("T", ""), 10)).filter(n => !isNaN(n));
-    const max = existing.length > 0 ? Math.max(...existing) : 0;
-    return `T${max + 1}`;
-  };
-
-  const placeInterstitial = (afterId) => {
-    // User clicked a drop zone — show the text input
-    setPendingInterstitialAfter(afterId);
-  };
-
-  const confirmInterstitial = () => {
-    if (!newInterstitialText.trim() || pendingInterstitialAfter === null) return;
-    const afterQuote = quotes.find(q => q.id === pendingInterstitialAfter);
-    const section = afterQuote ? afterQuote.part : (sectionNames[0] || "Orphan");
-    const newItem = {
-      id: nextInterstitialId(),
-      text: newInterstitialText.trim(),
-      part: section,
-      afterId: pendingInterstitialAfter === "__START__" ? null : pendingInterstitialAfter,
-    };
-    setInterstitials(prev => [...prev, newItem]);
-    setNewInterstitialText("");
-    setPendingInterstitialAfter(null);
-    setPlacingInterstitial(false);
-  };
-
-  const cancelPlacement = () => {
-    setPlacingInterstitial(false);
-    setPendingInterstitialAfter(null);
-    setNewInterstitialText("");
-  };
-
-  const removeInterstitial = (id) => {
-    setInterstitials(prev => prev.filter(t => t.id !== id));
-  };
-
-  const startEditInterstitial = (id) => {
-    const t = interstitials.find(t => t.id === id);
-    if (!t) return;
-    setEditingInterstitialId(id);
-    setEditInterstitialText(t.text);
-  };
-
-  const saveEditInterstitial = (id) => {
-    if (!editInterstitialText.trim()) return;
-    setInterstitials(prev => prev.map(t =>
-      t.id === id ? { ...t, text: editInterstitialText.trim() } : t
-    ));
-    setEditingInterstitialId(null);
-    setEditInterstitialText("");
-  };
-
-  // Get interstitials that appear after a given quote id (or at the start if afterId is null)
-  const getInterstitialsAfter = (quoteId) => {
-    return interstitials.filter(t => t.afterId === quoteId);
-  };
-  const getInterstitialsAtStart = () => {
-    return interstitials.filter(t => t.afterId === null || t.afterId === "__START__");
-  };
-
-  // === SAVE STATE ===
-  const handleSaveState = useCallback(() => {
-    const state = {
-      quoteOrder: quotes.map(q => q.id),
-      selections: quotes.filter(q => q.selected).map(q => q.id),
-      trims: editedQuotes,
-      sectionAssignments: {},
-      interstitials: interstitials,
-    };
-    quotes.forEach(q => {
-      const original = initialQuotes.find(oq => oq.num === q.num);
-      if (original && original.part !== q.part) {
-        state.sectionAssignments[q.id] = q.part;
-      }
-    });
-    const json = JSON.stringify(state);
-    setSavedJson(json);
-    setShowSavePanel(true);
-    navigator.clipboard.writeText(json).then(() => {
-      setSaveConfirmation("Copied to clipboard!");
-      setTimeout(() => setSaveConfirmation(""), 3000);
-    }).catch(() => {
-      setSaveConfirmation("Select all and copy manually");
-    });
-  }, [quotes, editedQuotes, interstitials]);
-
-  // === RESTORE STATE ===
-  const handleRestoreState = useCallback(() => {
-    try {
-      const state = JSON.parse(restoreText);
-      if (!state.quoteOrder || !state.selections) {
-        alert("Invalid save data — missing required fields.");
-        return;
-      }
-      const orderMap = {};
-      state.quoteOrder.forEach((id, idx) => { orderMap[id] = idx; });
-      setQuotes(prev => {
-        const sorted = [...prev].sort((a, b) => {
-          const aIdx = orderMap[a.id] !== undefined ? orderMap[a.id] : 9999;
-          const bIdx = orderMap[b.id] !== undefined ? orderMap[b.id] : 9999;
-          return aIdx - bIdx;
-        });
-        return sorted.map(q => ({
-          ...q,
-          selected: state.selections.includes(q.id),
-          part: (state.sectionAssignments && state.sectionAssignments[q.id]) || q.part,
-        }));
-      });
-      if (state.trims) {
-        setEditedQuotes(prev => ({ ...prev, ...state.trims }));
-      }
-      if (state.interstitials) {
-        setInterstitials(state.interstitials);
-      }
-      setRestoreText("");
-      setShowSavePanel(false);
-      setSaveConfirmation("State restored!");
-      setTimeout(() => setSaveConfirmation(""), 3000);
-    } catch (e) {
-      alert("Could not parse save data. Make sure you pasted the full JSON string.");
-    }
-  }, [restoreText]);
-
-  const selectedQuotes = quotes.filter(q => q.selected);
-  const filtered = quotes
-    .filter(q => filter === "All" || q.part === filter)
-    .filter(q => !showSelectedOnly || q.selected);
-
-  let lastSection = "";
 
   return (
-    <div className="max-w-4xl mx-auto p-4 font-sans">
-      {/* Title + counts (mode-aware) */}
-      <div className="mb-4 text-center">
-        <h1 className="text-xl font-bold text-gray-900 mb-1">{PROJECT_TITLE}</h1>
-        {viewMode === "review" ? (
-          <p className="text-sm text-gray-500">
-            Reading {reviewScope === "All" ? "the full sequence" : `"${reviewScope}"`}
-            {" — "}
-            {(reviewScope === "All"
-              ? selectedQuotes.length
-              : selectedQuotes.filter(q => q.part === reviewScope).length)} selected quote{
-              (reviewScope === "All"
-                ? selectedQuotes.length
-                : selectedQuotes.filter(q => q.part === reviewScope).length) === 1 ? "" : "s"}
-          </p>
-        ) : (
-          <p className="text-sm text-gray-500">{quotes.length} quotes total  •  {selectedQuotes.length} selected  •  {Object.keys(editedQuotes).length} trimmed{interstitials.length > 0 ? `  •  ${interstitials.length} interstitial${interstitials.length !== 1 ? "s" : ""}` : ""}</p>
-        )}
-      </div>
-
-      {/* Shared chrome — Review/Edit toggle (centered) with Save/Restore on
-          the right in Edit mode. Three-column grid keeps the toggle anchored. */}
-      <div className="grid grid-cols-3 items-center mb-6">
-        <div />
-        <div className="justify-self-center">
-          <div className="inline-flex rounded-full bg-gray-100 p-1">
-            <button
-              onClick={() => setViewMode("review")}
-              className={`px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                viewMode === "review" ? "bg-gray-900 text-white shadow-sm" : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Review
-            </button>
-            <button
-              onClick={() => setViewMode("edit")}
-              className={`px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                viewMode === "edit" ? "bg-gray-900 text-white shadow-sm" : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Edit
-            </button>
-          </div>
-        </div>
-        <div className="justify-self-end">
-          {viewMode === "edit" && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSaveState}
-                className="px-3 py-1.5 rounded text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
-              >
-                Save State
-              </button>
-              <button
-                onClick={() => setShowSavePanel(!showSavePanel)}
-                className="px-3 py-1.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
-              >
-                Restore State
-              </button>
-              {saveConfirmation && (
-                <span className="text-xs text-green-700 font-medium ml-1">{saveConfirmation}</span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Review-mode render path — selected quotes only, continuous narrative.
-          No editorial controls. Act-scoped by default; "All" tab reads end-to-end. */}
-      {viewMode === "review" && (() => {
-        const reviewItems = [...sectionNames, "All"];
-        const inScope = quotes
-          .filter(q => q.selected)
-          .filter(q => reviewScope === "All" || q.part === reviewScope);
-        const firstSection = sectionNames[0];
-        const inScopeIds = new Set(inScope.map(q => q.id));
-        const startInter = interstitials.filter(t =>
-          (t.afterId === null || t.afterId === "__START__") &&
-          (reviewScope === "All" || reviewScope === firstSection)
-        );
-
-        const blocks = [];
-        let lastSectionInReview = null;
-        let lastSpeaker = null;
-
-        startInter.forEach(t => {
-          blocks.push(
-            <div key={`r-start-${t.id}`} className="my-5 px-5 py-3 border border-dashed border-indigo-300 bg-indigo-50 rounded-lg">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 block mb-1">
-                Text Interstitial — {t.id}
-              </span>
-              <p className="text-sm text-indigo-900 italic leading-relaxed">{t.text}</p>
-            </div>
-          );
-        });
-
-        inScope.forEach(q => {
-          if (reviewScope === "All" && q.part !== lastSectionInReview) {
-            blocks.push(
-              <div key={`r-sec-${q.part}-${q.id}`} className="mt-10 mb-6 first:mt-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-gray-300" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-500">{q.part}</span>
-                  <div className="flex-1 h-px bg-gray-300" />
-                </div>
-              </div>
-            );
-            lastSectionInReview = q.part;
-            lastSpeaker = null;
-          }
-          if (q.speaker !== lastSpeaker) {
-            blocks.push(
-              <p key={`r-sp-${q.id}`} className="text-xs font-semibold uppercase tracking-wider text-gray-500 mt-5 mb-2">
-                — {q.speaker}
-              </p>
-            );
-            lastSpeaker = q.speaker;
-          }
-          const displayText = editedQuotes[q.id] || q.quote;
-          blocks.push(
-            <p key={`r-q-${q.id}`} className="text-lg text-gray-900 leading-relaxed mb-4">
-              {displayText}
-            </p>
-          );
-          interstitials
-            .filter(t => t.afterId === q.id && inScopeIds.has(q.id))
-            .forEach(t => {
-              blocks.push(
-                <div key={`r-inline-${t.id}`} className="my-5 px-5 py-3 border border-dashed border-indigo-300 bg-indigo-50 rounded-lg">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 block mb-1">
-                    Text Interstitial — {t.id}
-                  </span>
-                  <p className="text-sm text-indigo-900 italic leading-relaxed">{t.text}</p>
-                </div>
-              );
-            });
-        });
-
-        return (
-          <div>
-            {/* Review scope tabs (act selector, with "All" for full-sequence read) */}
-            <div className="text-center mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Acts</span>
-            </div>
-            <div className="border-b border-gray-200 mb-8">
-              <div className="flex items-center gap-6 justify-center flex-wrap -mb-px">
-                {reviewItems.map(name => {
-                  const count = name === "All"
-                    ? selectedQuotes.length
-                    : quotes.filter(q => q.selected && q.part === name).length;
-                  const active = reviewScope === name;
-                  return (
-                    <button
-                      key={name}
-                      onClick={() => setReviewScope(name)}
-                      className={`px-1 pb-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                        active
-                          ? "text-gray-900 border-gray-900"
-                          : "text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300"
-                      }`}
-                    >
-                      {name}
-                      <span className={`ml-1.5 text-xs ${active ? "text-gray-500" : "text-gray-400"}`}>({count})</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {reviewScope !== "All" && (
-              <div className="max-w-2xl mx-auto mb-6 text-center">
-                <h2 className="text-2xl font-semibold text-gray-900 tracking-tight">{reviewScope}</h2>
-              </div>
-            )}
-
-            <div className="max-w-2xl mx-auto">
-              {blocks.length === 0 ? (
-                <p className="text-sm text-gray-400 italic text-center py-8">
-                  No selected quotes in this act yet.
-                </p>
-              ) : blocks}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Edit-mode render path — full interactive interface, unchanged behavior.
-          Wrapped in a fragment so the existing render block can stay intact. */}
-      {viewMode === "edit" && (
-      <>
-      {/* Section filter tabs (underline style, unified with Review's act scope)
-          + Selected-only toggle on the right. */}
-      <div className="flex items-center border-b border-gray-200 mb-6">
-        <div className="flex items-center gap-6 flex-wrap">
-          {sections.map(s => {
-            const count = s === "All" ? quotes.length : quotes.filter(q => q.part === s).length;
-            const selCount = s === "All"
-              ? selectedQuotes.length
-              : quotes.filter(q => q.part === s && q.selected).length;
-            const active = filter === s;
-            return (
-              <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={`px-1 pb-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  active
-                    ? "text-gray-900 border-gray-900"
-                    : "text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300"
-                }`}
-              >
-                {s}
-                <span className={`ml-1.5 text-xs ${active ? "text-gray-500" : "text-gray-400"}`}>
-                  ({selCount}/{count})
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="ml-auto pb-2.5">
-          <button
-            onClick={() => setShowSelectedOnly(!showSelectedOnly)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              showSelectedOnly ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {showSelectedOnly ? "Show all" : "Selected only"}
-          </button>
-        </div>
-      </div>
-
-      {/* Editorial toolbar — + Interstitial only (Save/Restore moved to toggle row) */}
-      <div className="flex items-center gap-2 mb-4">
-        {placingInterstitial ? (
-          <button
-            onClick={cancelPlacement}
-            className="px-3 py-1.5 rounded text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors ring-2 ring-indigo-300"
-          >
-            Cancel Placement
-          </button>
-        ) : (
-          <button
-            onClick={() => { setPlacingInterstitial(true); setShowSelectedOnly(true); }}
-            className="px-3 py-1.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors"
-          >
-            + Interstitial
-          </button>
-        )}
-        {placingInterstitial && (
-          <span className="text-xs text-indigo-600 font-medium animate-pulse">Click a drop zone between quotes to place it</span>
-        )}
-      </div>
-
-      {/* Save/Restore panel (opened by Restore State in the toggle row) */}
-      {showSavePanel && (
-        <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-          {savedJson && (
-            <div>
-              <label className="text-xs font-bold text-gray-600 block mb-1">Saved State (auto-copied to clipboard)</label>
-              <textarea
-                readOnly
-                value={savedJson}
-                className="w-full text-xs font-mono p-2 border border-gray-300 rounded bg-white resize-y"
-                rows={3}
-                onClick={(e) => e.target.select()}
-              />
-            </div>
-          )}
-          <div>
-            <label className="text-xs font-bold text-gray-600 block mb-1">Paste saved state to restore</label>
-            <textarea
-              value={restoreText}
-              onChange={(e) => setRestoreText(e.target.value)}
-              placeholder='Paste your saved JSON here...'
-              className="w-full text-xs font-mono p-2 border border-gray-300 rounded bg-white resize-y"
-              rows={3}
-            />
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={handleRestoreState}
-                disabled={!restoreText.trim()}
-                className={`text-xs px-3 py-1.5 rounded font-medium ${
-                  restoreText.trim()
-                    ? "bg-yellow-500 text-white hover:bg-yellow-600"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                Restore
-              </button>
-              <button
-                onClick={() => { setShowSavePanel(false); setRestoreText(""); }}
-                className="text-xs px-3 py-1.5 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quotes list */}
-      <div className="space-y-2">
-        {/* Interstitials at the very start (before first quote) */}
-        {getInterstitialsAtStart().map(t => (
-          <div key={t.id} className="border border-dashed border-indigo-300 bg-indigo-50 rounded-lg overflow-hidden">
-            <div className="flex">
-              <div className="w-1 flex-shrink-0 bg-indigo-400" />
-              <div className="flex-1 p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-indigo-700">{t.id}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">TEXT INTERSTITIAL</span>
-                  </div>
-                  <button onClick={() => removeInterstitial(t.id)} className="text-xs text-red-400 hover:text-red-600" title="Remove interstitial">{"\u2715"}</button>
-                </div>
-                {editingInterstitialId === t.id ? (
-                  <div>
-                    <textarea value={editInterstitialText} onChange={e => setEditInterstitialText(e.target.value)} className="w-full text-sm p-2 border border-indigo-200 rounded bg-white resize-y" rows={2} />
-                    <div className="flex gap-2 mt-1">
-                      <button onClick={() => saveEditInterstitial(t.id)} className="text-xs px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-500">Save</button>
-                      <button onClick={() => setEditingInterstitialId(null)} className="text-xs px-3 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-indigo-900 leading-relaxed italic cursor-pointer hover:text-indigo-700" onClick={() => startEditInterstitial(t.id)}>"{t.text}"</p>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {/* Placement drop zone at top of sequence */}
-        {placingInterstitial && (
-          <div>
-            {pendingInterstitialAfter === "__START__" ? (
-              <div className="border border-dashed border-indigo-300 bg-indigo-50 rounded-lg p-3">
-                <label className="text-xs font-bold text-indigo-600 block mb-1">New text interstitial at start of sequence</label>
-                <textarea value={newInterstitialText} onChange={e => setNewInterstitialText(e.target.value)} placeholder="Factual text for on-screen display..." className="w-full text-sm p-2 border border-indigo-200 rounded bg-white resize-y" rows={2} autoFocus />
-                <div className="flex gap-2 mt-1">
-                  <button onClick={confirmInterstitial} disabled={!newInterstitialText.trim()} className={`text-xs px-3 py-1 rounded ${newInterstitialText.trim() ? "bg-indigo-600 text-white hover:bg-indigo-500" : "bg-gray-200 text-gray-400"}`}>Add</button>
-                  <button onClick={cancelPlacement} className="text-xs px-3 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Cancel</button>
-                </div>
-              </div>
-            ) : (
-              <div onClick={() => placeInterstitial("__START__")} className="h-6 mx-4 my-1 flex items-center justify-center rounded border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 cursor-pointer transition-colors group">
-                <span className="text-xs text-indigo-300 group-hover:text-indigo-500 font-medium">+ place interstitial here</span>
-              </div>
-            )}
-          </div>
-        )}
-        {filtered.map((q, filteredIdx) => {
-          const colors = sectionColors[q.part] || ORPHAN_COLOR;
-          const isSelected = q.selected;
-          const isEditing = editingNum === q.id;
-          const hasEdit = editedQuotes[q.id] !== undefined;
-          const displayText = editedQuotes[q.id] || q.quote;
-
-          let sectionHeader = null;
-          if (filter === "All" && q.part !== lastSection) {
-            lastSection = q.part;
-            sectionHeader = (
-              <div className="flex items-center gap-3 pt-4 pb-1" key={`header-${q.part}`}>
-                <div className={`w-3 h-3 rounded-full ${colors.stripe}`} />
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{q.part}</span>
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
-            );
-          }
-
+    <div className="split-panel" onClick={(e) => e.stopPropagation()}>
+      <p className="split-hint">
+        Click between words to place split markers. Click a marker again to remove it.
+      </p>
+      <div className="split-text">
+        {words.map((w, i) => {
+          const active = sorted.includes(w.boundaryAfter);
           return (
-            <div key={q.id}>
-              {sectionHeader}
-              {/* Drop indicator line — top */}
-              {dropTarget && dropTarget.id === q.id && dropTarget.half === "top" && (
-                <div className="h-0.5 bg-blue-500 rounded-full mx-2 -mb-px" />
+            <span key={i}>
+              <span>{w.word}</span>
+              {i < words.length - 1 && (
+                <>
+                  <span
+                    onClick={() => toggleMarker(w.boundaryAfter)}
+                    className={`split-marker${active ? " active" : ""}`}
+                    title={active ? "Remove split here" : "Add split here"}
+                  >
+                    {active ? "✂" : "|"}
+                  </span>
+                  {!active && " "}
+                </>
               )}
-              <div
-                className={`border rounded-lg overflow-hidden transition-all ${
-                  isSelected
-                    ? "border-gray-900 bg-white ring-1 ring-gray-900"
-                    : `${colors.border} ${colors.bg} hover:shadow-sm`
-                } ${dragNum === q.id ? "opacity-40" : ""}`}
-                onDragOver={(e) => handleDragOver(q.id, e)}
-                onDrop={(e) => handleDrop(q.id, e)}
-                onDragLeave={() => setDropTarget(null)}
-              >
-                <div className="flex">
-                  <div className={`w-1 flex-shrink-0 ${colors.stripe}`} />
-
-                  {isSelected && (
-                    <div
-                      className="flex items-center px-2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-700 select-none border-r border-gray-200 bg-gray-50"
-                      draggable
-                      onDragStart={(e) => handleDragStart(q.id, e)}
-                      onDragEnd={handleDragEnd}
-                      title="Drag to reorder"
-                    >
-                      <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
-                        <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
-                        <circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/>
-                        <circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/>
-                      </svg>
-                    </div>
-                  )}
-
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-gray-900">#{q.num}{q.subLabel || ""}</span>
-                        <span className="text-xs font-medium text-gray-600">{q.speaker}</span>
-                        <div className="relative">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setReassigningNum(reassigningNum === q.id ? null : q.id); }}
-                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors.badge} hover:ring-2 hover:ring-gray-400`}
-                          >
-                            {q.part} <span className="text-[10px] opacity-60">&#9662;</span>
-                          </button>
-                          {reassigningNum === q.id && (
-                            <div className="absolute top-6 left-0 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]">
-                              {[...sectionNames, "Orphan"].filter(s => s !== q.part).map(s => (
-                                <button
-                                  key={s}
-                                  onClick={(e) => reassignSection(q.id, s, e)}
-                                  className={`w-full text-left px-3 py-1.5 text-xs font-medium hover:bg-gray-50 flex items-center gap-2`}
-                                >
-                                  <div className={`w-2 h-2 rounded-full ${(sectionColors[s] || ORPHAN_COLOR).stripe}`} />
-                                  {s}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-xs text-gray-400">{q.startTC} → {q.endTC}</span>
-                        {hasEdit && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
-                            trimmed
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {isSelected && !isEditing && splittingId !== q.id && (
-                          <button
-                            onClick={(e) => startSplit(q.id, e)}
-                            className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                            title="Split this quote into sub-quotes"
-                          >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" d="M6 4l3 6M18 4l-3 6M9 10c0 3 6 3 6 0M9 10l-4 10M15 10l4 10"/>
-                            </svg>
-                          </button>
-                        )}
-                        <div
-                          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                            isSelected ? "bg-gray-900 border-gray-900" : "border-gray-300 bg-white"
-                          }`}
-                          onClick={(e) => { e.stopPropagation(); toggleSelect(q.id); }}
-                        >
-                          {isSelected && (
-                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-800 leading-relaxed mb-1">"{displayText}"</p>
-                      {hasEdit && !isEditing && (
-                        <span
-                          onClick={(e) => startEditing(q.id, e)}
-                          className="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
-                        >&#9654; show original &amp; edit</span>
-                      )}
-                      {hasEdit && isEditing && (
-                        <span
-                          onClick={(e) => { e.stopPropagation(); setEditingNum(null); }}
-                          className="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
-                        >&#9660; show original &amp; edit</span>
-                      )}
-                      {!hasEdit && isSelected && !isEditing && (
-                        <span
-                          onClick={(e) => startEditing(q.id, e)}
-                          className="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
-                        >&#9654; trim quote</span>
-                      )}
-                      {!hasEdit && isSelected && isEditing && (
-                        <span
-                          onClick={(e) => { e.stopPropagation(); setEditingNum(null); }}
-                          className="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
-                        >&#9660; trim quote</span>
-                      )}
-                    </div>
-
-                    {isEditing && (
-                      <EditPanel
-                        editOriginal={editOriginal}
-                        editCuts={editCuts}
-                        setEditCuts={setEditCuts}
-                        onSave={() => saveEdit(q.id)}
-                        onCancel={() => setEditingNum(null)}
-                      />
-                    )}
-
-                    {splittingId === q.id && (
-                      <SplitPanel
-                        text={q.quote}
-                        markers={splitMarkers}
-                        setMarkers={setSplitMarkers}
-                        onSplit={executeSplit}
-                        onCancel={() => setSplittingId(null)}
-                      />
-                    )}
-
-                    <p className="text-xs text-gray-500 italic mt-2">{q.rationale}</p>
-                  </div>
-                </div>
-              </div>
-              {/* Drop indicator line — bottom */}
-              {dropTarget && dropTarget.id === q.id && dropTarget.half === "bottom" && (
-                <div className="h-0.5 bg-blue-500 rounded-full mx-2 -mt-px" />
-              )}
-
-              {/* Interstitials placed after this quote */}
-              {getInterstitialsAfter(q.id).map(t => (
-                <div key={t.id} className="border border-dashed border-indigo-300 bg-indigo-50 rounded-lg overflow-hidden mt-1">
-                  <div className="flex">
-                    <div className="w-1 flex-shrink-0 bg-indigo-400" />
-                    <div className="flex-1 p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-indigo-700">{t.id}</span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">TEXT INTERSTITIAL</span>
-                          <span className="text-xs text-gray-400">after #{q.num}{q.subLabel || ""}</span>
-                        </div>
-                        <button onClick={() => removeInterstitial(t.id)} className="text-xs text-red-400 hover:text-red-600" title="Remove interstitial">✕</button>
-                      </div>
-                      {editingInterstitialId === t.id ? (
-                        <div>
-                          <textarea value={editInterstitialText} onChange={e => setEditInterstitialText(e.target.value)} className="w-full text-sm p-2 border border-indigo-200 rounded bg-white resize-y" rows={2} />
-                          <div className="flex gap-2 mt-1">
-                            <button onClick={() => saveEditInterstitial(t.id)} className="text-xs px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-500">Save</button>
-                            <button onClick={() => setEditingInterstitialId(null)} className="text-xs px-3 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Cancel</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-indigo-900 leading-relaxed italic cursor-pointer hover:text-indigo-700" onClick={() => startEditInterstitial(t.id)}>"{t.text}"</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Interstitial placement drop zone — visible during placement mode */}
-              {placingInterstitial && isSelected && (
-                <div className="mt-1">
-                  {pendingInterstitialAfter === q.id ? (
-                    <div className="border border-dashed border-indigo-300 bg-indigo-50 rounded-lg p-3">
-                      <label className="text-xs font-bold text-indigo-600 block mb-1">New text interstitial after #{q.num}{q.subLabel || ""}</label>
-                      <textarea
-                        value={newInterstitialText}
-                        onChange={e => setNewInterstitialText(e.target.value)}
-                        placeholder="Factual text for on-screen display (credentials, titles, context)..."
-                        className="w-full text-sm p-2 border border-indigo-200 rounded bg-white resize-y"
-                        rows={2}
-                        autoFocus
-                      />
-                      <div className="flex gap-2 mt-1">
-                        <button onClick={confirmInterstitial} disabled={!newInterstitialText.trim()} className={`text-xs px-3 py-1 rounded ${newInterstitialText.trim() ? "bg-indigo-600 text-white hover:bg-indigo-500" : "bg-gray-200 text-gray-400"}`}>Add</button>
-                        <button onClick={cancelPlacement} className="text-xs px-3 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => placeInterstitial(q.id)}
-                      className="h-6 mx-4 my-1 flex items-center justify-center rounded border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 cursor-pointer transition-colors group"
-                    >
-                      <span className="text-xs text-indigo-300 group-hover:text-indigo-500 font-medium">+ place interstitial here</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            </span>
           );
         })}
       </div>
-
-      {/* Selected quotes summary bar — collapsed by default */}
-      {selectedQuotes.length > 0 && (
-        <div className="mt-6 bg-gray-900 rounded-lg text-white sticky bottom-4">
-          <button
-            onClick={() => setShowSelectedBar(prev => !prev)}
-            className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-bold hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <span>Selected Quotes ({selectedQuotes.length})</span>
-            <span className="text-xs text-gray-400">{showSelectedBar ? "\u25BE" : "\u25B8"}</span>
-          </button>
-          {showSelectedBar && (
-            <div className="flex flex-wrap gap-2 px-4 pb-3">
-              {selectedQuotes.map(q => {
-                const trailingInterstitials = getInterstitialsAfter(q.id);
-                return [
-                  <span key={q.id} className={`text-xs px-2 py-1 rounded-full ${(sectionColors[q.part] || ORPHAN_COLOR).badge}`}>
-                    #{q.num}{q.subLabel || ""} — {q.part}{editedQuotes[q.id] !== undefined ? " (trimmed)" : ""}
-                  </span>,
-                  ...trailingInterstitials.map(t => (
-                    <span key={t.id} className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-700">
-                      {t.id} — TEXT
-                    </span>
-                  ))
-                ];
-              })}
-            </div>
+      {sorted.length > 0 && (
+        <div className="split-counter">
+          Will create <strong>{sorted.length + 1}</strong> sub-quotes
+          {entry.source_quote_id && (
+            <>
+              {" "}(#{entry.source_quote_id}a, #{entry.source_quote_id}b
+              {sorted.length > 1 && <>, #{entry.source_quote_id}c</>}
+              {sorted.length > 2 && <>…</>})
+            </>
           )}
         </div>
       )}
-      </>
+      <div className="split-actions">
+        <button className="btn btn-primary" onClick={onSplit} disabled={sorted.length === 0}>
+          Split into {sorted.length + 1} sub-quotes
+        </button>
+        <button className="btn" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Main component — QuotesView
+// ============================================================================
+
+export default function QuotesView() {
+  // === Round + view state ===
+  const [roundIndex, setRoundIndex] = useState(INITIAL_ROUND_INDEX);
+  const [view, setView] = useState("timeline");
+  const [cutFilter, setCutFilter] = useState("rough");
+  const [speakerFilter, setSpeakerFilter] = useState("all");
+  const [actFilter, setActFilter] = useState("all");
+  const [reviewScope, setReviewScope] = useState("All");
+
+  // === Per-round working timeline (deep-clone of canonical at first switch) ===
+  const [workingByRound, setWorkingByRound] = useState(() => {
+    const init = {};
+    ROUNDS.forEach((r, i) => {
+      init[i] = JSON.parse(JSON.stringify(r.timeline || []));
+    });
+    return init;
+  });
+  const [pendingOpsByRound, setPendingOpsByRound] = useState(() => {
+    const init = {};
+    ROUNDS.forEach((_, i) => { init[i] = []; });
+    return init;
+  });
+
+  const getTimeline = () => workingByRound[roundIndex] || [];
+  const getPendingOps = () => pendingOpsByRound[roundIndex] || [];
+
+  const applyLocalEdit = useCallback((opTag, mutator, description) => {
+    setWorkingByRound((prev) => {
+      const tl = JSON.parse(JSON.stringify(prev[roundIndex] || []));
+      mutator(tl);
+      return { ...prev, [roundIndex]: tl };
+    });
+    setPendingOpsByRound((prev) => ({
+      ...prev,
+      [roundIndex]: [...(prev[roundIndex] || []), { op: opTag, description, ts: Date.now() }],
+    }));
+  }, [roundIndex]);
+
+  function discardAllTweaks() {
+    if (getPendingOps().length === 0) return;
+    if (!confirm(`Discard ${getPendingOps().length} pending tweak(s) and restore canonical state?`)) return;
+    setWorkingByRound((prev) => ({
+      ...prev,
+      [roundIndex]: JSON.parse(JSON.stringify(ROUNDS[roundIndex].timeline || [])),
+    }));
+    setPendingOpsByRound((prev) => ({ ...prev, [roundIndex]: [] }));
+  }
+
+  // === Edit / split / reassign UI state ===
+  const [editingEntryId, setEditingEntryId] = useState(null);
+  const [editCuts, setEditCuts] = useState([]);
+  const [splittingEntryId, setSplittingEntryId] = useState(null);
+  const [splitMarkers, setSplitMarkers] = useState([]);
+  const [reassigningEntryId, setReassigningEntryId] = useState(null);
+
+  // === Send-to-agent panel state ===
+  const [sendPanelOpen, setSendPanelOpen] = useState(false);
+  const [commentary, setCommentary] = useState("");
+  const [sendStatus, setSendStatus] = useState({ text: "", cls: "" });
+
+  // === Drag-and-drop state ===
+  const [dragId, setDragId] = useState(null);
+
+  // === Speaker color memo ===
+  const speakerColors = buildSpeakerColors(PROJECT_META.speakers || []);
+
+  // ====== Round + save-as-new ======
+
+  async function saveAsNewRound() {
+    const newRoundNum = ROUNDS.length + 1;
+    const tl = getTimeline();
+    const payload = {
+      schema_version: 5,
+      round: newRoundNum,
+      project_slug: PROJECT_META.slug,
+      target_runtime_seconds: PROJECT_META.target_seconds,
+      entries: tl,
+    };
+    if (!hasCallMcpTool()) {
+      alert("Save new round is only available when the viewer is running inside Cowork.\n\nThe file would have been written to:\n" +
+        `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}/editing-versions/v${newRoundNum}.json`);
+      return;
+    }
+    const json = JSON.stringify(payload, null, 2);
+    const dir = `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}/editing-versions`;
+    const filepath = `${dir}/v${newRoundNum}.json`;
+    const cmd = `mkdir -p "${dir}" && cat > "${filepath}" <<'__JSON_EOF__'\n${json}\n__JSON_EOF__`;
+    const { ok, reason } = await callBash(cmd);
+    if (ok) {
+      alert(`Round ${newRoundNum} saved to ${filepath}.\n\nReload the viewer to see it in the round dropdown.`);
+    } else {
+      alert(`Save failed: ${reason}`);
+    }
+  }
+
+  // ====== Export ======
+
+  async function exportToFCPXML() {
+    const tl = getTimeline();
+    const filtered = cutFilter === "tight"
+      ? tl.filter((e) => e.runtime_recommendation === "must-keep")
+      : tl;
+    const totalSec = filtered.reduce((a, e) => a + entrySeconds(e), 0);
+    if (!hasCallMcpTool()) {
+      alert(`Export to FCPXML (${cutFilter} cut, ${filtered.length} clips, ${fmtSec(totalSec)}) is only available when the viewer is running inside Cowork.`);
+      return;
+    }
+    // Self-contained: write current working state, then invoke build_fcpxml.py.
+    const round = ROUNDS[roundIndex];
+    const payload = {
+      schema_version: 5,
+      round: round.round_number,
+      project_slug: PROJECT_META.slug,
+      target_runtime_seconds: PROJECT_META.target_seconds,
+      entries: tl,
+    };
+    const filename = `trimmed-quotes-v${round.round_number}.json`;
+    const handoffPath = `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}/${filename}`;
+    const writeCmd = `cat > "${handoffPath}" <<'__JSON_EOF__'\n${JSON.stringify(payload, null, 2)}\n__JSON_EOF__`;
+    setSendStatus({ text: "Writing state…", cls: "" });
+    const { ok: writeOk, reason: writeReason } = await callBash(writeCmd);
+    if (!writeOk) {
+      alert(`Export failed at write step: ${writeReason}`);
+      setSendStatus({ text: "", cls: "" });
+      return;
+    }
+    setSendStatus({ text: "Running build_fcpxml.py…", cls: "" });
+    const buildCmd =
+      `cd "${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}" && ` +
+      `python3 "${PROJECT_META.ssd_root}/documentary-junior-editor/scripts/build_fcpxml.py" ` +
+      `--mode=${cutFilter} --input="${handoffPath}" 2>&1`;
+    const { ok: buildOk, result: buildResult, reason: buildReason } = await callBash(buildCmd);
+    if (buildOk) {
+      const head = typeof buildResult === "string" ? buildResult.slice(0, 800) : "Build succeeded.";
+      alert(`Export complete (${cutFilter} cut, ${filtered.length} clips):\n\n${head}`);
+      setSendStatus({ text: `Exported ${cutFilter} cut`, cls: "ok" });
+      setTimeout(() => setSendStatus({ text: "", cls: "" }), 4000);
+    } else {
+      alert(`Export build failed: ${buildReason}`);
+      setSendStatus({ text: "Export failed", cls: "warn" });
+    }
+  }
+
+  // ====== Move + reorder helpers ======
+
+  function canMoveEntry(entry) {
+    const tl = getTimeline();
+    const i = tl.findIndex((x) => x.entry_id === entry.entry_id);
+    if (i < 0) return { up: false, down: false };
+    const my = entryActOf(entry);
+    let up = false;
+    let down = false;
+    for (let k = i - 1; k >= 0; k--) { if (entryActOf(tl[k]) === my) { up = true; break; } }
+    for (let k = i + 1; k < tl.length; k++) { if (entryActOf(tl[k]) === my) { down = true; break; } }
+    return { up, down };
+  }
+
+  function moveEntry(entryId, dir) {
+    const tl = getTimeline();
+    const found = tl.find((x) => x.entry_id === entryId);
+    if (!found) return;
+    const actName = entryActOf(found);
+    applyLocalEdit("move_" + (dir < 0 ? "up" : "down"),
+      (tlMut) => {
+        const i = tlMut.findIndex((x) => x.entry_id === entryId);
+        if (i < 0) return;
+        const my = entryActOf(tlMut[i]);
+        let target = -1;
+        if (dir === -1) {
+          for (let k = i - 1; k >= 0; k--) { if (entryActOf(tlMut[k]) === my) { target = k; break; } }
+        } else {
+          for (let k = i + 1; k < tlMut.length; k++) { if (entryActOf(tlMut[k]) === my) { target = k; break; } }
+        }
+        if (target < 0) return;
+        const [m] = tlMut.splice(i, 1);
+        tlMut.splice(target, 0, m);
+      },
+      `Moved ${entryId} ${dir < 0 ? "up" : "down"} within ${actName}`
+    );
+  }
+
+  // ====== Sub-quote ID assignment for splits ======
+
+  function executeSplit(entry) {
+    const original = fullQuoteText(entry);
+    const sorted = [...splitMarkers].sort((a, b) => a - b);
+    if (sorted.length === 0) return;
+    const boundaries = [0, ...sorted, original.length];
+    const letters = "abcdefghijklmnopqrstuvwxyz";
+    const subEntries = [];
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      const subText = original.slice(boundaries[i], boundaries[i + 1]).trim();
+      if (!subText) continue;
+      const sub = letters[i];
+      const newId = `${entry.source_quote_id}${sub}`;
+      subEntries.push({
+        ...entry,
+        entry_id: newId,
+        _subLabel: sub,
+        _editCuts: [],
+        notes: (entry.notes ? entry.notes + " " : "") + `(split ${sub} of ${boundaries.length - 1})`,
+      });
+    }
+    applyLocalEdit("split_entry",
+      (tl) => {
+        const idx = tl.findIndex((x) => x.entry_id === entry.entry_id);
+        if (idx < 0) return;
+        tl.splice(idx, 1, ...subEntries);
+      },
+      `Split ${entry.entry_id} into ${subEntries.length} sub-quotes (#${entry.source_quote_id}a..)`
+    );
+    setSplittingEntryId(null);
+    setSplitMarkers([]);
+  }
+
+  // ====== Send-to-agent panel ======
+
+  function focusCommentary(prefix) {
+    setSendPanelOpen(true);
+    setCommentary((cur) => {
+      if (cur.includes(prefix)) return cur;
+      return (cur && !cur.endsWith("\n") ? cur + "\n\n" : cur) + prefix;
+    });
+    requestAnimationFrame(() => {
+      const ta = document.getElementById("send-textarea");
+      if (ta) {
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+      }
+    });
+  }
+
+  function composeSendMessage() {
+    const ops = getPendingOps();
+    const tl = getTimeline();
+    const round = ROUNDS[roundIndex];
+    const lines = [];
+    if (ops.length > 0) {
+      lines.push("I made these tweaks in the viewer:", "");
+      ops.forEach((o, i) => lines.push(`${i + 1}. ${o.description}`));
+      lines.push("");
+    }
+    if (commentary.trim()) {
+      lines.push(ops.length > 0 ? "Editorial commentary:" : "Editorial feedback from viewer:", "");
+      lines.push(commentary.trim(), "");
+    }
+    if (ops.length > 0) {
+      lines.push(`Resulting timeline state (${tl.length} entries) — apply canonically and push update_artifact:`, "");
+      lines.push("```json");
+      lines.push(JSON.stringify(tl, null, 2));
+      lines.push("```", "");
+    }
+    lines.push(`Baseline: round ${round.round_number} (${round.version})`);
+    return lines.join("\n");
+  }
+
+  async function sendToAgent() {
+    const text = composeSendMessage();
+    try {
+      await navigator.clipboard.writeText(text);
+      setSendStatus({ text: "Copied ✓ — paste into chat", cls: "ok" });
+      setTimeout(() => setSendStatus({ text: "", cls: "" }), 3500);
+    } catch {
+      setSendStatus({ text: "Auto-copy blocked — copy manually", cls: "warn" });
+    }
+  }
+
+  // ====== Filter passes ======
+
+  function passesSourceFilters(q) {
+    if (speakerFilter !== "all" && q.speakerSlug !== speakerFilter) return false;
+    if (actFilter !== "all" && q.part !== actFilter) return false;
+    return true;
+  }
+  function passesTimelineFilters(e) {
+    if (speakerFilter !== "all") {
+      const src = findSourceQuote(e.source_quote_id);
+      if (!src || src.speakerSlug !== speakerFilter) return false;
+    }
+    if (actFilter !== "all" && entryActOf(e) !== actFilter) return false;
+    if (cutFilter === "tight" && e.runtime_recommendation !== "must-keep") return false;
+    return true;
+  }
+
+  // ====== Runtime totals ======
+  const allEntries = getTimeline();
+  const tightEntries = allEntries.filter((e) => e.runtime_recommendation === "must-keep");
+  const roughSec = allEntries.reduce((a, e) => a + entrySeconds(e), 0);
+  const tightSec = tightEntries.reduce((a, e) => a + entrySeconds(e), 0);
+  const activeEntries = cutFilter === "tight" ? tightEntries.length : allEntries.length;
+  const activeSec = cutFilter === "tight" ? tightSec : roughSec;
+
+  // ============================================================================
+  // Header
+  // ============================================================================
+
+  const renderHeader = () => (
+    <div className="hdr">
+      <div className="hdr-row1">
+       <div className="hdr-row1-inner">
+        <h1 className="hdr-title">{PROJECT_TITLE}</h1>
+        <select
+          className="round-select"
+          value={roundIndex}
+          onChange={(e) => {
+            const next = parseInt(e.target.value, 10);
+            if (next === -1) {
+              saveAsNewRound();
+              e.target.value = String(roundIndex);
+              return;
+            }
+            if (getPendingOps().length > 0) {
+              if (!confirm(`You have ${getPendingOps().length} unsynced tweaks on the current round. Switch rounds anyway? Unsynced tweaks stay scoped to their round.`)) {
+                e.target.value = String(roundIndex);
+                return;
+              }
+            }
+            setRoundIndex(next);
+          }}
+        >
+          {ROUNDS.map((r, i) => (
+            <option key={i} value={i}>{r.round_label || `Round ${r.round_number}`}</option>
+          ))}
+          <option value="-1">+ Save current as new round</option>
+        </select>
+        <div className="mode-toggle">
+          {[
+            { mode: "timeline", label: "Edit" },
+            { mode: "review", label: "Review" },
+            { mode: "library", label: "Quote Library" },
+          ].map((m) => (
+            <button
+              key={m.mode}
+              className={view === m.mode ? "active" : ""}
+              onClick={() => setView(m.mode)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+       </div>
+      </div>
+      {view !== "review" && (
+        <div className="hdr-row2">
+         <div className="hdr-row2-inner">
+          {/* Act filter */}
+          <div className="filter-group">
+            <span className="group-label">Act</span>
+            <button
+              className={`chip${actFilter === "all" ? " active" : ""}`}
+              onClick={() => setActFilter("all")}
+            >All</button>
+            {PROJECT_META.act_labels.filter((a) => a !== "Orphan").map((label, i) => (
+              <button
+                key={label}
+                className={`chip${actFilter === label ? " active" : ""}`}
+                onClick={() => setActFilter(label)}
+                title={label}
+              >
+                Act {i + 1}
+              </button>
+            ))}
+          </div>
+          {/* Speaker filter */}
+          <div className="filter-group">
+            <span className="group-label">Speaker</span>
+            <button
+              className={`chip${speakerFilter === "all" ? " active" : ""}`}
+              onClick={() => setSpeakerFilter("all")}
+            >All</button>
+            {(PROJECT_META.speakers || []).map((s) => (
+              <button
+                key={s.slug}
+                className={`chip${speakerFilter === s.slug ? " active" : ""}`}
+                onClick={() => setSpeakerFilter(s.slug)}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+          {/* Cut block (Edit view only) */}
+          {view === "timeline" && (
+            <div className="cut-block">
+              <span className="group-label">Cut</span>
+              <div className="cut-toggle">
+                <button
+                  className={cutFilter === "rough" ? "active rough" : ""}
+                  onClick={() => setCutFilter("rough")}
+                >Rough</button>
+                <button
+                  className={cutFilter === "tight" ? "active tight" : ""}
+                  onClick={() => setCutFilter("tight")}
+                >Tight</button>
+              </div>
+              <span className={`cut-metric cut-metric-${cutFilter}`}>
+                <span className="val">{activeEntries}</span> entries · <span className="val">{fmtSec(activeSec)}</span>
+              </span>
+              <button className="cut-export" onClick={exportToFCPXML}>Export XML</button>
+            </div>
+          )}
+         </div>
+        </div>
       )}
+    </div>
+  );
+
+  // ============================================================================
+  // Quote Library view
+  // ============================================================================
+
+  const renderLibrary = () => {
+    const realActs = PROJECT_META.act_labels.filter((a) => a !== "Orphan");
+    const inScope = SOURCE_QUOTES.filter((q) => !q.is_orphan && passesSourceFilters(q));
+    const orphans = SOURCE_QUOTES.filter((q) => q.is_orphan && passesSourceFilters(q));
+    const acts = realActs.map((act) => ({
+      name: act,
+      list: inScope.filter((q) => q.part === act),
+    })).filter((a) => a.list.length > 0);
+
+    const renderQuoteCard = (q) => {
+      const useCount = getTimeline().filter((e) => e.source_quote_id === q.num).length;
+      const inTimeline = useCount > 0;
+      const speakerC = speakerColors[q.speakerSlug] || { bg: COLORS.surface2, fg: COLORS.textMuted };
+      return (
+        <div key={q.num} id={`q-${q.num}`} className={`lib-card${q.is_orphan ? " orphan" : ""}${inTimeline ? " in-tl" : ""}`}>
+          <div className="card-head">
+            <span className="qid">#{q.num}</span>
+            <span className="speaker-tag" style={{ background: speakerC.bg, color: speakerC.fg }}>
+              {q.speaker}
+            </span>
+            <span className="act-tag-static">{q.part}</span>
+            <span className="tc">{tcFmt(q.startTC, q.endTC)}</span>
+            {inTimeline && <span className="in-tl-pill">in timeline{useCount > 1 ? ` ×${useCount}` : ""}</span>}
+            {q.is_orphan && <span className="orphan-pill">orphan</span>}
+          </div>
+          <p className="quote-text">{q.quote}</p>
+          {q.rationale && (
+            <div className="rationale">
+              <span className="rationale-label">Why:</span> {q.rationale}
+            </div>
+          )}
+          <div className="lib-actions">
+            <button
+              className="btn btn-primary"
+              disabled={inTimeline}
+              onClick={() => {
+                if (inTimeline) return;
+                const newId = String(q.num);
+                applyLocalEdit("add_entry",
+                  (tl) => {
+                    tl.push({
+                      entry_id: newId,
+                      _subLabel: null,
+                      source_quote_id: q.num,
+                      type: "spoken",
+                      speaker: q.speaker,
+                      part: q.part === "Orphan" ? (PROJECT_META.act_labels[0] || "Act 1") : q.part,
+                      runtime_recommendation: "probable-keep",
+                      _editCuts: [],
+                      notes: q.is_orphan ? "Pulled in from orphans by Jeff." : "Added by Jeff in viewer.",
+                    });
+                  },
+                  `Added #${q.num} (${q.speaker} — ${q.part}) to timeline`
+                );
+                setView("timeline");
+              }}
+            >
+              {inTimeline ? "✓ In timeline" : `Add #${q.num} to timeline`}
+            </button>
+            <button
+              className="btn btn-comment"
+              onClick={() => focusCommentary(`About #${q.num} (${q.speaker} — ${q.part}): `)}
+            >💬 Comment on this</button>
+            {inTimeline && (
+              <button
+                className="btn"
+                onClick={() => {
+                  setView("timeline");
+                  requestAnimationFrame(() => {
+                    const el = document.getElementById(String(q.num));
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  });
+                }}
+              >View in timeline</button>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="library-view">
+        {acts.map((a) => (
+          <section key={a.name} className="act-section">
+            <div className="act-header">
+              <h2 className="act-title">{a.name}</h2>
+              <span className="act-sub">{a.list.length} quote{a.list.length === 1 ? "" : "s"}</span>
+            </div>
+            {a.list.map(renderQuoteCard)}
+          </section>
+        ))}
+        {orphans.length > 0 && (
+          <section className="act-section orphans-section">
+            <div className="act-header">
+              <h2 className="act-title">Orphans</h2>
+              <span className="act-sub">
+                {orphans.length} quote{orphans.length === 1 ? "" : "s"} · agent recommends excluding
+              </span>
+            </div>
+            {orphans.map(renderQuoteCard)}
+          </section>
+        )}
+        {acts.length === 0 && orphans.length === 0 && (
+          <div className="empty">
+            <h3>No quotes match the current filters.</h3>
+            <p>Loosen Speaker / Act filters above.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // Timeline view
+  // ============================================================================
+
+  function renderTrimmedSpans(original, cuts) {
+    const segments = buildRenderSegments(original, cuts);
+    return segments.map((seg, i) => (
+      <span key={i} className={seg.cut ? "tl-quote-cut" : ""}>{seg.text}</span>
+    ));
+  }
+
+  const renderTimelineCard = (entry) => {
+    const src = findSourceQuote(entry.source_quote_id);
+    const idLabel = entry._subLabel
+      ? `#${entry.source_quote_id}${entry._subLabel}`
+      : `#${entry.source_quote_id}`;
+    const idClass = entry._subLabel ? "qid split" : "qid";
+    const mb = canMoveEntry(entry);
+    const isEditing = editingEntryId === entry.entry_id;
+    const isSplitting = splittingEntryId === entry.entry_id;
+    const original = fullQuoteText(entry);
+    const trimmed = isTrimmed(entry);
+    const speakerC = src ? speakerColors[src.speakerSlug] : { bg: COLORS.surface2, fg: COLORS.textMuted };
+    const rec = entry.runtime_recommendation || "probable-keep";
+
+    // Drag is only initiated from the .tl-drag handle on the left edge of the
+    // card — otherwise text selection inside the card (especially in the trim
+    // editor) gets hijacked into a card-drag. The whole card still accepts
+    // drops; only dragstart/dragend live on the handle.
+    return (
+      <div
+        key={entry.entry_id}
+        id={entry.entry_id}
+        className={`tl-card is-${rec}${dragId === entry.entry_id ? " dragging" : ""}`}
+        onDragOver={(e) => {
+          if (!dragId || dragId === entry.entry_id) return;
+          const tl = getTimeline();
+          const dragEntry = tl.find((x) => x.entry_id === dragId);
+          if (!dragEntry) return;
+          if (entryActOf(dragEntry) !== entryActOf(entry)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (!dragId || dragId === entry.entry_id) { setDragId(null); return; }
+          const draggedId = dragId;
+          applyLocalEdit("reorder",
+            (tl) => {
+              const fromIdx = tl.findIndex((x) => x.entry_id === draggedId);
+              const toIdx = tl.findIndex((x) => x.entry_id === entry.entry_id);
+              if (fromIdx < 0 || toIdx < 0) return;
+              if (entryActOf(tl[fromIdx]) !== entryActOf(tl[toIdx])) return;
+              const [m] = tl.splice(fromIdx, 1);
+              const newToIdx = tl.findIndex((x) => x.entry_id === entry.entry_id);
+              tl.splice(newToIdx, 0, m);
+            },
+            `Reordered: moved ${draggedId} above ${entry.entry_id}`
+          );
+          setDragId(null);
+        }}
+      >
+        <div
+          className="tl-drag"
+          title="Drag to reorder"
+          draggable
+          onDragStart={(e) => {
+            setDragId(entry.entry_id);
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", entry.entry_id);
+          }}
+          onDragEnd={() => setDragId(null)}
+        >
+          <svg width="10" height="20" viewBox="0 0 10 20" fill="currentColor">
+            <circle cx="2" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/>
+            <circle cx="2" cy="10" r="1.4"/><circle cx="8" cy="10" r="1.4"/>
+            <circle cx="2" cy="17" r="1.4"/><circle cx="8" cy="17" r="1.4"/>
+          </svg>
+        </div>
+        <div className="tl-body">
+          <div className="tl-card-head">
+            <span className={idClass}>{idLabel}</span>
+            <div className="tl-move-btns">
+              <button className="tl-move-btn" disabled={!mb.up}
+                onClick={() => moveEntry(entry.entry_id, -1)} title="Move up within act">↑</button>
+              <button className="tl-move-btn" disabled={!mb.down}
+                onClick={() => moveEntry(entry.entry_id, 1)} title="Move down within act">↓</button>
+            </div>
+            <span className="speaker-tag" style={{ background: speakerC.bg, color: speakerC.fg }}>
+              {src?.speaker || entry.speaker || "?"}
+            </span>
+            <span className="act-tag-wrap">
+              <button
+                className="act-tag-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setReassigningEntryId(reassigningEntryId === entry.entry_id ? null : entry.entry_id);
+                }}
+              >
+                {entryActOf(entry)} <span className="caret">▾</span>
+              </button>
+              {reassigningEntryId === entry.entry_id && (
+                <div className="reassign-pop" onClick={(e) => e.stopPropagation()}>
+                  {PROJECT_META.act_labels
+                    .filter((a) => a !== entryActOf(entry) && a !== "Orphan")
+                    .map((a) => (
+                      <button key={a} onClick={() => {
+                        applyLocalEdit("reassign_act",
+                          (tl) => {
+                            const e2 = tl.find((x) => x.entry_id === entry.entry_id);
+                            if (e2) e2.part = a;
+                          },
+                          `${entry.entry_id}: act → ${a}`
+                        );
+                        setReassigningEntryId(null);
+                      }}>{a}</button>
+                    ))}
+                </div>
+              )}
+            </span>
+            <button
+              className={`rec-badge ${rec}`}
+              onClick={() => {
+                const next = rec === "must-keep" ? "probable-keep" : "must-keep";
+                applyLocalEdit("set_rec",
+                  (tl) => {
+                    const e2 = tl.find((x) => x.entry_id === entry.entry_id);
+                    if (e2) e2.runtime_recommendation = next;
+                  },
+                  `${entry.entry_id} (#${entry.source_quote_id}): ${rec} → ${next}`
+                );
+              }}
+              title="Click to toggle between must-keep and probable-keep"
+            >{rec.replace("-", " ")}</button>
+            <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
+            <button
+              className="tl-scissors"
+              onClick={() => {
+                if (splittingEntryId === entry.entry_id) {
+                  setSplittingEntryId(null);
+                  setSplitMarkers([]);
+                } else {
+                  setSplittingEntryId(entry.entry_id);
+                  setSplitMarkers([]);
+                  setEditingEntryId(null);
+                }
+              }}
+              title="Split into sub-quotes"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" d="M6 4l3 6M18 4l-3 6M9 10c0 3 6 3 6 0M9 10l-4 10M15 10l4 10"/>
+              </svg>
+              split
+            </button>
+          </div>
+          {!isEditing && (
+            <p className="tl-quote">
+              "{trimmedQuoteText(entry)}"
+            </p>
+          )}
+          {!isEditing && !isSplitting && (
+            <span
+              className="tl-quote-hint"
+              onClick={() => {
+                setEditingEntryId(entry.entry_id);
+                setEditCuts((entry._editCuts || []).map((r) => [...r]));
+                setSplittingEntryId(null);
+              }}
+            >
+              ▶ {trimmed ? "show original & edit" : "trim quote"}
+            </span>
+          )}
+          {isEditing && (
+            <EditPanel
+              entry={entry}
+              editCuts={editCuts}
+              setEditCuts={setEditCuts}
+              onSave={() => {
+                const cutsCopy = [...editCuts];
+                applyLocalEdit("trim",
+                  (tl) => {
+                    const e2 = tl.find((x) => x.entry_id === entry.entry_id);
+                    if (e2) e2._editCuts = cutsCopy;
+                  },
+                  cutsCopy.length === 0
+                    ? `Reset trim on ${entry.entry_id}`
+                    : `Trimmed ${entry.entry_id} (${cutsCopy.length} cut region${cutsCopy.length === 1 ? "" : "s"})`
+                );
+                setEditingEntryId(null);
+                setEditCuts([]);
+              }}
+              onCancel={() => { setEditingEntryId(null); setEditCuts([]); }}
+            />
+          )}
+          {isSplitting && (
+            <SplitPanel
+              entry={entry}
+              markers={splitMarkers}
+              setMarkers={setSplitMarkers}
+              onSplit={() => executeSplit(entry)}
+              onCancel={() => { setSplittingEntryId(null); setSplitMarkers([]); }}
+            />
+          )}
+          {entry.notes && (
+            <div className="tl-notes">
+              <span className="tl-notes-label">Notes:</span> {entry.notes}
+            </div>
+          )}
+          <div className="tl-actions">
+            <button
+              className="btn btn-comment"
+              onClick={() => focusCommentary(`About ${entry.entry_id} (#${entry.source_quote_id}, ${entryActOf(entry)}): `)}
+            >💬 Comment on this</button>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                if (!confirm(`Drop entry ${entry.entry_id} (#${entry.source_quote_id})? Source quote stays in the Library and can be re-added.`)) return;
+                applyLocalEdit("drop_entry",
+                  (tl) => {
+                    const i = tl.findIndex((x) => x.entry_id === entry.entry_id);
+                    if (i >= 0) tl.splice(i, 1);
+                  },
+                  `Dropped ${entry.entry_id} (#${entry.source_quote_id})`
+                );
+              }}
+            >Drop entry</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTimeline = () => {
+    const tl = getTimeline();
+    if (tl.length === 0) {
+      return (
+        <div className="empty">
+          <h3>Timeline empty.</h3>
+          <p>Add quotes from Quote Library, or wait for the Edit Agent's first pass.</p>
+        </div>
+      );
+    }
+    const realActs = PROJECT_META.act_labels.filter((a) => a !== "Orphan");
+    const grouped = {};
+    for (const e of tl) {
+      const act = entryActOf(e);
+      grouped[act] = grouped[act] || [];
+      grouped[act].push(e);
+    }
+    return (
+      <div className="timeline-view">
+        {realActs.map((act) => {
+          if (actFilter !== "all" && act !== actFilter) return null;
+          const entries = (grouped[act] || []).filter(passesTimelineFilters);
+          if (entries.length === 0) return null;
+          const sec = entries.reduce((a, e) => a + entrySeconds(e), 0);
+          return (
+            <section key={act} className="act-section">
+              <div className="act-header">
+                <h2 className="act-title">{act}</h2>
+                <span className="act-sub">
+                  {entries.length} entr{entries.length === 1 ? "y" : "ies"} · ~{fmtSec(sec)}
+                </span>
+              </div>
+              {entries.map((entry) => renderTimelineCard(entry))}
+            </section>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // Review view
+  // ============================================================================
+
+  const renderReview = () => {
+    const tl = getTimeline().filter((e) =>
+      cutFilter === "tight" ? e.runtime_recommendation === "must-keep" : true
+    );
+    if (tl.length === 0) {
+      return <div className="empty"><h3>Nothing to review yet.</h3></div>;
+    }
+    const realActs = PROJECT_META.act_labels.filter((a) => a !== "Orphan");
+    const tabs = [...realActs, "All"];
+    const inScope = tl.filter((e) => reviewScope === "All" || entryActOf(e) === reviewScope);
+    return (
+      <div className="review-view">
+        <div className="review-tabs">
+          {tabs.map((name) => {
+            const count = name === "All" ? tl.length : tl.filter((e) => entryActOf(e) === name).length;
+            return (
+              <button
+                key={name}
+                className={`review-tab${reviewScope === name ? " active" : ""}`}
+                onClick={() => setReviewScope(name)}
+              >{name}<span className="count">({count})</span></button>
+            );
+          })}
+        </div>
+        {(() => {
+          const actsToShow = reviewScope === "All" ? realActs : [reviewScope];
+          return actsToShow.map((act) => {
+            const entries = inScope.filter((e) => entryActOf(e) === act);
+            if (entries.length === 0) return null;
+            const secs = entries.reduce((a, e) => a + entrySeconds(e), 0);
+            let lastSp = null;
+            return (
+              <div key={act} className="review-act">
+                <h2>{act}<span className="meta">~{fmtSec(secs)} · {entries.length} beat{entries.length === 1 ? "" : "s"}</span></h2>
+                {entries.map((e) => {
+                  const src = findSourceQuote(e.source_quote_id);
+                  const speakerLabel = src?.speaker || e.speaker || "?";
+                  const showSpeaker = speakerLabel !== lastSp;
+                  lastSp = speakerLabel;
+                  return (
+                    <div key={e.entry_id} className="review-block">
+                      {showSpeaker && <div className="speaker">— {speakerLabel}</div>}
+                      <div className="review-text">"{trimmedQuoteText(e)}"</div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          });
+        })()}
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // Send-to-agent panel
+  // ============================================================================
+
+  const renderSendPanel = () => {
+    const ops = getPendingOps();
+    const round = ROUNDS[roundIndex];
+    const hasContent = ops.length > 0 || commentary.trim().length > 0;
+    return (
+      <div className={`send-panel${sendPanelOpen ? "" : " collapsed"}${ops.length > 0 ? " has-pending" : ""}`}>
+        <div className="sp-head" onClick={() => setSendPanelOpen(!sendPanelOpen)}>
+          <span className="sp-title">Talk to agent</span>
+          <span className={`sp-count${ops.length === 0 ? " zero" : ""}`}>{ops.length}</span>
+          <span className="sp-toggle">{sendPanelOpen ? "▼" : "▲"}</span>
+        </div>
+        {sendPanelOpen && (
+          <>
+            <div className="sp-body">
+              <div className="sp-section">
+                <div className="sp-section-head">
+                  <span className="sp-section-title">Pending tweaks</span>
+                  <button
+                    className="sp-discard"
+                    onClick={(e) => { e.stopPropagation(); discardAllTweaks(); }}
+                    disabled={ops.length === 0}
+                  >Discard all</button>
+                </div>
+                <ul className="sp-ops">
+                  {ops.length === 0 ? (
+                    <li className="empty">No tweaks yet. Edit in the timeline to start.</li>
+                  ) : (
+                    ops.map((o, i) => <li key={i}>{o.description}</li>)
+                  )}
+                </ul>
+              </div>
+              <div className="sp-section">
+                <div className="sp-section-head">
+                  <span className="sp-section-title">Editorial commentary</span>
+                  <span className="sp-optional">optional</span>
+                </div>
+                <textarea
+                  id="send-textarea"
+                  className="sp-textarea"
+                  placeholder="Why these changes? Or: what's your editorial read on a specific entry? The agent learns from this — it's the 'why,' not just the 'what.'"
+                  value={commentary}
+                  onChange={(e) => setCommentary(e.target.value)}
+                />
+                <div className="sp-hint">
+                  Tip: click <strong>💬 Comment</strong> on any card to focus here with that entry pre-filled.
+                </div>
+              </div>
+            </div>
+            <div className="sp-foot">
+              <button className="sp-send" disabled={!hasContent} onClick={sendToAgent}>Send</button>
+              {sendStatus.text && <span className={`sp-status ${sendStatus.cls}`}>{sendStatus.text}</span>}
+              <span className="sp-version">Round {round.round_number} · {round.version}</span>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // Apply initial focus on first render
+  // ============================================================================
+
+  useEffect(() => {
+    if (!INITIAL_FOCUS) return;
+    const targetId = INITIAL_FOCUS.type === "entry" ? INITIAL_FOCUS.id : `q-${INITIAL_FOCUS.id}`;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("focus-flash");
+      setTimeout(() => el.classList.remove("focus-flash"), 1700);
+    });
+  }, []);
+
+  // Close reassign popup on outside click
+  useEffect(() => {
+    if (!reassigningEntryId) return;
+    const onDoc = () => setReassigningEntryId(null);
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, [reassigningEntryId]);
+
+  return (
+    <div className="viewer">
+      {renderHeader()}
+      <main className="main">
+        {view === "library" && renderLibrary()}
+        {view === "timeline" && renderTimeline()}
+        {view === "review" && renderReview()}
+      </main>
+      {renderSendPanel()}
     </div>
   );
 }
