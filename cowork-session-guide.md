@@ -1,5 +1,5 @@
 # Documentary Junior Editor — Cowork Session Guide
-### Version 5.0 | April 2026
+### Version 5.2 | May 2026
 
 ## Overview
 
@@ -91,6 +91,14 @@ Review pass. If you encounter older docs referencing `git-crypt unlock`, ignore 
 
 ## Project Folder Structure
 
+**Hard requirement: project SSD volume names must not contain spaces or
+special characters** (`& ; : ' " < > | <space>`). The Cowork sandbox uses
+virtiofs to bind-mount the SSD, and those characters break the mount.
+Rename the volume before starting if needed (e.g., `TCCS Dr Pan &
+Testimonials ` → `TCCS_2026`). This is a hard requirement, not a
+recovery step — sessions started on a badly-named SSD will need to be
+restarted after rename.
+
 Before starting, confirm the project SSD has this structure:
 
 ```
@@ -138,6 +146,14 @@ Before the editing pipeline can start, the Media Agent (or manual prep) must hav
 **What it does:** Detects audio files in `transcripts/audio/`, derives speaker names from filenames and confirms with Jeff, then presents a single bash command pointing at `documentary-junior-editor/start-editing` for Jeff to run in Terminal. After Jeff runs the command and reports back, the agent reads the new transcripts, validates each (non-empty, has timecodes, has speaker labels, plausible word count), and writes `handoffs/transcription-summary-v[N].md`.
 
 The host-side launcher reads the AssemblyAI key from `documentary-junior-editor/.env` (no git-crypt). If the file is missing, the agent fails fast and tells Jeff exactly what to put in it.
+
+**Video containers (`.mov`, `.mp4`) are pre-converted to `.mp3` in the
+sandbox before the launcher runs.** The launcher only sees audio
+extensions (`.mp3`, `.wav`, `.m4a`, `.aac`, `.flac`). If you drop a
+`.mov` or `.mp4` into `transcripts/audio/`, the Transcription Agent runs
+`ffmpeg` in the Cowork sandbox (Phase 3 of `SKILL-transcription.md`) to
+extract the audio track before presenting you the launcher command. The
+original video file stays in place.
 
 **Why a launcher and not direct sandbox execution:** Cowork's outbound network allowlist does not include AssemblyAI. Any sandbox-side call to `api.assemblyai.com` returns 403 from the proxy. Until the allowlist changes, transcription runs on the host. The launcher consolidates everything to one bash command with no copy-paste hazards (path has no extension; no chat auto-linking).
 
@@ -359,6 +375,23 @@ The Skill Review Agent (Step 5) often produces changes to skill files, reference
 
 If you skip this step, the lessons learned from this project stay trapped on whichever machine ran the review. The next project's agent will read stale skill files and make the same mistakes again.
 
+**Preferred path: use the `commit-skill-changes` helper.** This helper
+syncs SSD-side SKILL edits to the Desktop clone, reads a multi-line
+commit message from `.commit-message`, and pushes to GitHub in one step.
+From the project SSD's `documentary-junior-editor/` folder:
+
+```bash
+echo 'v5.2: TCCS Dr Pan & Testimonials review pass
+
+[paste full v5.2 CHANGELOG entry bullet list here, or shorter summary]' \
+  > .commit-message
+
+bash commit-skill-changes
+```
+
+If the helper is unavailable or you want fine-grained control, the manual
+`git` flow below also works.
+
 From the `documentary-junior-editor/` folder where the review ran:
 
 ```bash
@@ -394,6 +427,8 @@ git pull
 
 **Launcher returns 403 Forbidden from AssemblyAI:** The key in `.env` is invalid, revoked, or has hit a quota. Rotate the key in the AssemblyAI dashboard, update `.env`, re-run.
 
+**SSD disconnect / reconnect mid-session — agents keep asking for folder access:** The Cowork session's permission grant to the project folder is tied to the mount. If you unmount and remount the SSD partway through the pipeline, every subsequent agent session will need you to re-select the workspace folder, and any in-flight tool calls may fail. **Keep the SSD continuously mounted across the pipeline.** If a remount is unavoidable, expect to re-grant folder access on each agent's first turn, and verify the project's `pipeline-state.json` is intact before continuing.
+
 **Transcription Agent skips files unexpectedly:** It skips audio files that already have a matching .txt in `transcripts/text/`. To force re-transcription, delete or rename the existing .txt first.
 
 **Creative Context Agent says "audio detected without transcripts":** Run the Transcription Agent first using the launch prompt the agent gave you. Then return to Creative Context and re-launch.
@@ -420,4 +455,4 @@ git pull
 
 ---
 
-*v5.0 — April 2026 — see CHANGELOG.md for detailed version history.*
+*v5.2 — May 2026 — see CHANGELOG.md for detailed version history.*

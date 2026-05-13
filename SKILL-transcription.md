@@ -108,6 +108,36 @@ or alongside other agents. No stale-state check is needed.
 
 ---
 
+## Phase 0.5: Project Slug Confirmation
+
+The Transcription Agent runs before the Creative Context Agent, so the
+project slug used in downstream handoff paths (`handoffs/[project-slug]/`)
+is not yet established by any earlier agent. The agent must establish it
+before emitting the handoff doc, or downstream agents may write to a
+different path and the project state will fragment.
+
+**On first run for this project:**
+
+- If `handoffs/pipeline-state.json` already exists with a `project_slug`
+  field, use that. Confirm with Jeff: "I'll write the transcription
+  handoff to `handoffs/[slug]/transcription-summary-v1.md`. OK?"
+- If `pipeline-state.json` does not exist, derive a candidate slug from
+  the project folder name (lowercase, spaces → hyphens, strip special
+  chars). Present to Jeff and ask: "I'll use `[derived-slug]` as the
+  project slug for handoff paths. Confirm or correct."
+
+Wait for Jeff's response. Apply any correction. Use the confirmed slug
+in `handoffs/[slug]/transcription-summary-v[N].md` (Phase 6) and in
+the `project_slug` field of `pipeline-state.json` (which the Creative
+Context Agent and all downstream agents will read).
+
+**Slugs are sticky.** Once set, every downstream agent reads from the
+same `pipeline-state.json` and uses the same slug. The slug should be
+stable across the project — pick one Jeff will be happy to see months
+later in the reference-examples folder.
+
+---
+
 ## Phase 1: Audio Detection
 
 Scan `transcripts/audio/` for files matching the supported extensions. Build a list
@@ -481,7 +511,7 @@ transcribe, validate, save, emit handoff, update state.
 
 ---
 
-*Transcription Agent — documentary-junior-editor v5.0*
+*Transcription Agent — documentary-junior-editor v5.2*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *AssemblyAI calls delegated to `scripts/transcribe.py` (key path is a Phase 3
 follow-up — see Phase 4).*

@@ -692,6 +692,19 @@ The rough cut should err long — including every entry that plausibly earns
 its place across the full narrative arc. Runtime becomes the constraint only
 at Reduction, after the Discussion with Jeff.
 
+**Watch for outcome / visual-result material in the source pool that isn't
+shining at first pass.** Patient testimonials, customer-story projects, and
+medical / before-after content often contain a tagged quote describing the
+*outcome* itself — "the under-eye area was smooth," "we came in under
+budget," "the team is faster now." These quotes can feel descriptive rather
+than emotional and get skipped in selection. They often earn their place
+in Act 3. Before locking the rough cut, scan the source pool one more time
+specifically for outcome / visual-result quotes that didn't make the
+selection. Surface candidates to Jeff. The TCCS Dr Pan & Testimonials
+reference example shows a whole 12-second outcome-description quote that
+the Edit Agent skipped on selection but the editor pulled in during
+finishing.
+
 **Never pre-truncate the closing act to hit a number.** Act 3 (or whichever
 act carries the landing) needs its full widening arc to work. If the full
 closing sequence runs 30–60 seconds over a 3–5 minute target, present it
@@ -726,6 +739,15 @@ back; opening beats are about isolation, stigma, and community distrust.
 Interleave when it serves the narrative. Source quotes do not have to play
 in the order they were tagged. The timeline is the work product — its order
 is whatever the narrative demands.
+
+**Cross-reference pairings are editorial suggestions, not commitments.**
+The Synthesis Agent's cross-reference notes (claim/evidence pairs, verbatim
+echoes, callbacks) describe relationships the editor *might* exploit. They
+are not constraints on ordering. The pair can survive intact while the
+editor reorders the surrounding act, or the pair can be broken across acts
+if the narrative reads stronger that way. When you place a cross-referenced
+pair, treat the pairing as one consideration among many — adjacency is
+often but not always the right call.
 
 ### Title-card-as-shortener (named pattern, new in v5.0)
 
@@ -780,6 +802,14 @@ internal notes as a workaround for non-native-English speakers whose
 testimonials needed shortening. That framing is gone. Title-card-as-shortener
 is a general editorial tool — it applies wherever on-screen text lands a
 beat faster than spoken material would, regardless of speaker.
+
+**Act boundary title cards are different from title-card-as-shortener.**
+The FCPXML Agent automatically emits one title card at each act boundary
+on every emission, regardless of whether the Edit Agent includes explicit
+`title_card` entries. Those act-boundary cards are the editor's structural
+editing aid and are stripped at finishing. The Edit Agent does not need to
+emit `title_card` entries for act boundaries — only for title-card-as-
+shortener uses (where a beat reads cleaner on screen than spoken).
 
 ### Suggesting context beats (new in v5.0)
 
@@ -999,6 +1029,21 @@ quote. Sometimes the full quote is already tight and needs nothing removed.
 
 **Trimming principles:**
 
+- **Bias toward fewer segments per entry.** When in doubt about whether a
+  segment earns its place inside a kept entry, drop it. The editor's
+  finishing pass consistently shows heavier segment-level pruning than
+  the agent's initial selection — entries that ship with all their
+  planned segments are the exception, not the rule. If the entry's core
+  idea lands in segs 0-1, the rest is usually pickup.
+
+- **Don't silently drop tail segments labeled "redundant."** When a
+  segment at the end of a quote restates the same idea as the segment
+  before it, the agent's instinct is to drop it as redundant. The editor's
+  instinct is often to keep it — tail beats land the rhythm even when
+  they don't add information. When you propose dropping a tail segment,
+  surface the call explicitly to Jeff with the segment text and ask
+  before dropping. Default to keep, not drop.
+
 - **Find the essential segment.** Most source quotes have one segment that
   carries the real punch. The rest is setup, qualification, or repetition.
   Identify it and ask whether the surrounding material is truly necessary.
@@ -1197,7 +1242,11 @@ A structured summary for the FCPXML Agent containing:
   artifacts, the HTML viewer path: `handoffs/[project-slug]_quotes_view.html`)
 - Notes for the FCPXML Agent (e.g., "Entries e_011 and e_013 are an
   intercut — quote #21 wraps around quote #14. Generate clips per source
-  segment per entry; do not collapse e_011 and e_013 into a single clip.")
+  segment per entry, in the order specified in `trimmed-quotes-v[N].json`."
+  The Edit Agent's role is to communicate intent so the FCPXML Agent
+  generates the right clip structure; it is NOT to instruct the FCPXML
+  Agent or downstream finishing about ordering — order is authoritative
+  in the JSON and the editor may reorder in FCP regardless.)
 - Title card and interstitial counts and positions
 - **Suggested context beats** — the section described in Phase 3 above,
   with location, intent, and `(research needed)` tag
@@ -1388,5 +1437,5 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.0*
+*Edit Agent — documentary-junior-editor v5.2*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

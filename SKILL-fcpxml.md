@@ -12,6 +12,14 @@ description: |
   the new timeline-entry shape with `segments[]` (one clip per source segment
   per timeline entry), and emits versioned FCPXMLs to `XML/imports/`.
 
+  v5.2: rolled-up v5.1/v5.1.1 launcher pattern + new lessons from TCCS Dr
+  Pan & Testimonials. ACT-BOUNDARY TITLE CARDS ARE REQUIRED on every
+  emission (Phase 2.1.5). Multi-speaker resource-ID collision documented
+  with required remap procedure (Phase 2.1). Multi-output multicam
+  re-import duplication documented with required UID-reference approach
+  (Phase 2.1.6). Mid-quote zero-duration segment verification step
+  added.
+
   Start this agent after the Edit Agent has emitted a versioned
   `trimmed-quotes-v[N].json`. The agent reads `pipeline-state.json` first to
   detect upstream changes.
@@ -276,6 +284,74 @@ and entry e_004 from a single_clip interview, side by side. The spine
 contains an `<mc-clip>` followed by an `<asset-clip>`. Each is correctly
 formed for its source.
 
+**Multi-speaker resource-ID collision (CRITICAL).** Per-speaker captioned
+`.fcpxmld` exports from Final Cut Pro independently use the same resource
+IDs — most commonly `r2` for the multicam media resource, `r3`/`r5`/`r7` for
+the asset references. Naive concatenation of these XMLs into one output
+breaks every reference. The FCPXML Agent (and `build_fcpxml.py`) MUST
+perform dynamic resource-ID remap when merging multiple speakers:
+
+1. Read the first speaker's resources, retain their IDs as-is, track the
+   highest ID number used.
+2. For each subsequent speaker, shift all their resource IDs to start above
+   the previous high-water mark. Track the remap in a dictionary
+   (`r2 → r8`, `r3 → r9`, etc.) and rewrite every `ref="..."` attribute in
+   that speaker's clips before splicing them into the output spine.
+3. Add any per-output effects (title-card style, Flow transition) at fresh
+   IDs above all speaker IDs.
+
+This is currently implemented in the TCCS Dr Pan & Testimonials
+project-specific adapter (`build_tccs_rough_cut_v1.py`). Fold the logic
+back into `build_fcpxml.py` as part of the Phase 3 follow-up.
+
+### 2.1.5 — Act-boundary title cards (REQUIRED every emission)
+
+**The FCPXML Agent MUST emit one title card at each act boundary on every
+emission, regardless of whether the Edit Agent emitted explicit `title_card`
+entries.** Read the act labels from `act-structure-v[N].md` and insert one
+title card at the start of each act in the spine, using the act label as the
+title text and a short default duration (0.67s is the established default).
+
+These act-boundary cards are the editor's structural editing aid — they make
+acts visually distinct in the FCP timeline during the rough-cut review.
+**They are removed at finishing** as the last polish step. Their presence in
+every emission is non-optional. Do not skip them when the timeline JSON has
+zero `title_card` entries; do not skip them when the Edit Agent's plan
+already opens an act with a strong cold-open clip.
+
+Title-card entries the Edit Agent emits explicitly (title-card-as-shortener
+pattern, per `SKILL-edit.md`) are separate from act-boundary cards and
+should be generated in addition to them, in the position the Edit Agent
+specifies.
+
+### 2.1.6 — Multi-output multicam re-import duplication (CRITICAL)
+
+Importing multiple FCPXML files into the same FCP library creates duplicate
+multicams when each output FCPXML re-declares the full `<media>` multicam
+block. The duplicates clutter the library, break angle selection in clips
+referencing the older copy, and cause general FCP confusion.
+
+**Rule:** when a multicam already exists in the destination library, the
+generated FCPXML should reference it by UID without re-declaring the
+`<media>` block.
+
+Concretely, in the output FCPXML:
+- The `<library>` and `<event>` elements should match the destination FCP
+  library.
+- The multicam resource referenced in the spine (`<mc-clip ref="r2">`)
+  should be a `<media>` element with a matching `uid` attribute to the
+  existing library multicam. If the UID is preserved across exports
+  (Final Cut Pro keeps UIDs stable on the source multicams), FCP will
+  recognize the reference as the existing multicam, not a new one.
+
+If you cannot guarantee UID stability across multiple emissions, emit
+each output into a **separate event** (`<event name="2 | rough cuts v2"`)
+in the same library, so the multicam duplicates are at least scoped to
+that event. But the canonical fix is UID-stable references.
+
+This is currently NOT handled by `build_fcpxml.py` and is on the Phase 3
+follow-up list.
+
 ### 2.2 — Pre-flight
 
 Confirm these files exist (error immediately if any are missing):
@@ -284,6 +360,15 @@ Confirm these files exist (error immediately if any are missing):
 - `handoffs/act-structure-v[Y].md`
 - `handoffs/tagged-quotes-v[Z].json`
 - Source caption `.fcpxml` files in `XML/exports/` (or `xml/`) — enumerate
+
+**Mid-quote zero-duration segments need verification.** If the Synthesis
+Agent's `transcript-summary-v[N].md` flagged any segment with
+zero-duration timecode estimates (artifact at the tail of a long quote),
+the FCPXML Agent must verify the segment's actual TC against the source
+audio before locking the clip. Do not silently use the estimated TC. If
+verification reveals the real range, log it; if the segment truly has
+zero usable audio, flag to Jeff and surface as a candidate for drop from
+the timeline.
 
 ### 2.3 — Caption-matcher performance fix (standard for v5.0)
 
@@ -477,8 +562,15 @@ If Jeff approves the project, launch the Skill Review Agent:
 
 ---
 
-*FCPXML Agent — documentary-junior-editor v5.0*
+*FCPXML Agent — documentary-junior-editor v5.2*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
-*FCPXML generation delegated to `scripts/build_fcpxml.py` (Phase 3
-follow-up: per-interview clip_type branching, per-segment clip generation,
-and `find_quote_range` TC-window narrowing — see Phase 2.3 and 2.5).*
+*FCPXML generation delegated to `scripts/build_fcpxml.py`. Phase 3 code
+follow-ups currently OPEN (highest priority next code work): (1) v5 schema
+consumption — accept `{"entries": [...]}` with `segments[]` and
+`source_segment_idx`, not legacy `{"quotes": [...]}`; (2) per-interview
+`clip_type` branching; (3) per-segment clip generation; (4) multi-speaker
+resource-ID dynamic remap (see Phase 2.1); (5) library-multicam UID
+references (see Phase 2.1.6); (6) `parse_params_md()` basename bug fix —
+currently uses `os.path.basename()` on `.fcpxmld/Info.fcpxml` paths,
+stripping the package name; (7) `find_quote_range` TC-window narrowing
+(see Phase 2.3 and 2.5).*

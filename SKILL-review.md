@@ -13,6 +13,12 @@ description: |
   → `v2.json` etc. as first-class signal, and adds multicam-vs-single-clip
   branching checks for the FCPXML Params and FCPXML Agents.
 
+  v5.2: rolled-up v5.1/v5.1.1 launcher pattern + new lessons from TCCS Dr Pan
+  & Testimonials — title cards always emitted by FCPXML Agent, cross-reference
+  pair flag softened to suggestion, Edit Agent outcome-material blind spot
+  documented, FCPXML multi-speaker resource ID remap + multi-output multicam
+  duplication noted, slug consistency rule added.
+
   Start this agent after Jeff has approved the final FCPXML cut and marked
   the project as complete.
 model: opus-4.7
@@ -284,17 +290,29 @@ errors:
 - Any technical parameters that caused issues
 - Import problems and how they were resolved
 
-**Phase 3 follow-up code change tracking.** v5.0 flagged several code
-changes as out of scope for the SKILL pass:
+**Phase 3 follow-up code change tracking.** Current status of code changes
+flagged in prior reviews:
 
-- `scripts/transcribe.py` — read encrypted key path; drop `.env` fallbacks
+- `scripts/transcribe.py` — read AssemblyAI key from `.env`, drop legacy
+  `.env` lookup paths. **SHIPPED in v5.1.**
 - `scripts/build_fcpxml.py` — per-interview `clip_type` branching, parser
-  format update for new `## Clip Types` block, per-segment clip generation
+  format update for new `## Clip Types` block, per-segment clip generation,
+  multi-speaker resource-ID remap, library-multicam UID references (avoid
+  re-import duplication), `parse_params_md()` basename bug fix. **NOT
+  SHIPPED — highest priority next code work.** TCCS Dr Pan & Testimonials
+  used a project-specific adapter (`build_tccs_rough_cut_v1.py`); fold its
+  logic back into the canonical script.
 - `scripts/generate_fcpxml.py` — `find_quote_range` TC-window narrowing
+  (±15s per quote). Status to verify next pass.
 - `scripts/quotes_viewer_template.jsx` — segment-level UI, source
-  attribution per segment in composite display, status badges, runtime-
-  recommendation toggle, bidirectional `sendPrompt()` wiring, current-focus
-  highlight, title-card and context-beat entry types
+  attribution per segment, status badges, runtime-recommendation toggle,
+  bidirectional `sendPrompt()` wiring, current-focus highlight, title-card
+  and context-beat entry types. **PARTIALLY SHIPPED** (v5.0-native rebuild
+  done); **parked for separate viewer review task** — design drift across
+  recent projects, some prior design lost, some new functionality good,
+  some needs tweaking.
+- `secrets/assembly_ai.key` — deprecated git-crypt file from pre-v5.1 era.
+  **Ready for deletion** from the repo.
 
 For each Phase 3 follow-up, note in the lessons doc whether the change has
 shipped, is in progress, or remains open. Surface to Jeff which scripts are
@@ -546,5 +564,5 @@ skill.
 
 ---
 
-*Skill Review Agent — documentary-junior-editor v5.0*
+*Skill Review Agent — documentary-junior-editor v5.2*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

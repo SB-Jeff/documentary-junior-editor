@@ -1,0 +1,118 @@
+# TCCS Dr Pan & Testimonials — Lynette Patient Testimonial — Final Edit
+# Completed: 2026-05-13
+## Video type: Customer Testimonial
+# Subjects: 2 (Lynette Wiest — patient, primary; Dr. JD Luck — practitioner, supporting)
+# Mixed clip types: no (both speakers multicam)
+# Total rounds: 1 (skip_to_fcpxml; no Discussion / Reduction)
+# Final delivery filename: "Facial Rejuvenation - Final Narrative.fcpxmld"
+# Final runtime: 131.1s (target was 120s; Edit Agent tight cut planned 230s)
+
+# Notes on this representation:
+#   - Text reconstructed from the verbatim source segments (tagged-quotes-v1.json)
+#     that the final cut actually retains, in source order, with Edit Agent
+#     head/tail trims applied where present.
+#   - 'entry e_NNN' refers to the Edit Agent's planned timeline entry in
+#     trimmed-quotes-v1.json. Entries without an e_NNN tag (marked NEW) were
+#     not in the Edit Agent's plan and were pulled from the source pool
+#     during finishing.
+#   - Deviations from the Edit Agent's plan (dropped segments, reorderings)
+#     are flagged in square brackets.
+#   - Segment matching uses 'latest segment start <= clip midpoint' to handle
+#     transcript-TC vs. actual-audio-TC boundary slop.
+
+--- Who Is That? ---
+
+[Act title card stripped at finishing per workflow rule.]
+
+1. Lynette Wiest (entry e_001, source #1, segments [0])
+   "I've always taken care of my skin my whole life."
+   TC: 00:03:26 - 00:03:29
+   [Finishing: dropped seg [2] vs Edit Agent plan]
+
+2. Lynette Wiest (entry e_002, source #2, segments [0,2,3])
+   "And then I went through stage 3 breast cancer in 2021. And I didn't realize how hard that would be on my skin and my looks. I gained a lot of weight, like 40 pounds."
+   TC: 00:03:34 - 00:03:52
+   [Finishing: dropped seg [1] vs Edit Agent plan]
+
+3. Lynette Wiest (entry e_003, source #3, segments [0,2])
+   "I, um, then I'd look in the mirror and I, I was still recovering and I was tired, so I didn't really care what I looked like. and then you look in the mirror and you're like, oh my God, who is that?"
+   TC: 00:03:52 - 00:04:07
+   [Finishing: dropped seg [1] vs Edit Agent plan; added seg [0] not in Edit Agent plan]
+
+4. Lynette Wiest (entry e_004, source #4, segments [0,1])
+   "And so I realized like I wasn't happy and I was feeling frumpy, like I'd given up, and I never thought I would be that person."
+   TC: 00:04:07 - 00:04:14
+
+5. Lynette Wiest (entry e_005, source #21, segments [1,2])
+   "I'm just going to let myself go. You know, don't care what I look like. And I thought I could do that, but I couldn't."
+   TC: 00:14:09 - 00:14:17
+   [Finishing: dropped seg [0] vs Edit Agent plan]
+
+--- Truly Cared ---
+
+[Act title card stripped at finishing per workflow rule.]
+
+6. Lynette Wiest (entry e_007, source #8, segments [0,1,2])
+   "I went, I had consultations done with, you know, well-established plastic surgeons. One told me I wouldn't notice any difference if I had a facelift, which shocked me because it was thought, I thought, wow, okay."
+   TC: 00:06:50 - 00:07:07
+
+7. Lynette Wiest (entry e_008, source #9, segments [0,1])
+   "Another one, he went through everything and he just, you know, they didn't seem to really care if I chose them or not. They just said, "This is what I would do," and kind of left the room."
+   TC: 00:07:07 - 00:07:22
+
+8. Lynette Wiest (entry e_009, source #10, segments [0,2])
+   "Where Dr. Luck was more, "Do you have any questions?" and just really genuinely cared."
+   TC: 00:07:22 - 00:07:31
+   [Finishing: dropped seg [1] vs Edit Agent plan]
+
+9. Dr. JD Luck (entry e_006, source #56, segments [0])
+   "I try to be as upfront with all my patients as as possible, and that means, I never sell anybody anything, that's never my goal. My goal is just purely to educate patients,"
+   TC: 00:28:57 - 00:29:10
+
+10. Lynette Wiest (entry e_010, source #6, segments [0,1,2])
+   "I never felt pressured to do all the procedures. It was more, so what bothers you the most about your face? And then it was, okay, so This is what a facelift does. It lifts here."
+   TC: 00:05:13 - 00:05:27
+   [Finishing: added seg [2] not in Edit Agent plan]
+
+11. Dr. JD Luck (entry e_011, source #51, segments [0,1])
+   "My goal is not to churn out cases like a factory. I want every single patient to feel like they are my only patient."
+   TC: 00:18:50 - 00:18:57
+
+12. Dr. JD Luck (entry e_014, source #50, segments [0,1])
+   "Most patients, they see me multiple times before before we ever get to the operating room, and that's counseling sessions, and that's spending time talking about what to expect. I call all of my patients on my cell phone the night of surgery."
+   TC: 00:18:25 - 00:18:40
+   [Finishing: dropped seg [2] vs Edit Agent plan; added seg [0] not in Edit Agent plan]
+
+13. Lynette Wiest (entry e_016, source #45, segments [1])
+   "So I just felt like I was in really good hands."
+   TC: 00:25:59 - 00:26:04
+   [Finishing: dropped seg [0] vs Edit Agent plan]
+
+--- A Lifesaver ---
+
+14. (title card)  "A Lifesaver"   Duration: 0.67s
+   [Note: this title card was retained by oversight; per workflow rule, act title cards are removed at finishing.]
+
+15. Lynette Wiest (entry e_017, source #15, segments [0,1,2])
+   "if you looked at me 15 years ago, this is what I look like. And it just pulled everything back up where it used to be instead of that windblown look of the past. It's more just lifted up."
+   TC: 00:11:15 - 00:11:32
+   [Finishing: added seg [2] not in Edit Agent plan]
+
+16. Lynette Wiest (entry NEW — not in Edit Agent plan, source #16, segments [0,1,2])
+   "And then the under-eye area was what surprised me because I thought I'd have bruising and it would be swollen. And it was just, it was smooth. It was, it just, that it just, it was, it's impressive what he did."
+   TC: 00:11:32 - 00:11:44
+
+17. Dr. JD Luck (entry e_022, source #53, segments [0])
+   "the post-operative period never gets old."
+   TC: 00:24:00 - 00:24:04
+   [Finishing: dropped seg [1] vs Edit Agent plan]
+
+18. Lynette Wiest (entry e_020, source #40, segments [3,4])
+   "I'm motivated to, like, exercise and look my best and feel like I did back in my, you know, early 40s. It's— plastic surgery has just been a lifesaver for me."
+   TC: 00:23:38 - 00:23:57
+   [Finishing: dropped seg [0, 1, 2] vs Edit Agent plan]
+
+19. Lynette Wiest (entry e_021, source #22, segments [0,1,2])
+   "I want other women to know that they don't have to be ashamed of wanting to look their best, that they, and they can, and that it's also affordable and that there's really good plastic surgeons out there who truly care about you, who will listen."
+   TC: 00:14:43 - 00:15:05
+   [Finishing: added seg [1] not in Edit Agent plan]

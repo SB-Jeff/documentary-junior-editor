@@ -1,5 +1,114 @@
 # Documentary Junior Editor — Changelog
 
+## v5.2 — 2026-05-13
+
+Skill Review pass for the TCCS Dr Pan & Testimonials project. Folds in the
+unreleased v5.1 / v5.1.1 working-tree changes that addressed the
+Transcription Agent's host-side launcher pattern, and adds new lessons from
+the FCPXML stage and the editor's actual finishing-pass behavior.
+
+### Rolled-up v5.1 / v5.1.1 content (previously uncommitted on this SSD)
+
+- **Full Disk Access documented as a one-time per-machine setup** in
+  cowork-session-guide.md. Without it, the Cowork sandbox can't bind-mount
+  external SSDs and every transcription session falls back to host-side
+  Terminal.
+- **`.env` replaces git-crypt** for the AssemblyAI key. Key lives at
+  `documentary-junior-editor/.env`, gitignored, read by python-dotenv. The
+  legacy `secrets/assembly_ai.key` git-crypt path is deprecated and slated
+  for deletion.
+- **`start-editing` host-side launcher** added. Single bash command, no
+  file extension (avoids chat auto-linking of `.py` / `.sh`), self-resolves
+  project root, preflights folder layout / API key / Python deps, runs
+  transcription, reports outcome. Replaces multi-line copy-paste sequences
+  that had been failing in chat.
+- **`commit-skill-changes` helper** added for syncing SSD-side SKILL edits
+  to the Desktop clone with a `.commit-message` file.
+- **SKILL-transcription.md rewritten** around the launcher pattern. Phase 4
+  is now "present the single bash command to Jeff"; the agent waits, then
+  validates results and writes the handoff doc.
+- **SKILL.md and cowork-session-guide.md** updated to document the new
+  setup and reference the launcher.
+- **Opus 4.6 → Opus 4.7** across all SKILL files where Opus is the model.
+  Sonnet stays at 4.6.
+
+### New for v5.2 — from the TCCS Dr Pan & Testimonials review
+
+- **Act title cards: every export must include them; the editor strips at
+  finishing.** Rule promoted in SKILL-fcpxml.md. The FCPXML Agent must
+  auto-generate one title card per act boundary on every emission,
+  regardless of whether the Edit Agent emitted explicit `title_card`
+  entries. Title cards are the editor's structural editing aid and are
+  removed as the last polish step.
+- **Cross-reference pair flag is a suggestion, not a constraint.** When
+  the Edit Agent or FCPXML Agent flags a quote pair as "keep both; do not
+  merge or reorder," that's a recommendation. The editor may reorder
+  around the pair in finishing. SKILL-edit.md language softened.
+- **Edit Agent blind spot: outcome / visual-result material.** SKILL-edit.md
+  now instructs the agent to scan the full tagged-quotes pool for any
+  outcome-description quote that didn't make the initial selection,
+  particularly for Act 3. The pool contains fully-tagged quotes the
+  agent's selection can miss.
+- **Segment-level pruning guidance.** SKILL-edit.md notes that the editor
+  consistently drops more segments inside kept entries than the agent's
+  plan suggests. When in doubt, the agent should err toward fewer segments
+  per entry, especially when the entry already lands its core idea in
+  segs 0-1.
+- **Restore tail-beat codas under suspicion of redundancy.** SKILL-edit.md
+  notes that tail segments the agent calls redundant often earn their
+  place in finishing. When dropping a tail segment, the agent should
+  surface the call for explicit confirmation rather than silently dropping.
+- **Multi-speaker FCPXML resource-ID remap documented.** SKILL-fcpxml.md
+  documents that per-speaker captioned `.fcpxmld` exports all use `r2` as
+  their multicam media resource ID. Merge into a single output FCPXML
+  requires dynamic remap (detect highest ID in first speaker's XML, shift
+  subsequent speakers above that range).
+- **Multi-output multicam re-import duplication documented.** SKILL-fcpxml.md
+  documents the duplicate-on-reimport problem: emit references to library
+  multicams by UID, do not re-declare the full `<media>` block in every
+  output FCPXML.
+- **`parse_params_md()` basename bug flagged.** Pending fix in
+  `build_fcpxml.py` — uses `os.path.basename()` on `.fcpxmld/Info.fcpxml`
+  paths, stripping the package name.
+- **Mid-quote zero-duration segment verification.** SKILL-fcpxml.md adds a
+  pre-lock verification step for any segment flagged with zero-duration
+  timecode estimates (the FCPXML Agent should verify against source audio
+  rather than silently using the estimate).
+- **Slug-consistency rule.** SKILL-transcription.md adds Phase 0.5 — confirm
+  project slug with Jeff before writing the handoff doc, so downstream
+  agents read the same path.
+- **SSD-must-remain-mounted note.** cowork-session-guide.md troubleshooting
+  entry: disconnecting / reconnecting the SSD mid-pipeline breaks the
+  Cowork session's folder permission grant.
+- **Drive-name rule promoted.** cowork-session-guide.md "Project Folder
+  Structure" section now states upfront that project SSD names must avoid
+  spaces and special characters (`& ; : ' " <space>`). Previously only in
+  troubleshooting.
+- **SKILL-review.md Phase 3 follow-up tracking refreshed.** Marks
+  `transcribe.py` work as shipped (v5.1), `build_fcpxml.py` as the highest
+  priority next code work, viewer template as parked for separate review,
+  `secrets/assembly_ai.key` as ready for deletion.
+
+### New reference example
+
+- `reference-examples/tccs-dr-pan-testimonials/` — Customer Testimonial,
+  single-speaker patient testimonial with supporting practitioner, single
+  Edit Agent round with `skip_to_fcpxml`, no v2 emissions. Includes
+  `lessons-learned.md`, `Final_Edit.txt`, and the in-scope raw transcripts.
+
+### Out of scope, parked for separate review tasks
+
+- **Quote viewer (`quotes_viewer_template.jsx`) design review.** Multiple
+  rounds of drift across recent projects; some prior design was lost,
+  some new functionality is good, some needs tweaking. To be addressed
+  in its own task.
+- **Pipeline architecture review.** The 8-agent pipeline assumes the
+  editor wants the agent to do narrative + selection work. The editor's
+  actual workflow on TCCS Dr Pan was closer to: agents do mechanical work,
+  editor makes all editorial decisions in FCP. Whether the pipeline
+  should be simplified for that workflow is a strategic question to
+  address in its own task.
+
 ## v5.0 — 2026-04-29
 
 Major version — twelve lessons distilled from the International Institute of Minnesota
