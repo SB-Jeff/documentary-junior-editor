@@ -172,12 +172,12 @@
         {
           "entry_id": "11", "_subLabel": null, "source_quote_id": 11, "type": "spoken",
           "speaker": "Maria Lopez", "part": "Act 1", "runtime_recommendation": "probable-keep",
-          "_editCuts": [], "notes": "", "tight_priority": "low"
+          "_editCuts": [], "notes": ""
         },
         {
           "entry_id": "2", "_subLabel": null, "source_quote_id": 2, "type": "spoken",
           "speaker": "Maria Lopez", "part": "Act 1", "runtime_recommendation": "probable-keep",
-          "_editCuts": [[0, 53]], "notes": "Trimmed the first sentence in a prior pass.", "tight_priority": "high"
+          "_editCuts": [[0, 53]], "notes": "Trimmed the first sentence in a prior pass."
         },
         {
           "entry_id": "4", "_subLabel": null, "source_quote_id": 4, "type": "spoken",

@@ -43,21 +43,21 @@ Editing Coach (see "Cross-scope dependencies" in the roadmap).
 - **Tight-candidate state (P1, viewer + build halves).** Rec badge cycles three states
   (must-keep → tight-candidate → probable-keep); Tight cut = must-keep +
   tight-candidate. `build_quotes_viewer.py` no longer collapses `tight-candidate`.
-- **tight_priority badge + sort (P1, viewer + build halves).** Probable-keep cards
-  show a high/medium/low badge when present; an Edit-view "priority sort" toggle
-  reorders probable-keeps within their slots (view-only). `migrate_entry_trims` passes
-  `tight_priority` through. Graceful no-op when absent.
+- **tight_priority ranking — built then reverted.** The badge + view-only "priority
+  sort" was implemented, then removed on Jeff's call: sorting probable-keeps by
+  confidence pulls quotes out of their intended playback order, which fights the
+  narrative read-through (Cardinal Rule 2). Re-filed to the roadmap with a
+  non-reordering constraint for any future attempt.
 - **Test harness.** Added `scripts/test-fixtures/sample_viewer_data.json` — a committed
-  fixture (2 speakers, 3 acts, must/tight-candidate/probable mix, orphan, interstitial,
-  tight_priority examples) for a repeatable `build_quotes_viewer.py --data` manual-test
-  loop.
+  fixture (2 speakers, 3 acts, must/tight-candidate/probable mix, orphan, interstitial)
+  for a repeatable `build_quotes_viewer.py --data` manual-test loop.
 
 ### Cross-scope dependencies flagged (not changed here)
 
-- The Edit Agent populating **`tight-candidate`** and **`tight_priority`** during the
-  rough cut requires `SKILL-edit.md` changes owned by the Editing Coach. The viewer +
-  build-script halves shipped; the skill-side halves are flagged in the roadmap entries
-  for coordination — `SKILL-edit.md` was not edited.
+- The Edit Agent populating **`tight-candidate`** during the rough cut requires a
+  `SKILL-edit.md` change owned by the Editing Coach. The viewer + build-script halves
+  shipped; the skill-side half is flagged in the roadmap entry for coordination —
+  `SKILL-edit.md` was not edited.
 - `SKILL-edit.md:1080` says drag reorders "within or across acts," but the
   implementation constrains drag to within an act (cross-act via the dropdown).
   Doc/behavior discrepancy flagged in the roadmap for the skill owners.

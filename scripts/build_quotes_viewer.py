@@ -172,7 +172,7 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
     else:
         new_id = old_id
 
-    migrated = {
+    return {
         "entry_id": new_id,
         "_subLabel": None,
         "source_quote_id": entry["source_quote_id"],
@@ -183,11 +183,6 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
         "_editCuts": cuts,
         "notes": entry.get("notes", ""),
     }
-    # Pass through the Edit Agent's tight-promotion ranking (high/medium/low) on
-    # probable-keep entries so the viewer can badge + sort by it.
-    if entry.get("tight_priority"):
-        migrated["tight_priority"] = entry["tight_priority"]
-    return migrated
 
 
 def migrate_recommendations_two_tier(entries):
@@ -780,18 +775,6 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .rec-badge.tight-candidate:hover { background: var(--tight); color: white; }
 .rec-badge.probable-keep { background: var(--probable-soft); color: var(--probable); }
 .rec-badge.probable-keep:hover { background: var(--probable); color: white; }
-
-/* tight_priority badge (on probable-keep cards when the Edit Agent ranked them) */
-.tp-badge { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-.tp-badge.tp-high { background: #fee2e2; color: #b91c1c; }
-.tp-badge.tp-medium { background: #fef3c7; color: #b45309; }
-.tp-badge.tp-low { background: #f1f5f9; color: #64748b; }
-.tp-sort-toggle {
-  background: transparent; border: 1px solid var(--border-strong); border-radius: 6px;
-  padding: 4px 10px; font-size: 12px; color: var(--text-muted);
-}
-.tp-sort-toggle:hover:not(.active) { background: var(--surface-2); color: var(--text); }
-.tp-sort-toggle.active { background: var(--probable-soft); color: var(--probable); border-color: var(--probable); }
 
 .tl-quote { color: var(--text); line-height: 1.55; font-size: 14px; margin: 6px 0 0; }
 .tl-quote-cut { color: var(--danger); text-decoration: line-through; opacity: 0.65; }

@@ -100,17 +100,16 @@ above, this lets Jeff scan ranked candidates rather than discover them by
 experimentation.
 **Priority:** P1 high-friction — the viewer half is paired with the tight-candidate
 state.
-**Status:** Shipped (viewer + build-script halves) — probable-keep cards now show a
-`tight_priority` badge (high/medium/low) when the field is present, and an Edit-view
-"↑ priority sort" toggle (appears only when any entry carries tight_priority)
-reorders probable-keeps within their slots by priority — view-only, leaving
-must-keep/tight-candidate and interstitials in place. Graceful no-op when the field
-is absent. `build_quotes_viewer.py`'s `migrate_entry_trims` now passes
-`tight_priority` through (it previously dropped unknown fields). Verified in a browser
-build (badge render + sort) and a unit check of the passthrough.
-⚑ DEPENDENCY (out of viewer scope, per the original filing): the Edit Agent
-populating `tight_priority` on probable-keeps is the SKILL-edit.md / Editing Coach
-half. Flagged in skill-review-notes; NOT editing SKILL-edit.md unilaterally.
+**Status:** Filed — viewer half was built (badge + view-only sort) then **reverted on
+Jeff's call (2026-05-21)**. ✋ DESIGN OBJECTION (Jeff): the cut is meant to be read
+top-to-bottom as a narrative (Cardinal Rule 2). **Any sort by confidence pulls quotes
+out of their intended playback order** — even a "view-only" sort is misleading and
+fights the read-through. The HIGH/MED/LOW *sort* is rejected on these grounds.
+Re-attempt only with a NON-reordering design (e.g. a passive ranking badge that never
+changes card order, if it's wanted at all — Jeff did not request this; it was
+Coach-filed off Nanos). The skill-side half (Edit Agent populating `tight_priority`)
+was never built. Reverted commit removed the badge, the sort toggle, the build-script
+passthrough, and the demo fixture values.
 
 ### Drag-to-reorder in Edit view is broken (regression)
 **Source project:** Surfaced during v5.5 work session (2026-05-21), reflecting on
@@ -261,10 +260,10 @@ items:
    cut filter); until the Edit Agent emits it, Jeff sets it manually. Needs a
    `SKILL-edit.md` rule change (the documented system is currently two-tier:
    must-keep / probable-keep only).
-2. **Edit Agent should populate `tight_priority`** (high/medium/low) on probable-keep
-   entries. The viewer now badges + sorts by it; the build script passes it through.
-   Needs the `SKILL-edit.md` change the original roadmap entry already assigned to
-   Coach's territory.
+
+(The `tight_priority` ranking item was built then reverted on Jeff's call — its sort
+violates narrative reading order. See that roadmap entry above; no SKILL-edit.md work
+is pending for it.)
 
 Also flagged (doc/behavior discrepancy, no code change made): `SKILL-edit.md:1080`
 says drag-to-reorder works "within or across acts," but the viewer constrains drag to

@@ -126,11 +126,6 @@ const REC_CYCLE = {
   "probable-keep": "must-keep",
 };
 
-// tight_priority ranking (Edit Agent's "most likely to earn promotion to Tight"
-// hint on probable-keep entries). Unranked entries sort last.
-const TP_RANK = { high: 0, medium: 1, low: 2 };
-function tpRankOf(e) { return TP_RANK[e && e.tight_priority] ?? 3; }
-
 // Speaker color palette — assigned in order of appearance.
 const SPEAKER_PALETTE = [
   { bg: "#fef3c7", fg: "#7c2d12" },
@@ -526,8 +521,6 @@ export default function QuotesView() {
   const [speakerFilter, setSpeakerFilter] = useState("all");
   const [actFilter, setActFilter] = useState("all");
   const [reviewScope, setReviewScope] = useState("All");
-  // Edit view: view-only sort of probable-keeps by tight_priority within an act.
-  const [tpSort, setTpSort] = useState(false);
   // Quote Library: "Hide quotes already in the current cut" — persisted per project.
   const [hideInCut, setHideInCut] = useState(() => {
     try { return localStorage.getItem("odv-hideInCut-" + PROJECT_META.slug) === "1"; }
@@ -1087,7 +1080,6 @@ export default function QuotesView() {
   // ====== Runtime totals ======
   const allEntries = getTimeline();
   const tightEntries = allEntries.filter((e) => inTightCut(e));
-  const hasTightPriority = allEntries.some((e) => e.tight_priority);
   const roughSec = allEntries.reduce((a, e) => a + entrySeconds(e), 0);
   const tightSec = tightEntries.reduce((a, e) => a + entrySeconds(e), 0);
   const activeEntries = cutFilter === "tight" ? tightEntries.length : allEntries.length;
@@ -1182,13 +1174,6 @@ export default function QuotesView() {
                 <span className={`cut-metric cut-metric-${cutFilter}`}>
                   <span className="val">{activeEntries}</span> entries · <span className="val">{fmtSec(activeSec)}</span>
                 </span>
-                {hasTightPriority && (
-                  <button
-                    className={`tp-sort-toggle${tpSort ? " active" : ""}`}
-                    onClick={() => setTpSort((v) => !v)}
-                    title="Sort probable-keeps by the Edit Agent's tight-priority within each act (view only — does not change playback order)"
-                  >↑ priority sort</button>
-                )}
                 <button className="cut-export" onClick={exportToFCPXML}>Export XML</button>
               </div>
             )}
@@ -1653,11 +1638,6 @@ export default function QuotesView() {
               }}
               title="Click to cycle: must-keep → tight-candidate → probable-keep"
             >{rec.replace("-", " ")}</button>
-            {rec === "probable-keep" && entry.tight_priority && (
-              <span className={`tp-badge tp-${entry.tight_priority}`} title="Edit Agent's tight-promotion priority">
-                ↑ {entry.tight_priority}
-              </span>
-            )}
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             <button
               className="tl-scissors"
@@ -1798,19 +1778,6 @@ export default function QuotesView() {
           const entries = (grouped[act] || []).filter(passesTimelineFilters);
           if (entries.length === 0) return null;
           const sec = entries.reduce((a, e) => a + entrySeconds(e), 0);
-          // View-only tight-priority sort: reorder probable-keeps within their
-          // existing slots by tight_priority, leaving must-keep/tight-candidate
-          // positions untouched. Does not mutate the working timeline.
-          let displayEntries = entries;
-          if (tpSort) {
-            const slots = [];
-            entries.forEach((e, i) => {
-              if (e.source_quote_id != null && e.runtime_recommendation === "probable-keep") slots.push(i);
-            });
-            const ranked = slots.map((i) => entries[i]).sort((a, b) => tpRankOf(a) - tpRankOf(b));
-            displayEntries = entries.slice();
-            slots.forEach((i, k) => { displayEntries[i] = ranked[k]; });
-          }
           return (
             <section key={act} className="act-section">
               <div className="act-header">
@@ -1819,7 +1786,7 @@ export default function QuotesView() {
                   {entries.length} entr{entries.length === 1 ? "y" : "ies"} · ~{fmtSec(sec)}
                 </span>
               </div>
-              {displayEntries.flatMap((entry, idx) => {
+              {entries.flatMap((entry, idx) => {
                 const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
                 const card = isSpoken ? renderTimelineCard(entry) : renderInterstitialCard(entry);
                 const els = [];
