@@ -534,6 +534,23 @@ export default function QuotesView() {
   // Quote Library text search — transient (not persisted); matches verbatim
   // quote text + rationale, case-insensitive, composed after speaker/act filters.
   const [librarySearch, setLibrarySearch] = useState("");
+  // Quote Library act re-tagging. Overrides a source quote's act in the viewer's
+  // working state; logged as a `reassign_source_act` tweak so the Edit Agent
+  // persists it canonically to the source pool. The viewer never overwrites the
+  // upstream tagged-quotes file directly. Timeline entries keep their own `part`.
+  const [sourceActOverrides, setSourceActOverrides] = useState({});
+  const [reassigningQuoteNum, setReassigningQuoteNum] = useState(null);
+  const quoteActOf = (q) => sourceActOverrides[q.num] || q.part;
+  function reassignSourceAct(q, newAct) {
+    const prevAct = quoteActOf(q);
+    setSourceActOverrides((prev) => ({ ...prev, [q.num]: newAct }));
+    applyLocalEdit("reassign_source_act",
+      () => {},  // no timeline mutation — source-pool re-tag only
+      `Re-tagged source #${q.num} (${q.speaker}) act: ${prevAct} → ${newAct}`,
+      { change_type: "reassign_source_act", entry_id: String(q.num), before: { part: prevAct }, after: { part: newAct } }
+    );
+    setReassigningQuoteNum(null);
+  }
 
   // === Per-round working timeline (deep-clone of canonical at first switch) ===
   const [workingByRound, setWorkingByRound] = useState(() => {
@@ -970,7 +987,7 @@ export default function QuotesView() {
 
   function passesSourceFilters(q) {
     if (speakerFilter !== "all" && q.speakerSlug !== speakerFilter) return false;
-    if (actFilter !== "all" && q.part !== actFilter) return false;
+    if (actFilter !== "all" && quoteActOf(q) !== actFilter) return false;
     return true;
   }
   // Single source of truth for "is this entry in the Tight cut" (Item 7 widens
@@ -1139,7 +1156,7 @@ export default function QuotesView() {
     const matchCount = inScope.length + orphans.length;
     const acts = realActs.map((act) => ({
       name: act,
-      list: inScope.filter((q) => q.part === act),
+      list: inScope.filter((q) => quoteActOf(q) === act),
     })).filter((a) => a.list.length > 0);
 
     const renderQuoteCard = (q) => {
@@ -1153,7 +1170,31 @@ export default function QuotesView() {
             <span className="speaker-tag" style={{ background: speakerC.bg, color: speakerC.fg }}>
               {q.speaker}
             </span>
-            <span className="act-tag-static">{q.part}</span>
+            {q.is_orphan ? (
+              <span className="act-tag-static">{quoteActOf(q)}</span>
+            ) : (
+              <span className="act-tag-wrap">
+                <button
+                  className="act-tag-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReassigningQuoteNum(reassigningQuoteNum === q.num ? null : q.num);
+                  }}
+                  title="Re-tag this quote's act"
+                >
+                  {quoteActOf(q)} <span className="caret">▾</span>
+                </button>
+                {reassigningQuoteNum === q.num && (
+                  <div className="reassign-pop" onClick={(e) => e.stopPropagation()}>
+                    {PROJECT_META.act_labels
+                      .filter((a) => a !== quoteActOf(q) && a !== "Orphan")
+                      .map((a) => (
+                        <button key={a} onClick={() => reassignSourceAct(q, a)}>{a}</button>
+                      ))}
+                  </div>
+                )}
+              </span>
+            )}
             <span className="tc">{tcFmt(q.startTC, q.endTC)}</span>
             {inTimeline && <span className="in-tl-pill">in timeline{useCount > 1 ? ` ×${useCount}` : ""}</span>}
             {q.is_orphan && <span className="orphan-pill">orphan</span>}
@@ -1873,13 +1914,19 @@ export default function QuotesView() {
     });
   }, []);
 
-  // Close reassign popup on outside click
+  // Close reassign popups on outside click
   useEffect(() => {
     if (!reassigningEntryId) return;
     const onDoc = () => setReassigningEntryId(null);
     document.addEventListener("click", onDoc);
     return () => document.removeEventListener("click", onDoc);
   }, [reassigningEntryId]);
+  useEffect(() => {
+    if (reassigningQuoteNum === null) return;
+    const onDoc = () => setReassigningQuoteNum(null);
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, [reassigningQuoteNum]);
 
   return (
     <div className="viewer">

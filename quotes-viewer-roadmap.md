@@ -191,7 +191,14 @@ in the Quote Library view. Behavior identical to the Edit view's dropdown
 visible immediately in both views.
 **Priority:** P1 high-friction — closes a parity gap that forces unnecessary
 view-switching.
-**Status:** Filed
+**Status:** Shipped — added the act-reassign dropdown to each (non-orphan) Library
+card, reusing the `.reassign-pop` pattern. Source-quote act is lifted into viewer
+working state (`sourceActOverrides` + `quoteActOf`) so the Library regroups
+immediately. The change is logged as a `reassign_source_act` tweak so the Edit Agent
+persists it canonically to the source pool — the viewer does NOT overwrite the
+upstream `tagged-quotes` file. Timeline entries keep their own `part` (no silent
+moves). Verified in a browser build (#3 re-tagged Act 1 → Act 2, regrouped, op
+logged).
 
 ### Quote Library — search
 **Source project:** Surfaced during v5.5 work session (2026-05-21). Per Jeff:
