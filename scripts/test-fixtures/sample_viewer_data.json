@@ -186,8 +186,8 @@
         },
         {
           "entry_id": "6", "_subLabel": null, "source_quote_id": 6, "type": "spoken",
-          "speaker": "Maria Lopez", "part": "Act 2", "runtime_recommendation": "probable-keep",
-          "_editCuts": [], "notes": ""
+          "speaker": "Maria Lopez", "part": "Act 2", "runtime_recommendation": "tight-candidate",
+          "_editCuts": [], "notes": "Borderline-essential — tight-candidate."
         },
         {
           "entry_id": "5", "_subLabel": null, "source_quote_id": 5, "type": "spoken",

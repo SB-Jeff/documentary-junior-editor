@@ -117,10 +117,12 @@ const COLORS = {
   textSubtle: "#78716c",
 };
 
-// Recommendation cycle order for the clickable rec badge. Item 7 inserts
-// "tight-candidate" between must-keep and probable-keep.
+// Recommendation cycle order for the clickable rec badge. Three states:
+// must-keep (in both cuts) → tight-candidate (borderline-essential; in Tight) →
+// probable-keep (Rough only) → back to must-keep.
 const REC_CYCLE = {
-  "must-keep": "probable-keep",
+  "must-keep": "tight-candidate",
+  "tight-candidate": "probable-keep",
   "probable-keep": "must-keep",
 };
 
@@ -715,7 +717,7 @@ export default function QuotesView() {
   async function exportToFCPXML() {
     const tl = getTimeline();
     const filtered = cutFilter === "tight"
-      ? tl.filter((e) => e.runtime_recommendation === "must-keep")
+      ? tl.filter((e) => inTightCut(e))
       : tl;
     const totalSec = filtered.reduce((a, e) => a + entrySeconds(e), 0);
     if (!hasCallMcpTool()) {
@@ -990,10 +992,11 @@ export default function QuotesView() {
     if (actFilter !== "all" && quoteActOf(q) !== actFilter) return false;
     return true;
   }
-  // Single source of truth for "is this entry in the Tight cut" (Item 7 widens
-  // this to include tight-candidate). Reused by the Library hide-in-cut filter.
+  // Single source of truth for "is this entry in the Tight cut" — must-keep plus
+  // tight-candidate. Reused by the Tight view filter, export, runtime totals, and
+  // the Library hide-in-cut filter.
   function inTightCut(e) {
-    return e.runtime_recommendation === "must-keep";
+    return e.runtime_recommendation === "must-keep" || e.runtime_recommendation === "tight-candidate";
   }
   // source_quote_ids present in the current cut (active round, respecting
   // Rough/Tight). Used by the Library "Hide quotes in current cut" filter.
@@ -1012,13 +1015,13 @@ export default function QuotesView() {
       if (!src || src.speakerSlug !== speakerFilter) return false;
     }
     if (actFilter !== "all" && entryActOf(e) !== actFilter) return false;
-    if (cutFilter === "tight" && e.runtime_recommendation !== "must-keep") return false;
+    if (cutFilter === "tight" && !inTightCut(e)) return false;
     return true;
   }
 
   // ====== Runtime totals ======
   const allEntries = getTimeline();
-  const tightEntries = allEntries.filter((e) => e.runtime_recommendation === "must-keep");
+  const tightEntries = allEntries.filter((e) => inTightCut(e));
   const roughSec = allEntries.reduce((a, e) => a + entrySeconds(e), 0);
   const tightSec = tightEntries.reduce((a, e) => a + entrySeconds(e), 0);
   const activeEntries = cutFilter === "tight" ? tightEntries.length : allEntries.length;
@@ -1423,7 +1426,7 @@ export default function QuotesView() {
                   { change_type: "status_flip", entry_id: entry.entry_id, before: { runtime_recommendation: rec }, after: { runtime_recommendation: next } }
                 );
               }}
-              title="Click to toggle recommendation"
+              title="Click to cycle: must-keep → tight-candidate → probable-keep"
             >{rec.replace("-", " ")}</button>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
           </div>
@@ -1599,7 +1602,7 @@ export default function QuotesView() {
                   }
                 );
               }}
-              title="Click to toggle between must-keep and probable-keep"
+              title="Click to cycle: must-keep → tight-candidate → probable-keep"
             >{rec.replace("-", " ")}</button>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             <button
@@ -1771,7 +1774,7 @@ export default function QuotesView() {
 
   const renderReview = () => {
     const tl = getTimeline().filter((e) =>
-      cutFilter === "tight" ? e.runtime_recommendation === "must-keep" : true
+      cutFilter === "tight" ? inTightCut(e) : true
     );
     if (tl.length === 0) {
       return <div className="empty"><h3>Nothing to review yet.</h3></div>;

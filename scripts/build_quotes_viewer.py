@@ -186,13 +186,17 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
 
 
 def migrate_recommendations_two_tier(entries):
-    """Collapse four-tier recommendation system to two-tier.
-    probable-cut and optional → promoted to probable-keep.
+    """Normalize the recommendation field to the viewer's supported states.
+
+    Supported: must-keep, tight-candidate (borderline-essential; shows in the
+    Tight cut), probable-keep. Legacy probable-cut / optional collapse to
+    probable-keep.
     """
+    allowed = ("must-keep", "tight-candidate", "probable-keep")
     out = []
     for e in entries:
         rec = e.get("runtime_recommendation", "probable-keep")
-        if rec not in ("must-keep", "probable-keep"):
+        if rec not in allowed:
             note = e.get("notes", "") or ""
             note = (note + " ").strip() + f"[migrated: was '{rec}' → probable-keep]"
             e = {**e, "runtime_recommendation": "probable-keep", "notes": note}
@@ -465,6 +469,8 @@ VIEWER_CSS = """
   --accent-strong: #075985;
   --must: #059669;
   --must-soft: #d1fae5;
+  --tight: #0d9488;
+  --tight-soft: #ccfbf1;
   --probable: #2563eb;
   --probable-soft: #dbeafe;
   --warn: #d97706;
@@ -694,6 +700,7 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .tl-card.drag-over { box-shadow: 0 -3px 0 0 var(--accent), var(--shadow); }
 .tl-drag { touch-action: none; }
 .tl-card.is-must-keep { border-left: 4px solid var(--must); }
+.tl-card.is-tight-candidate { border-left: 4px solid var(--tight); }
 .tl-card.is-probable-keep { border-left: 4px solid var(--probable); }
 .tl-card.focus-flash { animation: focusHL 1.6s ease-out; }
 @keyframes focusHL {
@@ -753,6 +760,8 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .rec-badge.must-keep { background: var(--must-soft); color: var(--must); }
 .rec-badge.must-keep:hover { background: var(--must); color: white; }
+.rec-badge.tight-candidate { background: var(--tight-soft); color: var(--tight); }
+.rec-badge.tight-candidate:hover { background: var(--tight); color: white; }
 .rec-badge.probable-keep { background: var(--probable-soft); color: var(--probable); }
 .rec-badge.probable-keep:hover { background: var(--probable); color: white; }
 

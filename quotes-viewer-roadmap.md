@@ -74,7 +74,17 @@ three meaningful states rather than two-with-a-workaround. Keeps the must-keep
 signal clean.
 **Priority:** P1 high-friction — works around an active editorial pain point; ships
 alongside the SKILL-edit.md `tight_priority` change below for full benefit.
-**Status:** Filed
+**Status:** Shipped (viewer + build-script halves) — the rec badge now cycles three
+states (must-keep → tight-candidate → probable-keep); the Tight cut filters to
+must-keep + tight-candidate via a shared `inTightCut` predicate (used by Tight view,
+export, runtime totals, and the Library hide-in-cut filter). New teal badge + card
+styling. `build_quotes_viewer.py` no longer collapses `tight-candidate` to
+probable-keep. Verified in a browser build (3-state cycle + Tight cut composition).
+⚑ DEPENDENCY (out of viewer scope): the Edit Agent populating `tight-candidate`
+during the rough cut requires a SKILL-edit.md change — that file is owned by the
+Editing Coach. Until that lands, Jeff sets tight-candidate manually (which is exactly
+the clean workspace state this item asked for). Flagged in skill-review-notes; NOT
+editing SKILL-edit.md unilaterally.
 
 ### Tight_priority ranking inside probable-keeps (skill-side + viewer-side)
 **Source project:** 2026 Nanos Boston brand-video (May 2026).
