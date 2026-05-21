@@ -669,6 +669,8 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
   box-shadow: var(--shadow);
 }
 .tl-card.dragging { opacity: 0.4; }
+.tl-card.drag-over { box-shadow: 0 -3px 0 0 var(--accent), var(--shadow); }
+.tl-drag { touch-action: none; }
 .tl-card.is-must-keep { border-left: 4px solid var(--must); }
 .tl-card.is-probable-keep { border-left: 4px solid var(--probable); }
 .tl-card.focus-flash { animation: focusHL 1.6s ease-out; }

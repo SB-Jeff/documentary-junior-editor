@@ -109,7 +109,15 @@ the left-edge drag handle's event binding was lost. Verify against the v5.3
 CHANGELOG description of the intended behavior.
 **Priority:** P0 blocking — core editing affordance broken; degrades the entire
 Edit view experience.
-**Status:** Filed
+**Status:** Shipped — root cause: native HTML5 drag-and-drop is unreliable inside
+Cowork's sandboxed artifact iframe. Reimplemented drag using pointer events
+(`onPointerDown` + `setPointerCapture` + `onPointerMove`/`onPointerUp`), which work
+in every context and are synthetically testable. Verified in a browser build
+(within-act reorder + logged op). NOTE for Coach/SKILL-edit.md: SKILL-edit.md:1080
+says drag reorders "within or across acts," but the implementation (both before and
+after this fix) constrains drag to within an act; cross-act moves go through the
+act-reassign dropdown. Flagging the doc/behavior discrepancy — not changing
+SKILL-edit.md unilaterally.
 
 ### Interstitials between quotes — regression
 **Source project:** Surfaced during v5.5 work session (2026-05-21). Per Jeff:

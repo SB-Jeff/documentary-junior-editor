@@ -552,8 +552,53 @@ export default function QuotesView() {
   const [commentary, setCommentary] = useState("");
   const [sendStatus, setSendStatus] = useState({ text: "", cls: "" });
 
-  // === Drag-and-drop state ===
+  // === Drag-to-reorder state (pointer-events based) ===
+  // Native HTML5 drag-and-drop is unreliable inside Cowork's sandboxed artifact
+  // iframe (the regression Jeff hit). Pointer events + setPointerCapture work in
+  // every context — plain browser, sandboxed iframe — and are synthetically
+  // testable. Reorder is constrained to within an act (cross-act moves use the
+  // act-reassign dropdown); ↑/↓ buttons remain as a fallback.
   const [dragId, setDragId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const dragIdRef = useRef(null);
+  const dragOverRef = useRef(null);
+
+  function clearPointerDrag() {
+    dragIdRef.current = null;
+    dragOverRef.current = null;
+    setDragId(null);
+    setDragOverId(null);
+  }
+
+  function finishPointerDrag() {
+    const draggedId = dragIdRef.current;
+    const overId = dragOverRef.current;
+    if (draggedId && overId && draggedId !== overId) {
+      const tlNow = getTimeline();
+      const act = entryActOf(tlNow.find((x) => x.entry_id === draggedId) || {});
+      const fromActIdx = actLocalIndex(tlNow, draggedId);
+      const toActIdx = actLocalIndex(tlNow, overId);
+      applyLocalEdit("reorder",
+        (tl) => {
+          const fromIdx = tl.findIndex((x) => x.entry_id === draggedId);
+          const toIdx = tl.findIndex((x) => x.entry_id === overId);
+          if (fromIdx < 0 || toIdx < 0) return;
+          if (entryActOf(tl[fromIdx]) !== entryActOf(tl[toIdx])) return;
+          const [m] = tl.splice(fromIdx, 1);
+          const newToIdx = tl.findIndex((x) => x.entry_id === overId);
+          tl.splice(newToIdx, 0, m);
+        },
+        `Reordered: moved ${draggedId} to ${overId}'s position`,
+        {
+          change_type: "reorder",
+          entry_id: draggedId,
+          before: { act, act_index: fromActIdx },
+          after: { act, act_index: toActIdx, over: overId },
+        }
+      );
+    }
+    clearPointerDrag();
+  }
 
   // === Speaker color memo ===
   const speakerColors = buildSpeakerColors(PROJECT_META.speakers || []);
@@ -1110,54 +1155,38 @@ export default function QuotesView() {
       <div
         key={entry.entry_id}
         id={entry.entry_id}
-        className={`tl-card is-${rec}${dragId === entry.entry_id ? " dragging" : ""}`}
-        onDragOver={(e) => {
-          if (!dragId || dragId === entry.entry_id) return;
-          const tl = getTimeline();
-          const dragEntry = tl.find((x) => x.entry_id === dragId);
-          if (!dragEntry) return;
-          if (entryActOf(dragEntry) !== entryActOf(entry)) return;
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          if (!dragId || dragId === entry.entry_id) { setDragId(null); return; }
-          const draggedId = dragId;
-          const tlNow = getTimeline();
-          const fromActIdx = actLocalIndex(tlNow, draggedId);
-          const toActIdx = actLocalIndex(tlNow, entry.entry_id);
-          applyLocalEdit("reorder",
-            (tl) => {
-              const fromIdx = tl.findIndex((x) => x.entry_id === draggedId);
-              const toIdx = tl.findIndex((x) => x.entry_id === entry.entry_id);
-              if (fromIdx < 0 || toIdx < 0) return;
-              if (entryActOf(tl[fromIdx]) !== entryActOf(tl[toIdx])) return;
-              const [m] = tl.splice(fromIdx, 1);
-              const newToIdx = tl.findIndex((x) => x.entry_id === entry.entry_id);
-              tl.splice(newToIdx, 0, m);
-            },
-            `Reordered: moved ${draggedId} above ${entry.entry_id}`,
-            {
-              change_type: "reorder",
-              entry_id: draggedId,
-              before: { act: entryActOf(entry), act_index: fromActIdx },
-              after: { act: entryActOf(entry), act_index: toActIdx, above: entry.entry_id },
-            }
-          );
-          setDragId(null);
-        }}
+        className={`tl-card is-${rec}${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`}
       >
         <div
           className="tl-drag"
           title="Drag to reorder"
-          draggable
-          onDragStart={(e) => {
+          onPointerDown={(e) => {
+            e.preventDefault();
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+            dragIdRef.current = entry.entry_id;
+            dragOverRef.current = entry.entry_id;
             setDragId(entry.entry_id);
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", entry.entry_id);
+            setDragOverId(entry.entry_id);
           }}
-          onDragEnd={() => setDragId(null)}
+          onPointerMove={(e) => {
+            if (!dragIdRef.current) return;
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            const card = el && el.closest ? el.closest(".tl-card") : null;
+            if (!card || !card.id) return;
+            const tl = getTimeline();
+            const de = tl.find((x) => x.entry_id === dragIdRef.current);
+            const oe = tl.find((x) => x.entry_id === card.id);
+            if (!de || !oe || entryActOf(de) !== entryActOf(oe)) return;
+            if (card.id !== dragOverRef.current) {
+              dragOverRef.current = card.id;
+              setDragOverId(card.id);
+            }
+          }}
+          onPointerUp={(e) => {
+            try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {}
+            finishPointerDrag();
+          }}
+          onPointerCancel={clearPointerDrag}
         >
           <svg width="10" height="20" viewBox="0 0 10 20" fill="currentColor">
             <circle cx="2" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/>
