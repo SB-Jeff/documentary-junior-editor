@@ -28,7 +28,8 @@ Editing Coach (see "Cross-scope dependencies" in the roadmap).
   between every Edit-view entry and at each act head, with an inline editor
   (interstitial / title_card / context_beat, text, duration). Non-spoken entries get
   a dedicated amber card with editable text/intent + duration; Review view renders
-  them as distinct centered cards. Verbatim quote text stays untouched (Cardinal
+  them inline (attributed as their type, e.g. "— TITLE CARD", with italic text).
+  Verbatim quote text stays untouched (Cardinal
   Rule 1). Restores the viewer as a complete surface for Cardinal Rule 2.
 - **Quote Library: hide-in-cut filter (P1).** Toggle hides source quotes already in
   the active cut (respects Rough/Tight via a shared `inTightCut` predicate);

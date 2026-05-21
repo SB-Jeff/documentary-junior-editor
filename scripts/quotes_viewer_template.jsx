@@ -1876,13 +1876,13 @@ export default function QuotesView() {
                 {entries.map((e) => {
                   const isSpoken = e.type === "spoken" || e.source_quote_id != null;
                   if (!isSpoken) {
-                    lastSp = null;  // an interstitial breaks the flow; re-show next speaker
+                    lastSp = null;  // attribution differs; re-show the next speaker
                     const insLabel = { title_card: "TITLE CARD", interstitial: "INTERSTITIAL", context_beat: "CONTEXT BEAT" }[e.type] || "INTERSTITIAL";
                     const insText = e.type === "context_beat" ? `[${e.intent || "context needed"}]` : (e.text || "");
                     return (
-                      <div key={e.entry_id} className="review-interstitial">
-                        <span className="ri-label">{insLabel}</span>
-                        <div className="ri-text">{insText}</div>
+                      <div key={e.entry_id} className="review-block">
+                        <div className="speaker">— {insLabel}</div>
+                        <div className="review-text review-interstitial-text">{insText}</div>
                       </div>
                     );
                   }

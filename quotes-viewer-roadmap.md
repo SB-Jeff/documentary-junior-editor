@@ -170,7 +170,9 @@ entry and at each act head. Opens an inline editor with a type selector
 Non-spoken entries now have a dedicated amber card with editable text/intent +
 duration (text editing is allowed — not a verbatim quote; Cardinal Rule 1 governs
 spoken quotes only), reorder, act-reassign, rec badge, drop, comment. Review view
-renders them as distinct centered cards. Persists via existing round serialization.
+renders them inline in the narrative flow — attributed as their type (e.g.
+"— TITLE CARD") with italic text to set them apart from verbatim quotes. Persists
+via existing round serialization.
 Verified end-to-end in a browser build (render, add, Review). No SKILL-edit.md change
 needed — the data model already supported these entry types.
 

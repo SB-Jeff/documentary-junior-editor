@@ -853,13 +853,10 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .ins-add-text:focus { outline: none; border-color: var(--warn); box-shadow: 0 0 0 2px var(--warn-soft); }
 .ins-add-actions { display: flex; gap: 6px; margin-top: 8px; }
 
-/* Interstitials in Review view */
-.review-interstitial {
-  margin: 12px auto; padding: 10px 14px; max-width: 80%;
-  background: var(--warn-soft); border: 1px dashed var(--warn); border-radius: 8px; text-align: center;
-}
-.ri-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--warn); }
-.ri-text { font-size: 15px; color: var(--text); margin-top: 4px; font-style: italic; }
+/* Interstitials in Review view — inline like a quote, attributed as their type
+   (e.g. "— TITLE CARD") with the text italicized to set it apart from the
+   verbatim spoken quotes. */
+.review-interstitial-text { font-style: italic; color: var(--text-muted); }
 
 /* Trim + split panels */
 .trim-panel, .split-panel {
