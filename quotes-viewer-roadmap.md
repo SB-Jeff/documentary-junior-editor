@@ -139,7 +139,16 @@ underlying data model already supports this per SKILL-edit.md's title-card
 and context-beat references; the viewer just needs the UI.
 **Priority:** P0 blocking — blocks the viewer from being a complete surface for
 Cardinal Rule 2 compliance; forces work-arounds through chat.
-**Status:** Filed
+**Status:** Shipped — restored the "+ interstitial" affordance (matches the button
+SKILL-edit.md:932 documents) as slim insertion controls between every Edit-view
+entry and at each act head. Opens an inline editor with a type selector
+(interstitial / title_card / context_beat), text field, and duration estimate.
+Non-spoken entries now have a dedicated amber card with editable text/intent +
+duration (text editing is allowed — not a verbatim quote; Cardinal Rule 1 governs
+spoken quotes only), reorder, act-reassign, rec badge, drop, comment. Review view
+renders them as distinct centered cards. Persists via existing round serialization.
+Verified end-to-end in a browser build (render, add, Review). No SKILL-edit.md change
+needed — the data model already supported these entry types.
 
 ### Quote Library — filter out quotes already in the timeline
 **Source project:** Surfaced during v5.5 work session (2026-05-21). Per Jeff:

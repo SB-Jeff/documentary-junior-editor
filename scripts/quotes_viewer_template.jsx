@@ -465,6 +465,49 @@ function SplitPanel({ entry, markers, setMarkers, onSplit, onCancel }) {
 }
 
 // ============================================================================
+// InterstitialAddForm — inline editor for inserting a non-spoken entry
+// (title card / text interstitial / context beat) between timeline entries.
+// Interstitial/title-card text is NOT a verbatim quote, so it is freely
+// editable (Cardinal Rule 1 governs spoken quotes only).
+// ============================================================================
+
+function InterstitialAddForm({ onAdd, onCancel }) {
+  const [type, setType] = useState("interstitial");
+  const [text, setText] = useState("");
+  const [seconds, setSeconds] = useState(3);
+  const isContext = type === "context_beat";
+  return (
+    <div className="ins-add" onClick={(e) => e.stopPropagation()}>
+      <div className="ins-add-row">
+        <select className="ins-add-type" value={type} onChange={(e) => setType(e.target.value)}>
+          <option value="interstitial">Interstitial — factual bridge</option>
+          <option value="title_card">Title card — short on-screen text</option>
+          <option value="context_beat">Context beat — research needed</option>
+        </select>
+        <label className="ins-secs">~<input
+          type="number" min="1" max="60" value={seconds}
+          onChange={(e) => setSeconds(Math.max(1, Number(e.target.value) || 1))}
+        />s</label>
+      </div>
+      <textarea
+        className="ins-add-text"
+        autoFocus
+        placeholder={isContext
+          ? "What context is needed? (the intent — Jeff/research fills the actual content before FCPXML)"
+          : "On-screen / bridge text…"}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="ins-add-actions">
+        <button className="btn btn-primary" disabled={!text.trim()}
+          onClick={() => onAdd({ type, text: text.trim(), seconds })}>Add</button>
+        <button className="btn" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Main component — QuotesView
 // ============================================================================
 
@@ -546,6 +589,9 @@ export default function QuotesView() {
   const [splittingEntryId, setSplittingEntryId] = useState(null);
   const [splitMarkers, setSplitMarkers] = useState([]);
   const [reassigningEntryId, setReassigningEntryId] = useState(null);
+  // Insertion slot for a new interstitial: refId of the entry to insert after,
+  // or `start:${act}` for the head of an act.
+  const [addingAfterId, setAddingAfterId] = useState(null);
 
   // === Send-to-agent panel state ===
   const [sendPanelOpen, setSendPanelOpen] = useState(false);
@@ -764,6 +810,51 @@ export default function QuotesView() {
     );
     setSplittingEntryId(null);
     setSplitMarkers([]);
+  }
+
+  // ====== Interstitial insertion ======
+
+  // refId === null inserts at the head of `act`; otherwise after that entry.
+  function insertInterstitial(refId, act, fields) {
+    const newId = `ic-${Date.now().toString(36)}`;
+    const newEntry = {
+      entry_id: newId,
+      _subLabel: null,
+      source_quote_id: null,
+      type: fields.type,
+      part: act,
+      runtime_recommendation: "probable-keep",
+      _editCuts: [],
+      notes: "",
+      estimated_seconds: fields.seconds,
+    };
+    if (fields.type === "context_beat") {
+      newEntry.intent = fields.text;
+      newEntry.research_needed = true;
+      newEntry.text = "";
+    } else {
+      newEntry.text = fields.text;
+    }
+    const typeName = fields.type.replace("_", " ");
+    applyLocalEdit("add_interstitial",
+      (tl) => {
+        if (refId === null) {
+          const idx = tl.findIndex((e) => entryActOf(e) === act);
+          if (idx < 0) tl.push(newEntry); else tl.splice(idx, 0, newEntry);
+        } else {
+          const idx = tl.findIndex((e) => e.entry_id === refId);
+          if (idx < 0) tl.push(newEntry); else tl.splice(idx + 1, 0, newEntry);
+        }
+      },
+      `Added ${typeName} "${(fields.text || "").slice(0, 40)}" in ${act}`,
+      {
+        change_type: "add",
+        entry_id: newId,
+        before: null,
+        after: { entry_id: newId, type: fields.type, part: act, text: fields.text },
+      }
+    );
+    setAddingAfterId(null);
   }
 
   // ====== Send-to-agent panel ======
@@ -1133,6 +1224,195 @@ export default function QuotesView() {
     ));
   }
 
+  // Shared left-edge drag handle (pointer-events based) — used by both spoken
+  // and interstitial cards so reorder behaves identically for every entry type.
+  const renderDragHandle = (entry) => (
+    <div
+      className="tl-drag"
+      title="Drag to reorder"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+        dragIdRef.current = entry.entry_id;
+        dragOverRef.current = entry.entry_id;
+        setDragId(entry.entry_id);
+        setDragOverId(entry.entry_id);
+      }}
+      onPointerMove={(e) => {
+        if (!dragIdRef.current) return;
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const card = el && el.closest ? el.closest(".tl-card") : null;
+        if (!card || !card.id) return;
+        const tl = getTimeline();
+        const de = tl.find((x) => x.entry_id === dragIdRef.current);
+        const oe = tl.find((x) => x.entry_id === card.id);
+        if (!de || !oe || entryActOf(de) !== entryActOf(oe)) return;
+        if (card.id !== dragOverRef.current) {
+          dragOverRef.current = card.id;
+          setDragOverId(card.id);
+        }
+      }}
+      onPointerUp={(e) => {
+        try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {}
+        finishPointerDrag();
+      }}
+      onPointerCancel={clearPointerDrag}
+    >
+      <svg width="10" height="20" viewBox="0 0 10 20" fill="currentColor">
+        <circle cx="2" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/>
+        <circle cx="2" cy="10" r="1.4"/><circle cx="8" cy="10" r="1.4"/>
+        <circle cx="2" cy="17" r="1.4"/><circle cx="8" cy="17" r="1.4"/>
+      </svg>
+    </div>
+  );
+
+  // Non-spoken entries (title card / interstitial / context beat) render a
+  // dedicated card: editable text + duration, no trim/split, no source quote.
+  const renderInterstitialCard = (entry) => {
+    const mb = canMoveEntry(entry);
+    const rec = entry.runtime_recommendation || "probable-keep";
+    const typeLabel = { title_card: "Title card", interstitial: "Interstitial", context_beat: "Context beat" }[entry.type] || "Interstitial";
+    const isContext = entry.type === "context_beat";
+    const fieldVal = isContext ? (entry.intent || "") : (entry.text || "");
+    return (
+      <div
+        key={entry.entry_id}
+        id={entry.entry_id}
+        className={`tl-card tl-interstitial ins-${entry.type} is-${rec}${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`}
+      >
+        {renderDragHandle(entry)}
+        <div className="tl-body">
+          <div className="tl-card-head">
+            <span className="ins-type-badge">{typeLabel}</span>
+            <div className="tl-move-btns">
+              <button className="tl-move-btn" disabled={!mb.up}
+                onClick={() => moveEntry(entry.entry_id, -1)} title="Move up within act">↑</button>
+              <button className="tl-move-btn" disabled={!mb.down}
+                onClick={() => moveEntry(entry.entry_id, 1)} title="Move down within act">↓</button>
+            </div>
+            <span className="act-tag-wrap">
+              <button
+                className="act-tag-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setReassigningEntryId(reassigningEntryId === entry.entry_id ? null : entry.entry_id);
+                }}
+              >
+                {entryActOf(entry)} <span className="caret">▾</span>
+              </button>
+              {reassigningEntryId === entry.entry_id && (
+                <div className="reassign-pop" onClick={(e) => e.stopPropagation()}>
+                  {PROJECT_META.act_labels
+                    .filter((a) => a !== entryActOf(entry) && a !== "Orphan")
+                    .map((a) => (
+                      <button key={a} onClick={() => {
+                        const prevAct = entryActOf(entry);
+                        applyLocalEdit("reassign_act",
+                          (tl) => { const e2 = tl.find((x) => x.entry_id === entry.entry_id); if (e2) e2.part = a; },
+                          `${entry.entry_id}: act → ${a}`,
+                          { change_type: "reassign_act", entry_id: entry.entry_id, before: { part: prevAct }, after: { part: a } }
+                        );
+                        setReassigningEntryId(null);
+                      }}>{a}</button>
+                    ))}
+                </div>
+              )}
+            </span>
+            <button
+              className={`rec-badge ${rec}`}
+              onClick={() => {
+                const next = REC_CYCLE[rec] || "must-keep";
+                applyLocalEdit("set_rec",
+                  (tl) => { const e2 = tl.find((x) => x.entry_id === entry.entry_id); if (e2) e2.runtime_recommendation = next; },
+                  `${entry.entry_id} (${typeLabel}): ${rec} → ${next}`,
+                  { change_type: "status_flip", entry_id: entry.entry_id, before: { runtime_recommendation: rec }, after: { runtime_recommendation: next } }
+                );
+              }}
+              title="Click to toggle recommendation"
+            >{rec.replace("-", " ")}</button>
+            <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
+          </div>
+          <div className="ins-edit-row">
+            <textarea
+              key={`${entry.entry_id}-text-${fieldVal}`}
+              className="ins-text"
+              defaultValue={fieldVal}
+              placeholder={isContext
+                ? "Intent — what context is needed (research filled in later)"
+                : "On-screen / bridge text…"}
+              onBlur={(e) => {
+                const val = e.target.value;
+                const field = isContext ? "intent" : "text";
+                if (val === fieldVal) return;
+                applyLocalEdit("edit_interstitial",
+                  (tl) => { const e2 = tl.find((x) => x.entry_id === entry.entry_id); if (e2) e2[field] = val; },
+                  `Edited ${typeLabel} text on ${entry.entry_id}`,
+                  { change_type: "edit_interstitial", entry_id: entry.entry_id, before: { [field]: fieldVal }, after: { [field]: val } }
+                );
+              }}
+            />
+            <label className="ins-secs">~<input
+              type="number" min="1" max="60"
+              key={`${entry.entry_id}-secs-${entry.estimated_seconds || 3}`}
+              defaultValue={entry.estimated_seconds || 3}
+              onBlur={(e) => {
+                const v = Math.max(1, Number(e.target.value) || 1);
+                const old = entry.estimated_seconds || 3;
+                if (v === old) return;
+                applyLocalEdit("edit_interstitial",
+                  (tl) => { const e2 = tl.find((x) => x.entry_id === entry.entry_id); if (e2) e2.estimated_seconds = v; },
+                  `Set ${typeLabel} duration to ${v}s on ${entry.entry_id}`,
+                  { change_type: "edit_interstitial", entry_id: entry.entry_id, before: { estimated_seconds: old }, after: { estimated_seconds: v } }
+                );
+              }}
+            />s</label>
+          </div>
+          {isContext && (
+            <div className="ins-research">⚑ research needed — Jeff fills the actual content before the FCPXML round</div>
+          )}
+          {entry.notes && (
+            <div className="tl-notes"><span className="tl-notes-label">Notes:</span> {entry.notes}</div>
+          )}
+          <div className="tl-actions">
+            <button
+              className="btn btn-comment"
+              onClick={() => focusCommentary(`About ${entry.entry_id} (${typeLabel}, ${entryActOf(entry)}): `)}
+            >💬 Comment on this</button>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                if (!confirm(`Drop ${typeLabel} ${entry.entry_id}?`)) return;
+                applyLocalEdit("drop_entry",
+                  (tl) => { const i = tl.findIndex((x) => x.entry_id === entry.entry_id); if (i >= 0) tl.splice(i, 1); },
+                  `Dropped ${typeLabel} ${entry.entry_id}`,
+                  { change_type: "drop", entry_id: entry.entry_id, before: { entry_id: entry.entry_id, type: entry.type, part: entryActOf(entry) }, after: null }
+                );
+              }}
+            >Drop entry</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Slim "+ interstitial" insertion control rendered between timeline entries.
+  const renderInsertControl = (refId, act, key) => {
+    const slot = refId === null ? `start:${act}` : refId;
+    const open = addingAfterId === slot;
+    return (
+      <div className="ins-slot" key={key}>
+        {open ? (
+          <InterstitialAddForm
+            onAdd={(fields) => insertInterstitial(refId, act, fields)}
+            onCancel={() => setAddingAfterId(null)}
+          />
+        ) : (
+          <button className="ins-add-btn" onClick={() => setAddingAfterId(slot)}>+ interstitial</button>
+        )}
+      </div>
+    );
+  };
+
   const renderTimelineCard = (entry) => {
     const src = findSourceQuote(entry.source_quote_id);
     const idLabel = entry._subLabel
@@ -1157,43 +1437,7 @@ export default function QuotesView() {
         id={entry.entry_id}
         className={`tl-card is-${rec}${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`}
       >
-        <div
-          className="tl-drag"
-          title="Drag to reorder"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
-            dragIdRef.current = entry.entry_id;
-            dragOverRef.current = entry.entry_id;
-            setDragId(entry.entry_id);
-            setDragOverId(entry.entry_id);
-          }}
-          onPointerMove={(e) => {
-            if (!dragIdRef.current) return;
-            const el = document.elementFromPoint(e.clientX, e.clientY);
-            const card = el && el.closest ? el.closest(".tl-card") : null;
-            if (!card || !card.id) return;
-            const tl = getTimeline();
-            const de = tl.find((x) => x.entry_id === dragIdRef.current);
-            const oe = tl.find((x) => x.entry_id === card.id);
-            if (!de || !oe || entryActOf(de) !== entryActOf(oe)) return;
-            if (card.id !== dragOverRef.current) {
-              dragOverRef.current = card.id;
-              setDragOverId(card.id);
-            }
-          }}
-          onPointerUp={(e) => {
-            try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {}
-            finishPointerDrag();
-          }}
-          onPointerCancel={clearPointerDrag}
-        >
-          <svg width="10" height="20" viewBox="0 0 10 20" fill="currentColor">
-            <circle cx="2" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/>
-            <circle cx="2" cy="10" r="1.4"/><circle cx="8" cy="10" r="1.4"/>
-            <circle cx="2" cy="17" r="1.4"/><circle cx="8" cy="17" r="1.4"/>
-          </svg>
-        </div>
+        {renderDragHandle(entry)}
         <div className="tl-body">
           <div className="tl-card-head">
             <span className={idClass}>{idLabel}</span>
@@ -1410,7 +1654,15 @@ export default function QuotesView() {
                   {entries.length} entr{entries.length === 1 ? "y" : "ies"} · ~{fmtSec(sec)}
                 </span>
               </div>
-              {entries.map((entry) => renderTimelineCard(entry))}
+              {entries.flatMap((entry, idx) => {
+                const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
+                const card = isSpoken ? renderTimelineCard(entry) : renderInterstitialCard(entry);
+                const els = [];
+                if (idx === 0) els.push(renderInsertControl(null, act, `ins-start-${act}`));
+                els.push(card);
+                els.push(renderInsertControl(entry.entry_id, act, `ins-after-${entry.entry_id}`));
+                return els;
+              })}
             </section>
           );
         })}
@@ -1457,6 +1709,18 @@ export default function QuotesView() {
               <div key={act} className="review-act">
                 <h2>{act}<span className="meta">~{fmtSec(secs)} · {entries.length} beat{entries.length === 1 ? "" : "s"}</span></h2>
                 {entries.map((e) => {
+                  const isSpoken = e.type === "spoken" || e.source_quote_id != null;
+                  if (!isSpoken) {
+                    lastSp = null;  // an interstitial breaks the flow; re-show next speaker
+                    const insLabel = { title_card: "TITLE CARD", interstitial: "INTERSTITIAL", context_beat: "CONTEXT BEAT" }[e.type] || "INTERSTITIAL";
+                    const insText = e.type === "context_beat" ? `[${e.intent || "context needed"}]` : (e.text || "");
+                    return (
+                      <div key={e.entry_id} className="review-interstitial">
+                        <span className="ri-label">{insLabel}</span>
+                        <div className="ri-text">{insText}</div>
+                      </div>
+                    );
+                  }
                   const src = findSourceQuote(e.source_quote_id);
                   const speakerLabel = src?.speaker || e.speaker || "?";
                   const showSpeaker = speakerLabel !== lastSp;
