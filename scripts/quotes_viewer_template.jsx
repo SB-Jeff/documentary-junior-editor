@@ -531,6 +531,9 @@ export default function QuotesView() {
       return next;
     });
   }
+  // Quote Library text search — transient (not persisted); matches verbatim
+  // quote text + rationale, case-insensitive, composed after speaker/act filters.
+  const [librarySearch, setLibrarySearch] = useState("");
 
   // === Per-round working timeline (deep-clone of canonical at first switch) ===
   const [workingByRound, setWorkingByRound] = useState(() => {
@@ -1125,10 +1128,15 @@ export default function QuotesView() {
   const renderLibrary = () => {
     const realActs = PROJECT_META.act_labels.filter((a) => a !== "Orphan");
     const inCutIds = hideInCut ? sourceIdsInCut() : null;
-    const passLib = (q) => passesSourceFilters(q) && (!inCutIds || !inCutIds.has(q.num));
+    const needle = librarySearch.trim().toLowerCase();
+    const matchesSearch = (q) => !needle
+      || (q.quote || "").toLowerCase().includes(needle)
+      || (q.rationale || "").toLowerCase().includes(needle);
+    const passLib = (q) => passesSourceFilters(q) && (!inCutIds || !inCutIds.has(q.num)) && matchesSearch(q);
     const inScope = SOURCE_QUOTES.filter((q) => !q.is_orphan && passLib(q));
     const orphans = SOURCE_QUOTES.filter((q) => q.is_orphan && passLib(q));
     const hiddenCount = inCutIds ? inCutIds.size : 0;
+    const matchCount = inScope.length + orphans.length;
     const acts = realActs.map((act) => ({
       name: act,
       list: inScope.filter((q) => q.part === act),
@@ -1215,6 +1223,14 @@ export default function QuotesView() {
     return (
       <div className="library-view">
         <div className="lib-toolbar">
+          <input
+            type="search"
+            className="lib-search"
+            placeholder="Search quote text or rationale…"
+            value={librarySearch}
+            onChange={(e) => setLibrarySearch(e.target.value)}
+          />
+          {needle && <span className="lib-search-meta">{matchCount} match{matchCount === 1 ? "" : "es"}</span>}
           <label className="lib-hide-toggle" title="Hide source quotes already pulled into the current cut">
             <input type="checkbox" checked={hideInCut} onChange={toggleHideInCut} />
             Hide quotes in current cut

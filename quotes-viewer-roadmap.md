@@ -208,7 +208,11 @@ Empty search = no filter. Search state does NOT persist across sessions
 (it's transient by nature).
 **Priority:** P1 high-friction — the value scales with project size; Nanos
 (373 quotes) and beyond will feel this more than smaller projects.
-**Status:** Filed
+**Status:** Shipped — added a search input to the Library toolbar. Real-time,
+case-insensitive substring match on verbatim quote text + rationale, composed
+AFTER the speaker/act filters and the hide-in-cut filter. Shows a live match count;
+transient (not persisted). Verified in a browser build (quote-text match, rationale
+match, and composition with the speaker filter).
 
 ---
 
