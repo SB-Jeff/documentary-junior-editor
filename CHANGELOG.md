@@ -1,5 +1,116 @@
 # Documentary Junior Editor — Changelog
 
+## v5.4 — 2026-05-21
+
+Pipeline learning-loop release. Two foundational changes: narrative coherence formally
+promoted to Cardinal Rule status alongside the verbatim rule, and a new Editing Coach
+Agent introduced to systematically improve Edit Agent performance from session feedback.
+Skill Review Agent narrowed in scope to pipeline-wide concerns now that Edit-Agent-
+specific analysis lives in Coach.
+
+Driven by the 2026 Nanos Boston brand-video project review (May 2026). Nanos surfaced
+two recurring issues: (1) the Edit Agent didn't proactively check narrative coherence
+unless Jeff explicitly asked, and routinely produced cuts that didn't read as continuous
+narrative when Jeff probed them, and (2) Jeff was using `must-keep` as a workspace
+toggle to inflate the Tight view rather than as a conviction signal, contaminating the
+override log and pointing at both a SKILL-edit.md gap (no ranking inside probable-keeps)
+and a quote viewer gap (no tight-candidate state distinct from must-keep).
+
+### Cardinal Rule 2 — Narrative Coherence (new)
+
+- **Promoted from feedback rule to Cardinal Rule status.** Previously documented as a
+  "Narrative Coherence Rule" subsection in `SKILL-edit.md` only and as a feedback
+  memory in Jeff's conversational memory. Now formal Cardinal Rule 2, repeated in every
+  agent skill file alongside Cardinal Rule 1 (verbatim quotes).
+- **Operationalized in `SKILL-edit.md` Phase 7.** Phase 7 renamed from "Cardinal Rule
+  Verification" to "Cardinal Rules Verification" and split into two required checks:
+  Rule 1 verification (per-entry verbatim integrity, unchanged) and Rule 2 verification
+  (whole-timeline narrative coherence — orphan pronouns, back-reference openers,
+  subject anchoring, logical jumps, redundancy, tonal whiplash, act transitions). A
+  cut is not "ready to present" until both pass. Required after every change, every
+  round, applies equally to rough and tight.
+- **Master `SKILL.md` updated.** "The Cardinal Rule" section renamed to "The Cardinal
+  Rules" with both rules side-by-side. Pipeline diagram updated to show nine agents.
+
+### Editing Coach Agent (new — `SKILL-editing-coach.md`)
+
+- **Companion to the Edit Agent.** Reads the quote viewer's override log + Jeff's
+  reasoning, identifies patterns where the Edit Agent's defaults diverged from Jeff's
+  judgment, turns those patterns into targeted SKILL-edit.md updates and viewer
+  roadmap entries.
+- **Two modes.** Between-rounds (course-correct mid-project, briefs the next Edit
+  Agent invocation) and at-close (consolidate across all rounds, codify into skill
+  files, hand off to Skill Review).
+- **Co-equal primary inputs.** Edit Agent performance AND quote viewer design. Coach
+  routes each finding to Agent / Viewer / Both during clustering.
+- **Three-occurrence rule for rule promotion.** Observations promote to SKILL-edit.md
+  rules only after appearing in 3+ projects (or with Jeff's explicit blessing).
+  Prevents premature codification of project-shaped insights.
+- **No separate coaching corpus file.** The collection of past projects'
+  `reference-examples/[project-name]/lessons-learned.md` files IS the corpus. Coach
+  reads them filtered by project type.
+- **Known pattern seeded from Nanos:** must-keep-as-workspace toggle. Two-pronged
+  fix: SKILL-edit.md ranks within probable-keeps, viewer exposes a tight-candidate
+  state distinct from must-keep. Both flagged for future work.
+
+### Skill Review Agent redesign (`SKILL-review.md`)
+
+- **Narrower scope.** Pipeline-wide only: technical issues, system design observations,
+  capability/state-of-the-art audit, Jeff's forward-looking ideas, reference-example
+  contribution. Edit-Agent-specific analysis (override patterns, editorial corrections,
+  rule promotion) moves to the Editing Coach Agent.
+- **New phase: Capability audit.** Web-search for new Claude capabilities, new MCPs,
+  new orchestration patterns since the last project; surface candidates for pipeline
+  redesign. Nanos already flagged one (sub-agent parallelism for Transcript + FCPXML
+  Params); this phase ensures future projects systematically look for similar wins
+  rather than discovering them by accident.
+- **Removed:** much of the diff-mining ceremony, the dense per-agent question
+  checklist, and the multi-step sync-and-push wrap-up (sync stays; ceremony shrinks).
+
+### Shared `lessons-learned.md` structure
+
+Coach and Skill Review write to one file per project under these headers:
+
+- `## Session Feedback: Editing` (Coach)
+- `## Session Feedback: Quote Viewer` (Coach)
+- `## Session Feedback: System` with sub-sections `### Technical Issues`,
+  `### Architecture & Design`, `### Capability Audit` (Skill Review)
+- `## Forward-Looking — Jeff's Ideas` (Skill Review)
+- `## Reference Value` (Skill Review)
+
+Authorship implicit by section. Future Coach invocations read the Editing + Quote Viewer
+sections of past projects' files as their corpus; future Skill Review invocations read
+the System + Forward-Looking sections similarly.
+
+### Quote viewer roadmap (`quotes-viewer-roadmap.md`)
+
+New file at the master skill folder root. Single source of truth for viewer change
+requests, consumed by the separate Claude Code project that owns viewer development.
+Coach files per-project entries from Cowork sessions; entries migrate to master at
+project close so the canonical viewer code and its roadmap travel together.
+
+### Skill version footers bumped
+
+- `SKILL.md` → v5.4
+- `SKILL-edit.md` → v5.4
+- `SKILL-editing-coach.md` → v5.4 (new file)
+- `SKILL-review.md` → v5.4 (redesigned)
+
+Other agent skill files (`SKILL-transcription.md`, `SKILL-creative-context.md`,
+`SKILL-transcript.md`, `SKILL-fcpxml-params.md`, `SKILL-synthesis.md`,
+`SKILL-fcpxml.md`) remain on their prior versions; Cardinal Rule 2 still applies to
+them via the master `SKILL.md` header. They should be updated to include both rules
+in their own headers on the next Skill Review pass that touches each.
+
+### Known carry-forward items
+
+- **Tweak-log persistence.** Editing Coach assumes `tweak-log-v[N].json` is saved to
+  disk at session end. The viewer template doesn't currently do this. Tracked as a
+  parallel code track for the Claude Code viewer project. Coach has documented
+  fallback inputs (visible viewer state, Jeff's memory, rough/tight diff) for
+  projects without persistence — including the Nanos brand-video project itself,
+  which will be the first run under v5.4.
+
 ## v5.3 — 2026-05-13
 
 Viewer template rewrite + supporting SKILL changes, all landing as a single

@@ -33,7 +33,13 @@ starting a session.
 
 ---
 
-## The Cardinal Rule
+## The Cardinal Rules
+
+**These rules apply to every agent in the pipeline without exception. The Edit Agent
+operates inside both rules' danger zones — word-level manipulation of verbatim material
+(Rule 1) and full editorial responsibility for narrative coherence (Rule 2).**
+
+### Cardinal Rule 1 — Verbatim Quotes
 
 **NEVER paraphrase or edit quotes from the transcripts.** You can trim them (cut
 the beginning, middle, or end), split them into independently orderable subclips,
@@ -52,9 +58,10 @@ requires close attention to individual words. The temptation to "clean up" or
 "improve" a quote is highest here. Resist it entirely. Your job is to find the
 shortest verbatim version that makes the point — not to write a better version.
 
-**Before saving a handoff, run the Cardinal Rule verification** described in
+**Before saving a handoff, run BOTH Cardinal Rule verifications** described in
 Phase 7. Every kept segment must be verified as a verbatim subset of its source
-quote.
+quote (Rule 1), AND the assembled timeline must be read top-to-bottom for
+narrative coherence (Rule 2). A cut is not "ready to present" until both pass.
 
 ### How the rule generalizes to segments and timeline entries
 
@@ -81,14 +88,13 @@ entry) are what make the segments-and-entries model verifiable against the
 Cardinal Rule. Anything more flexible would let you smuggle in cross-source or
 out-of-order recombinations that change meaning.
 
----
+### Cardinal Rule 2 — Narrative Coherence
 
-## The Narrative Coherence Rule
-
-**The paper cut must read as a coherent story.** This rule is as important as
-the Cardinal Rule. The timeline, played in order, must make narrative sense —
-each entry setting up the next, building an emotional arc, telling a story a
-viewer can follow.
+**The paper cut must read as a coherent story.** Cardinal Rule 1 (verbatim
+quotes) is necessary but not sufficient — verbatim quotes assembled in an
+incoherent order still violate Rule 2. The timeline, played in order, must
+make narrative sense — each entry setting up the next, building an emotional
+arc, telling a story a viewer can follow.
 
 **After every change to selection, ordering, trimming, or splitting, read the
 assembled sequence.** If the progression doesn't make narrative sense — if a
@@ -1232,8 +1238,9 @@ Each completed Rough Cut → Discussion → Reduction loop ends with an emit:
 4. **Update `pipeline-state.json`** — increment Edit Agent's
    `current_version` to N, record `based_on` (which Synthesis and
    Creative-Context versions were consumed), set `last_run`.
-5. **Cardinal Rule verification (Phase 7)** runs *before* any of the above
-   are saved.
+5. **Cardinal Rules verification (Phase 7)** runs *before* any of the above
+   are saved. Both Rule 1 (verbatim per-entry) and Rule 2 (narrative
+   coherence across the whole timeline) must pass.
 
 Then trigger a fresh FCPXML Agent run by following the handoff footer
 (see Phase 7). Jeff opens a new Cowork session, starts the FCPXML Agent,
@@ -1264,10 +1271,15 @@ finalize on round 1; others loop four or five times.
 
 ---
 
-## Phase 7: Cardinal Rule Verification + Handoff Documents
+## Phase 7: Cardinal Rules Verification + Handoff Documents
 
-Before saving any round's outputs, verify that every kept span is a
-verbatim subset of its source segment. For each timeline entry:
+Before saving any round's outputs, run BOTH Cardinal Rule verifications.
+A cut is not "ready to present" until both pass.
+
+### Cardinal Rule 1 verification — verbatim integrity (per-entry)
+
+Verify that every kept span is a verbatim subset of its source segment.
+For each timeline entry:
 
 1. For each segment reference in the entry, locate the source segment by
    `source_quote_id` + `source_segment_idx`.
@@ -1282,8 +1294,63 @@ verbatim subset of its source segment. For each timeline entry:
 5. Confirm the entry's `source_quote_id` matches all referenced segments.
    No cross-quote segments allowed.
 
-If any entry fails verification, fix it before saving. Do not proceed with
-unverified entries.
+If any entry fails Rule 1 verification, fix it before saving. Do not
+proceed with unverified entries.
+
+### Cardinal Rule 2 verification — narrative coherence (whole-timeline)
+
+Assemble the timeline's verbatim text in playback order — concatenating
+each entry's kept segments in source order, with any interstitials and
+title cards inserted at their timeline positions. Read it through as if
+hearing it for the first time. Check for:
+
+1. **Orphan pronouns** — "they / it / that / this / those" without a
+   clear antecedent established earlier in the cut.
+2. **Back-reference openers** — entries that open with "And so / Yet /
+   But / Again / However" pointing to something the prior entry didn't
+   actually set up.
+3. **Subject anchoring** — does the viewer know who "we / they / I"
+   refers to by this point in the cut? Has the speaker been introduced?
+4. **Logical jumps** — does each entry follow from what came before?
+   Are there gaps where the viewer is expected to make a leap the
+   material hasn't supported?
+5. **Redundant content** — does an entry restate something already
+   established earlier in the cut?
+6. **Emotional/tonal whiplash without a bridge** — does the cut shift
+   register sharply (e.g., from grief to humor) without an interstitial
+   or context beat softening the transition?
+7. **Act transitions** — do the boundaries between acts read as
+   intentional, or do they feel like the cut just stopped one section
+   and started another?
+
+If any check fails, the cut is not ready. Options to fix:
+
+- Reorder entries to establish missing setup before the payoff
+- Trim differently to remove the dependency (e.g., trim a back-reference
+  opener)
+- Add or extend an interstitial / title card / context beat that bridges
+  the gap
+- Pull material from an unselected source quote that supplies the missing
+  setup
+- Drop the problematic entry if no fix preserves narrative flow
+
+Repeat Rule 2 verification after every fix until the timeline reads
+cleanly top-to-bottom. **Do not present the cut to Jeff until both Rule
+1 and Rule 2 verifications pass.** Document any unresolved coherence
+risks in the round's handoff (Phase 7 below) with proposed
+interstitials Jeff can approve.
+
+Applies equally to rough cuts and tight cuts. "Rough" does not mean
+incoherent.
+
+### Why both verifications run together
+
+Rule 1 protects the words; Rule 2 protects the meaning. A cut can pass
+Rule 1 (every word verbatim) and still fail Rule 2 (the verbatim words
+assembled don't tell a coherent story). The most common failure mode
+is a trim or reorder that satisfies Rule 1 mechanically but breaks a
+setup-payoff dependency or strands a pronoun. Catching it at Phase 7
+is the last line of defense before Jeff sees the cut.
 
 This active verification replaces the v3.0 context-isolation approach. The
 Cardinal Rule is now protected by per-entry, per-segment word-level
@@ -1493,9 +1560,11 @@ When Jeff returns after watching the round-N FCPXML cut:
 - The full source pool remains available in the artifact
 
 Re-enter the loop at Phase 1, run Phases 2–7 with round N+1 as the next
-emit version. Re-running Cardinal Rule verification on every round is
-required even if you only touched a small subset of entries — the
-verification is cheap and the cost of missing a violation is high.
+emit version. Re-running BOTH Cardinal Rules verifications on every round
+is required even if you only touched a small subset of entries — a single
+entry's trim or reorder can break narrative coherence across the whole
+timeline (Rule 2), and verification is cheap relative to the cost of
+missing a violation.
 
 All source quotes remain available. Nothing has been removed from the
 source pool. The Cardinal Rule, approved act structure, and verification
@@ -1503,5 +1572,5 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.2*
+*Edit Agent — documentary-junior-editor v5.4*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

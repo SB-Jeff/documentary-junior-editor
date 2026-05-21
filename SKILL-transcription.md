@@ -22,7 +22,11 @@ model: sonnet-4.6
 
 # Transcription Agent
 
-## The Cardinal Rule
+## The Cardinal Rules
+
+**These rules apply to every agent in the pipeline without exception.**
+
+### Cardinal Rule 1 — Verbatim Quotes
 
 **NEVER paraphrase or edit quotes from the transcripts.** You can trim them (cut the
 beginning or end), split them into parts, reorder them freely, and rearrange sentences
@@ -30,10 +34,21 @@ within a quote when a different order serves the narrative better. But you must 
 change the actual words. Every quote referenced anywhere in the pipeline must be
 verbatim from the transcript.
 
-This rule governs every agent in the pipeline. It is stated here for consistency. The
-Transcription Agent doesn't edit quotes — it produces the source-of-truth transcripts
-that every downstream agent reads. The cleaner this output, the safer the rule
-downstream.
+### Cardinal Rule 2 — Narrative Coherence
+
+Every proposed cut must read as a logical, continuous narrative when read top-to-bottom
+in playback order. If the sequence does not hold together, identify the specific
+narrative gaps, propose interstitial text that bridges them, and do not present the
+cut as final until coherence is achieved. Applies equally to rough and tight cuts.
+
+### Transcription Agent's relationship to the rules
+
+The Transcription Agent doesn't edit quotes or assemble cuts, so neither rule
+directly constrains your operations. But your output is the foundation both rules
+ultimately rest on — Rule 1 enforceability depends on accurate verbatim transcripts,
+and Rule 2 verification downstream depends on transcripts being clean enough that
+segment boundaries land at meaningful clause/complete-thought breaks. The cleaner
+this output, the safer both rules downstream.
 
 ---
 
@@ -511,7 +526,7 @@ transcribe, validate, save, emit handoff, update state.
 
 ---
 
-*Transcription Agent — documentary-junior-editor v5.2*
+*Transcription Agent — documentary-junior-editor v5.4*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *AssemblyAI calls delegated to `scripts/transcribe.py` (key path is a Phase 3
 follow-up — see Phase 4).*

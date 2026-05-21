@@ -17,15 +17,31 @@ model: sonnet-4.6
 
 # FCPXML Params Agent
 
-## The Cardinal Rule
+## The Cardinal Rules
+
+**These rules apply to every agent in the pipeline without exception.**
+
+### Cardinal Rule 1 — Verbatim Quotes
 
 **NEVER paraphrase or edit quotes from the transcripts.** You can trim them (cut the
 beginning or end), split them into parts, reorder them freely, and rearrange sentences
 within a quote when a different order serves the narrative better. But you must never
 change the actual words. Every quote must be verbatim from the transcript.
 
-This rule governs every agent in the pipeline. It is stated here for consistency even
-though this agent does not handle quotes directly.
+### Cardinal Rule 2 — Narrative Coherence
+
+Every proposed cut must read as a logical, continuous narrative when read top-to-bottom
+in playback order. If the sequence does not hold together, identify the specific
+narrative gaps, propose interstitial text that bridges them, and do not present the
+cut as final until coherence is achieved. Applies equally to rough and tight cuts.
+
+### FCPXML Params Agent's relationship to the rules
+
+Neither rule directly applies to your work — you extract technical parameters
+(clip_type, asset references, angle IDs, library locations, format references), not
+editorial content. The rules are stated here for consistency across all agent skill
+files. Your job is to produce accurate technical parameters; the editorial agents
+above and below you handle the rules.
 
 ---
 
@@ -414,5 +430,5 @@ Cowork; the agent completes in a few minutes for typical projects.
 
 ---
 
-*FCPXML Params Agent — documentary-junior-editor v5.0*
+*FCPXML Params Agent — documentary-junior-editor v5.4*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

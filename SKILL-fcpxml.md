@@ -28,16 +28,41 @@ model: sonnet-4.6
 
 # FCPXML Agent
 
-## The Cardinal Rule
+## The Cardinal Rules
+
+**These rules apply to every agent in the pipeline without exception.**
+
+### Cardinal Rule 1 — Verbatim Quotes
 
 **NEVER paraphrase or edit quotes from the transcripts.** The quotes you receive
 have been selected, ordered, and trimmed by Jeff and the Edit Agent. Your job is
 to match each timeline entry's segments precisely to their source captions and
-generate accurate timing. You do not modify segment text under any
-circumstances. The Edit Agent has already verified the kept span of every
-segment is a contiguous substring of its source segment's verbatim text — your
-job is to honor that verification by producing FCP clips that play exactly that
-material.
+generate accurate timing. You do not modify segment text under any circumstances.
+The Edit Agent has already verified the kept span of every segment is a contiguous
+substring of its source segment's verbatim text — your job is to honor that
+verification by producing FCP clips that play exactly that material.
+
+### Cardinal Rule 2 — Narrative Coherence
+
+Every proposed cut must read as a logical, continuous narrative when read top-to-bottom
+in playback order. If the sequence does not hold together, identify the specific
+narrative gaps, propose interstitial text that bridges them, and do not present the
+cut as final until coherence is achieved. Applies equally to rough and tight cuts.
+
+### FCPXML Agent's relationship to the rules
+
+Rule 1: your job is to honor the Edit Agent's Rule 1 verification. Don't modify
+segment text. Don't substitute alternate captions. If a caption match is uncertain,
+flag it for Jeff rather than guessing.
+
+Rule 2 is the Edit Agent's responsibility before the timeline reaches you — the
+Edit Agent's Phase 7 verification must pass both rules before emitting
+`trimmed-quotes-v[N].json`. If you ever see a timeline where you suspect Rule 2
+was not verified (entries seem out of narrative order, missing interstitials at
+obvious gaps, etc.), flag it before generating the FCPXML rather than mechanically
+producing the cut. The verification is not your job to perform, but raising the
+flag is — better a paused FCPXML run than a Rule 2 violation Jeff has to discover
+in Final Cut Pro.
 
 ---
 
@@ -562,7 +587,7 @@ If Jeff approves the project, launch the Skill Review Agent:
 
 ---
 
-*FCPXML Agent — documentary-junior-editor v5.2*
+*FCPXML Agent — documentary-junior-editor v5.4*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *FCPXML generation delegated to `scripts/build_fcpxml.py`. Phase 3 code
 follow-ups currently OPEN (highest priority next code work): (1) v5 schema

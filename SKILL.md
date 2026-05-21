@@ -21,9 +21,11 @@ hand off to each other, and how to set up a new project.
 
 ---
 
-## The Cardinal Rule
+## The Cardinal Rules
 
-**This rule applies to every agent in the pipeline without exception.**
+**These rules apply to every agent in the pipeline without exception.**
+
+### Cardinal Rule 1 — Verbatim Quotes
 
 **NEVER paraphrase or edit quotes from the transcripts.** You can trim them (cut the
 beginning or end), split them into parts (e.g., #82a and #82b for different sections),
@@ -36,12 +38,34 @@ to the raw transcript and find the actual words — then assign it a new number.
 lead with the conclusion and follow with the setup, or when you move a vivid phrase to the
 front. The words stay verbatim — only the order changes.
 
-This rule is repeated at the top of every agent skill file. Its prominence is intentional.
-A long context window can bury instructions. This one cannot be buried.
+### Cardinal Rule 2 — Narrative Coherence
 
-### How the rule generalizes in v5.0 — segments and timeline entries
+**Every proposed cut must read as a logical, continuous narrative when read top-to-bottom
+in playback order.** The Edit Agent must verify this on every pass — reading the
+assembled cut as if hearing it for the first time. If the sequence does not hold together,
+the agent must:
 
-The Cardinal Rule's existing language ("trim them, split them into parts, reorder them
+1. **Identify the specific narrative gaps** — which transition breaks, why. Orphan
+   pronouns ("they / it / that" without antecedent), back-reference openers ("And so /
+   Yet / But" without setup), missing subject anchoring, logical jumps, redundant content
+   because something already landed earlier, emotional/tonal whiplash without a bridge.
+2. **Propose interstitial text** — title cards, context beats, or B-roll cues that
+   bridge the gap. Try to solve the gap with material from the transcripts first — a
+   phrase from an unselected quote, trimmed to just the bridge, often works better than
+   on-screen text.
+3. **NOT present the cut as final until coherence is achieved.**
+
+Applies to rough cuts and tight cuts equally. A rough cut is wide but it still has to
+read as a story; "rough" doesn't mean incoherent. No exceptions.
+
+### Rule prominence
+
+These rules are repeated at the top of every agent skill file. Their prominence is
+intentional. A long context window can bury instructions. These cannot be buried.
+
+### How the rules generalize in v5.0 — segments and timeline entries
+
+Cardinal Rule 1's existing language ("trim them, split them into parts, reorder them
 freely, rearrange sentences") generalizes naturally to the v5.0 data model. Source quotes
 are decomposed into **segments** — meaningful, self-contained pieces of an idea, typically
 a clause or phrase that completes a thought. The unit of rearrangement is the segment:
@@ -60,11 +84,15 @@ The agent never says "split #11 into parts." It produces new timeline entries wh
 manipulation requires it. Splitting is implicit. Verbatim integrity is preserved at the
 segment level — words within a segment never change.
 
+Cardinal Rule 2 applies to the assembled timeline regardless of segment-level
+construction. Verbatim integrity (Rule 1) is necessary but not sufficient — verbatim
+segments assembled in an incoherent order still violate Rule 2.
+
 ---
 
 ## The Pipeline
 
-The editing workflow is divided into eight specialized agents. Each agent has its own
+The editing workflow is divided into nine specialized agents. Each agent has its own
 skill file, operates with a focused context window, and hands off structured output to
 the project folder for the next agent to read. Jeff is surfaced only at creative
 decision points.
@@ -102,10 +130,19 @@ Synthesis Agent          →  merged tagged-quotes-v[N].json (segments preserved
 │  Jeff watches in FCP. Approves OR appends to review-notes.md    │
 │  and re-launches Edit Agent for round N+1.                      │
 └─────────────────────────────────────────────────────────────────┘
-        ↓ (Jeff approves)
-Skill Review Agent       →  reads versioned diffs across all rounds,
-                            updates lessons-learned + SKILL files
+        ↓ (Jeff approves OR between-rounds invocation)
+Editing Coach Agent      →  reads tweak log + Jeff's reasoning,
+                            updates SKILL-edit.md + viewer roadmap,
+                            writes Editing/Quote Viewer sections of
+                            lessons-learned.md
+        ↓
+Skill Review Agent       →  pipeline-wide review: tech issues, system
+                            design, capability audit, forward-looking
+                            ideas, reference-example contribution
 ```
+
+The pipeline is now nine agents long. Editing Coach can also run between Edit Agent
+rounds (lighter mode) to course-correct mid-project before the final pass.
 
 ### Human-in-the-Loop Pause Points
 
@@ -462,7 +499,44 @@ fallback if n8n has issues.
 
 See `CHANGELOG.md` for full version history.
 
-Current version: 5.1 — April 2026
+Current version: 5.4 — May 2026
+
+### v5.4 highlights (Cardinal Rule 2 + Editing Coach Agent)
+
+- **Narrative coherence promoted to Cardinal Rule 2.** Formalized alongside the verbatim
+  rule (now Cardinal Rule 1). Both rules apply to every agent in the pipeline without
+  exception. Operationalized in `SKILL-edit.md` Phase 7 as a required pre-presentation
+  check; a cut cannot be presented as ready until coherence verification passes.
+- **New Editing Coach Agent** (`SKILL-editing-coach.md`). Companion to the Edit Agent.
+  Reads the quote viewer's override log plus Jeff's reasoning, identifies patterns where
+  the Edit Agent's defaults diverged from Jeff's judgment, and turns those patterns into
+  targeted updates to `SKILL-edit.md` and a quote-viewer roadmap. Runs between rounds
+  (course-correct mid-project) and at project close (consolidate, codify, hand off to
+  Skill Review).
+- **Skill Review Agent redesigned.** Narrower scope: pipeline-wide concerns only —
+  technical issues, system design, capability/state-of-the-art audit, Jeff's forward-
+  looking ideas, reference-example contribution. Edit-Agent-specific analysis moves to
+  the Editing Coach. New phase: capability audit (web search for new Claude capabilities,
+  new MCPs, new orchestration patterns since last project; surface candidates for
+  pipeline redesign).
+- **Shared lessons-learned.md structure.** Coach and Skill Review write to one file per
+  project with categorized sections: Session Feedback: Editing, Session Feedback: Quote
+  Viewer, Session Feedback: System (sub-sections Technical / Architecture / Capability
+  Audit), Forward-Looking, Reference Value. Authorship implicit by section.
+- **Quote viewer roadmap formalized.** New file `quotes-viewer-roadmap.md` at the master
+  skill folder root. Coach files entries from Cowork sessions; the viewer development
+  workflow (separate Claude Code project) consumes the roadmap as its work queue.
+- **Three-occurrence rule for rule promotion.** Coach observes patterns once
+  (lessons-learned only), confirms on second occurrence, proposes a SKILL-edit.md rule
+  change on third+ occurrence. Prevents premature codification of project-shaped
+  insights.
+
+### v5.3 highlights (viewer rewrite)
+
+See `CHANGELOG.md` v5.3 entry for full detail. Major: quote viewer rewritten in React
+against the v5.0 data model, with v4.0.1-style editorial affordances restored plus new
+capabilities (Rough/Tight sub-toggle, round dropdown with Save-as-new, unified
+Send-to-agent panel, direct-write Export).
 
 ### v5.1 highlights (workflow reliability)
 

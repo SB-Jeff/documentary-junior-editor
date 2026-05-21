@@ -16,15 +16,32 @@ output: Versioned merged tagged-quotes-v[N].json (with segments[] preserved), or
 
 # Synthesis Agent
 
-## The Cardinal Rule
+## The Cardinal Rules
 
-**NEVER paraphrase or edit quotes from the transcripts.** You can trim them (cut the beginning or end), split them into parts (e.g., #82a and #82b for different sections), reorder them freely, and rearrange sentences within a quote when a different order serves the narrative better. But you must never change the actual words. Every quote referenced here must be verbatim from the transcript. If a quote doesn't exist in the transcript, do not create it. This rule is stated first because it is the most important rule in the entire pipeline.
+**These rules apply to every agent in the pipeline without exception.**
 
-The Synthesis Agent's relationship to the Cardinal Rule is purely structural: it
-combines per-speaker outputs without modifying any quote text or any segment text.
-Renumbering does not drop segments. Merging does not rewrite quotes. The verbatim
-material that arrives from the Transcript Agents leaves the Synthesis Agent
-unchanged.
+### Cardinal Rule 1 — Verbatim Quotes
+
+**NEVER paraphrase or edit quotes from the transcripts.** You can trim them (cut the beginning or end), split them into parts (e.g., #82a and #82b for different sections), reorder them freely, and rearrange sentences within a quote when a different order serves the narrative better. But you must never change the actual words. Every quote referenced here must be verbatim from the transcript. If a quote doesn't exist in the transcript, do not create it.
+
+### Cardinal Rule 2 — Narrative Coherence
+
+Every proposed cut must read as a logical, continuous narrative when read top-to-bottom in playback order. If the sequence does not hold together, identify the specific narrative gaps, propose interstitial text that bridges them, and do not present the cut as final until coherence is achieved. Applies equally to rough and tight cuts.
+
+### Synthesis Agent's relationship to the rules
+
+Rule 1: your relationship is purely structural — you combine per-speaker outputs
+without modifying any quote text or any segment text. Renumbering does not drop
+segments. Merging does not rewrite quotes. The verbatim material that arrives from
+the Transcript Agents leaves the Synthesis Agent unchanged.
+
+Rule 2: you don't assemble a timeline, but the narrative assessment you produce
+(speaker coverage map, redundancy report, gap report, recommended speaker weight,
+cross-references) is what helps the Edit Agent identify coherence risks before they
+materialize as Rule 2 failures. A surfaced redundancy or a flagged gap saves a
+downstream coherence break. Treat your narrative assessment as Rule 2 risk
+mitigation — the more clearly you call out where the material doesn't connect, the
+easier the Edit Agent's job becomes.
 
 ---
 
@@ -491,6 +508,6 @@ agents read from `tagged-quotes-v[N].json`.
 
 ---
 
-*Synthesis Agent — documentary-junior-editor v5.0*
+*Synthesis Agent — documentary-junior-editor v5.4*
 
 *Read `SKILL.md` first for pipeline overview and folder structure.*

@@ -17,16 +17,34 @@ model: opus-4.7
 
 # Creative Context Agent
 
-## The Cardinal Rule
+## The Cardinal Rules
+
+**These rules apply to every agent in the pipeline without exception.**
+
+### Cardinal Rule 1 — Verbatim Quotes
 
 **NEVER paraphrase or edit quotes from the transcripts.** You can trim them (cut the
 beginning or end), split them into parts, reorder them freely, and rearrange sentences
 within a quote when a different order serves the narrative better. But you must never
-change the actual words. Every quote referenced here must be verbatim from the transcript.
+change the actual words. Every quote referenced here must be verbatim from the
+transcript. The words are sacred from the first moment you read them.
 
-This rule governs every agent in the pipeline. It is stated here because you will be
-reading interview transcripts in this session and may reference quotes when discussing
-narrative structure. The words are sacred from the first moment you read them.
+### Cardinal Rule 2 — Narrative Coherence
+
+Every proposed cut must read as a logical, continuous narrative when read top-to-bottom
+in playback order. If the sequence does not hold together, identify the specific
+narrative gaps, propose interstitial text that bridges them, and do not present the
+cut as final until coherence is achieved. Applies equally to rough and tight cuts.
+
+### Creative Context Agent's relationship to the rules
+
+Rule 1 applies when you reference quotes while iterating on the act structure — quote
+verbatim, never paraphrase. Rule 2 doesn't directly constrain your operations (you
+produce the act structure, not the timeline). But the act structure you propose is
+what the Edit Agent will assemble against. A coherent act structure with clear
+narrative roadmaps per section makes Rule 2 verification downstream much easier; a
+muddy or competing-narrative structure forces the Edit Agent into unwinnable Rule 2
+trade-offs.
 
 ---
 
@@ -571,5 +589,5 @@ When all per-speaker Transcript Agents have emitted, launch the Synthesis Agent
 
 ---
 
-*Creative Context Agent — documentary-junior-editor v5.0*
+*Creative Context Agent — documentary-junior-editor v5.4*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
