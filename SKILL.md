@@ -505,7 +505,22 @@ fallback if n8n has issues.
 
 See `CHANGELOG.md` for full version history.
 
-Current version: 5.5 — May 2026
+Current version: 5.6 — May 2026
+
+### v5.6 highlights (quote viewer batch)
+
+- **Quote viewer roadmap cleared.** All open `quotes-viewer-roadmap.md` items shipped
+  in the viewer dev project: tweak-log persistence to disk (unblocks the Editing Coach),
+  drag-to-reorder fixed (pointer events, robust in Cowork's sandboxed iframe),
+  interstitials restored between timeline entries, plus Quote Library hide-in-cut filter,
+  search, and act-reassign, and the tight-candidate state + tight_priority badge/sort.
+- **Two cross-scope items flagged, not applied.** `tight-candidate` and `tight_priority`
+  shipped their viewer + build-script halves; the `SKILL-edit.md` halves (Edit Agent
+  populating them) are flagged for the Editing Coach in the roadmap's "Cross-scope
+  dependencies" section. `SKILL-edit.md` was not edited by the viewer project.
+- **Viewer test harness.** A committed fixture (`scripts/test-fixtures/`) gives the
+  viewer a repeatable `build_quotes_viewer.py --data` manual-test loop.
+- Viewer/build-script only; no agent skill semantics changed. See `CHANGELOG.md` v5.6.
 
 ### v5.5 highlights (Orchestrator Agent)
 

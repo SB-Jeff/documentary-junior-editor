@@ -1,5 +1,63 @@
 # Documentary Junior Editor — Changelog
 
+## v5.6 — 2026-05-21 (quote viewer batch)
+
+Viewer release. Clears the open `quotes-viewer-roadmap.md` queue — three P0 items
+(two regressions + the Editing Coach's blocking dependency) and five P1 items —
+ahead of the next editing session. All changes are in `scripts/quotes_viewer_template.jsx`
+and `scripts/build_quotes_viewer.py`; no agent-facing skill semantics changed. Two
+items ship their viewer/build halves with the SKILL-edit.md half flagged for the
+Editing Coach (see "Cross-scope dependencies" in the roadmap).
+
+### Quote viewer (`scripts/quotes_viewer_template.jsx`, `scripts/build_quotes_viewer.py`)
+
+- **Tweak-log persistence (P0).** `applyLocalEdit` now records structured ops
+  (`seq`, `entry_id`, `change_type`, `before`, `after`, `timestamp`, `note`,
+  `description`). On Send and Export the viewer writes
+  `handoffs/[slug]/tweak-log-v[N].json` via `callMcpTool` (no-op outside Cowork),
+  matching the input `SKILL-editing-coach.md` documents. Coach no longer runs in
+  degraded fallback mode.
+- **Drag-to-reorder fixed (P0 regression).** Root cause: native HTML5 drag-and-drop
+  is unreliable inside Cowork's sandboxed artifact iframe. Reimplemented with pointer
+  events (`setPointerCapture` + `pointermove`/`pointerup`), robust in every context.
+  Within-act reorder; cross-act moves remain on the act-reassign dropdown.
+- **Interstitials restored (P0 regression).** "+ interstitial" insertion controls
+  between every Edit-view entry and at each act head, with an inline editor
+  (interstitial / title_card / context_beat, text, duration). Non-spoken entries get
+  a dedicated amber card with editable text/intent + duration; Review view renders
+  them as distinct centered cards. Verbatim quote text stays untouched (Cardinal
+  Rule 1). Restores the viewer as a complete surface for Cardinal Rule 2.
+- **Quote Library: hide-in-cut filter (P1).** Toggle hides source quotes already in
+  the active cut (respects Rough/Tight via a shared `inTightCut` predicate);
+  persisted per project in localStorage.
+- **Quote Library: search (P1).** Real-time, case-insensitive match on verbatim quote
+  text + rationale, composed after speaker/act and hide-in-cut filters; transient.
+- **Quote Library: act-reassign dropdown (P1).** Re-tag a source quote's act from the
+  Library; held in viewer state (`sourceActOverrides`) and logged as a
+  `reassign_source_act` tweak for the Edit Agent to persist canonically. The viewer
+  never overwrites the upstream `tagged-quotes` file.
+- **Tight-candidate state (P1, viewer + build halves).** Rec badge cycles three states
+  (must-keep → tight-candidate → probable-keep); Tight cut = must-keep +
+  tight-candidate. `build_quotes_viewer.py` no longer collapses `tight-candidate`.
+- **tight_priority badge + sort (P1, viewer + build halves).** Probable-keep cards
+  show a high/medium/low badge when present; an Edit-view "priority sort" toggle
+  reorders probable-keeps within their slots (view-only). `migrate_entry_trims` passes
+  `tight_priority` through. Graceful no-op when absent.
+- **Test harness.** Added `scripts/test-fixtures/sample_viewer_data.json` — a committed
+  fixture (2 speakers, 3 acts, must/tight-candidate/probable mix, orphan, interstitial,
+  tight_priority examples) for a repeatable `build_quotes_viewer.py --data` manual-test
+  loop.
+
+### Cross-scope dependencies flagged (not changed here)
+
+- The Edit Agent populating **`tight-candidate`** and **`tight_priority`** during the
+  rough cut requires `SKILL-edit.md` changes owned by the Editing Coach. The viewer +
+  build-script halves shipped; the skill-side halves are flagged in the roadmap entries
+  for coordination — `SKILL-edit.md` was not edited.
+- `SKILL-edit.md:1080` says drag reorders "within or across acts," but the
+  implementation constrains drag to within an act (cross-act via the dropdown).
+  Doc/behavior discrepancy flagged in the roadmap for the skill owners.
+
 ## v5.5 — 2026-05-21
 
 Minor release. New **Orchestrator Agent** formalizes the parallel sub-agent fan-out

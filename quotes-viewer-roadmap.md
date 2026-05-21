@@ -242,6 +242,30 @@ match, and composition with the speaker filter).
 
 ---
 
+## Cross-scope dependencies — for Editing Coach / Skill Review
+
+The viewer batch (v5.6, 2026-05-21) shipped the **viewer + build-script halves** of
+two items that also need a **`SKILL-edit.md`** change. `SKILL-edit.md` is owned by the
+Editing Coach, so the viewer project did NOT edit it. These are the open coordination
+items:
+
+1. **Edit Agent should populate `tight-candidate`** during the rough cut for
+   borderline-essential quotes. The viewer now supports the state (badge cycle + Tight
+   cut filter); until the Edit Agent emits it, Jeff sets it manually. Needs a
+   `SKILL-edit.md` rule change (the documented system is currently two-tier:
+   must-keep / probable-keep only).
+2. **Edit Agent should populate `tight_priority`** (high/medium/low) on probable-keep
+   entries. The viewer now badges + sorts by it; the build script passes it through.
+   Needs the `SKILL-edit.md` change the original roadmap entry already assigned to
+   Coach's territory.
+
+Also flagged (doc/behavior discrepancy, no code change made): `SKILL-edit.md:1080`
+says drag-to-reorder works "within or across acts," but the viewer constrains drag to
+within an act (cross-act moves use the act-reassign dropdown). Reconcile the doc or
+the behavior — surfaced for the skill owners to decide.
+
+---
+
 *Maintained as part of the `documentary-junior-editor` skill set. Coach writes here;
 the Claude Code viewer project reads here.*
 *Current as of: 2026-05-21*
