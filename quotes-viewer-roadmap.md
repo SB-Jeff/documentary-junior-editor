@@ -50,7 +50,12 @@ optional `note` (if Jeff added free-text via the Comment-on-this button). Preser
 iteration order so reversal pairs are reconstructible.
 **Priority:** P0 blocking — without this, the Editing Coach Agent operates in
 degraded fallback mode on every project.
-**Status:** Filed
+**Status:** Shipped — viewer writes `handoffs/[slug]/tweak-log-v[N].json` on Send
+and Export via `callBash` (no-op outside Cowork). `applyLocalEdit` now records
+structured `{seq, entry_id, change_type, before, after, timestamp, note,
+description}` ops; log carries top-level `commentary`/`baseline`/`generated_at`.
+Schema matches SKILL-editing-coach.md's documented input. Verified end-to-end in a
+browser build (status_flip + reorder captured with before/after).
 
 ### Tight-candidate state distinct from must-keep
 **Source project:** 2026 Nanos Boston brand-video (May 2026).

@@ -117,6 +117,13 @@ const COLORS = {
   textSubtle: "#78716c",
 };
 
+// Recommendation cycle order for the clickable rec badge. Item 7 inserts
+// "tight-candidate" between must-keep and probable-keep.
+const REC_CYCLE = {
+  "must-keep": "probable-keep",
+  "probable-keep": "must-keep",
+};
+
 // Speaker color palette — assigned in order of appearance.
 const SPEAKER_PALETTE = [
   { bg: "#fef3c7", fg: "#7c2d12" },
@@ -487,17 +494,41 @@ export default function QuotesView() {
   const getTimeline = () => workingByRound[roundIndex] || [];
   const getPendingOps = () => pendingOpsByRound[roundIndex] || [];
 
-  const applyLocalEdit = useCallback((opTag, mutator, description) => {
+  // applyLocalEdit records a structured op alongside the human-readable
+  // description. `meta` carries the fields the Editing Coach Agent reads from
+  // the persisted tweak log: entry_id, change_type, before/after state, and an
+  // optional free-text note. change_type defaults to opTag when not supplied.
+  const applyLocalEdit = useCallback((opTag, mutator, description, meta) => {
     setWorkingByRound((prev) => {
       const tl = JSON.parse(JSON.stringify(prev[roundIndex] || []));
       mutator(tl);
       return { ...prev, [roundIndex]: tl };
     });
-    setPendingOpsByRound((prev) => ({
-      ...prev,
-      [roundIndex]: [...(prev[roundIndex] || []), { op: opTag, description, ts: Date.now() }],
-    }));
+    setPendingOpsByRound((prev) => {
+      const list = prev[roundIndex] || [];
+      const op = {
+        seq: list.length + 1,
+        op: opTag,
+        description,
+        change_type: (meta && meta.change_type) || opTag,
+        entry_id: (meta && meta.entry_id) ?? null,
+        before: (meta && meta.before) ?? null,
+        after: (meta && meta.after) ?? null,
+        note: (meta && meta.note) ?? null,
+        ts: Date.now(),
+        timestamp: new Date().toISOString(),
+      };
+      return { ...prev, [roundIndex]: [...list, op] };
+    });
   }, [roundIndex]);
+
+  // Within-act position of an entry — used to record reorder before/after.
+  function actLocalIndex(tl, entryId) {
+    const e = tl.find((x) => x.entry_id === entryId);
+    if (!e) return -1;
+    const act = entryActOf(e);
+    return tl.filter((x) => entryActOf(x) === act).findIndex((x) => x.entry_id === entryId);
+  }
 
   function discardAllTweaks() {
     if (getPendingOps().length === 0) return;
@@ -594,6 +625,7 @@ export default function QuotesView() {
       `--mode=${cutFilter} --input="${handoffPath}" 2>&1`;
     const { ok: buildOk, result: buildResult, reason: buildReason } = await callBash(buildCmd);
     if (buildOk) {
+      await writeTweakLog();  // best-effort: persist override log alongside the export
       const head = typeof buildResult === "string" ? buildResult.slice(0, 800) : "Build succeeded.";
       alert(`Export complete (${cutFilter} cut, ${filtered.length} clips):\n\n${head}`);
       setSendStatus({ text: `Exported ${cutFilter} cut`, cls: "ok" });
@@ -623,6 +655,7 @@ export default function QuotesView() {
     const found = tl.find((x) => x.entry_id === entryId);
     if (!found) return;
     const actName = entryActOf(found);
+    const fromActIdx = actLocalIndex(tl, entryId);
     applyLocalEdit("move_" + (dir < 0 ? "up" : "down"),
       (tlMut) => {
         const i = tlMut.findIndex((x) => x.entry_id === entryId);
@@ -638,7 +671,13 @@ export default function QuotesView() {
         const [m] = tlMut.splice(i, 1);
         tlMut.splice(target, 0, m);
       },
-      `Moved ${entryId} ${dir < 0 ? "up" : "down"} within ${actName}`
+      `Moved ${entryId} ${dir < 0 ? "up" : "down"} within ${actName}`,
+      {
+        change_type: "reorder",
+        entry_id: entryId,
+        before: { act: actName, act_index: fromActIdx },
+        after: { act: actName, act_index: fromActIdx + dir },
+      }
     );
   }
 
@@ -670,7 +709,13 @@ export default function QuotesView() {
         if (idx < 0) return;
         tl.splice(idx, 1, ...subEntries);
       },
-      `Split ${entry.entry_id} into ${subEntries.length} sub-quotes (#${entry.source_quote_id}a..)`
+      `Split ${entry.entry_id} into ${subEntries.length} sub-quotes (#${entry.source_quote_id}a..)`,
+      {
+        change_type: "split",
+        entry_id: entry.entry_id,
+        before: { entry_id: entry.entry_id, source_quote_id: entry.source_quote_id },
+        after: { sub_ids: subEntries.map((s) => s.entry_id) },
+      }
     );
     setSplittingEntryId(null);
     setSplitMarkers([]);
@@ -717,14 +762,56 @@ export default function QuotesView() {
     return lines.join("\n");
   }
 
+  // Persist the round's override log to disk for the Editing Coach Agent.
+  // Writes handoffs/[slug]/tweak-log-v[N].json via callBash; no-ops gracefully
+  // outside Cowork. Called on Send and Export — the points where the session's
+  // tweaks leave the viewer. pendingOps is cumulative (never auto-cleared), so
+  // each write captures the full ordered history, reversal pairs included.
+  async function writeTweakLog() {
+    const ops = getPendingOps();
+    if (ops.length === 0 && !commentary.trim()) return { ok: false, reason: "nothing to log" };
+    if (!hasCallMcpTool()) return { ok: false, reason: "not in Cowork" };
+    const round = ROUNDS[roundIndex];
+    const payload = {
+      schema_version: 1,
+      project_slug: PROJECT_META.slug,
+      round: round.round_number,
+      round_version: round.version,
+      generated_at: new Date().toISOString(),
+      baseline: `round ${round.round_number} (${round.version})`,
+      commentary: commentary.trim(),
+      tweaks: ops.map((o) => ({
+        seq: o.seq,
+        entry_id: o.entry_id,
+        change_type: o.change_type,
+        before: o.before,
+        after: o.after,
+        timestamp: o.timestamp,
+        note: o.note,
+        description: o.description,
+      })),
+    };
+    const dir = `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}`;
+    const filepath = `${dir}/tweak-log-v${round.round_number}.json`;
+    const json = JSON.stringify(payload, null, 2);
+    const cmd = `mkdir -p "${dir}" && cat > "${filepath}" <<'__TWEAKLOG_EOF__'\n${json}\n__TWEAKLOG_EOF__`;
+    return await callBash(cmd);
+  }
+
   async function sendToAgent() {
     const text = composeSendMessage();
+    let copied = false;
     try {
       await navigator.clipboard.writeText(text);
-      setSendStatus({ text: "Copied ✓ — paste into chat", cls: "ok" });
-      setTimeout(() => setSendStatus({ text: "", cls: "" }), 3500);
+      copied = true;
     } catch {
       setSendStatus({ text: "Auto-copy blocked — copy manually", cls: "warn" });
+    }
+    const logResult = await writeTweakLog();
+    if (copied) {
+      const suffix = logResult && logResult.ok ? " · tweak log saved" : "";
+      setSendStatus({ text: "Copied ✓ — paste into chat" + suffix, cls: "ok" });
+      setTimeout(() => setSendStatus({ text: "", cls: "" }), 3500);
     }
   }
 
@@ -909,6 +996,7 @@ export default function QuotesView() {
               onClick={() => {
                 if (inTimeline) return;
                 const newId = String(q.num);
+                const addedPart = q.part === "Orphan" ? (PROJECT_META.act_labels[0] || "Act 1") : q.part;
                 applyLocalEdit("add_entry",
                   (tl) => {
                     tl.push({
@@ -917,13 +1005,19 @@ export default function QuotesView() {
                       source_quote_id: q.num,
                       type: "spoken",
                       speaker: q.speaker,
-                      part: q.part === "Orphan" ? (PROJECT_META.act_labels[0] || "Act 1") : q.part,
+                      part: addedPart,
                       runtime_recommendation: "probable-keep",
                       _editCuts: [],
                       notes: q.is_orphan ? "Pulled in from orphans by Jeff." : "Added by Jeff in viewer.",
                     });
                   },
-                  `Added #${q.num} (${q.speaker} — ${q.part}) to timeline`
+                  `Added #${q.num} (${q.speaker} — ${q.part}) to timeline`,
+                  {
+                    change_type: "add",
+                    entry_id: newId,
+                    before: null,
+                    after: { entry_id: newId, source_quote_id: q.num, part: addedPart, from_orphan: !!q.is_orphan },
+                  }
                 );
                 setView("timeline");
               }}
@@ -1030,6 +1124,9 @@ export default function QuotesView() {
           e.preventDefault();
           if (!dragId || dragId === entry.entry_id) { setDragId(null); return; }
           const draggedId = dragId;
+          const tlNow = getTimeline();
+          const fromActIdx = actLocalIndex(tlNow, draggedId);
+          const toActIdx = actLocalIndex(tlNow, entry.entry_id);
           applyLocalEdit("reorder",
             (tl) => {
               const fromIdx = tl.findIndex((x) => x.entry_id === draggedId);
@@ -1040,7 +1137,13 @@ export default function QuotesView() {
               const newToIdx = tl.findIndex((x) => x.entry_id === entry.entry_id);
               tl.splice(newToIdx, 0, m);
             },
-            `Reordered: moved ${draggedId} above ${entry.entry_id}`
+            `Reordered: moved ${draggedId} above ${entry.entry_id}`,
+            {
+              change_type: "reorder",
+              entry_id: draggedId,
+              before: { act: entryActOf(entry), act_index: fromActIdx },
+              after: { act: entryActOf(entry), act_index: toActIdx, above: entry.entry_id },
+            }
           );
           setDragId(null);
         }}
@@ -1090,12 +1193,19 @@ export default function QuotesView() {
                     .filter((a) => a !== entryActOf(entry) && a !== "Orphan")
                     .map((a) => (
                       <button key={a} onClick={() => {
+                        const prevAct = entryActOf(entry);
                         applyLocalEdit("reassign_act",
                           (tl) => {
                             const e2 = tl.find((x) => x.entry_id === entry.entry_id);
                             if (e2) e2.part = a;
                           },
-                          `${entry.entry_id}: act → ${a}`
+                          `${entry.entry_id}: act → ${a}`,
+                          {
+                            change_type: "reassign_act",
+                            entry_id: entry.entry_id,
+                            before: { part: prevAct },
+                            after: { part: a },
+                          }
                         );
                         setReassigningEntryId(null);
                       }}>{a}</button>
@@ -1106,13 +1216,19 @@ export default function QuotesView() {
             <button
               className={`rec-badge ${rec}`}
               onClick={() => {
-                const next = rec === "must-keep" ? "probable-keep" : "must-keep";
+                const next = REC_CYCLE[rec] || "must-keep";
                 applyLocalEdit("set_rec",
                   (tl) => {
                     const e2 = tl.find((x) => x.entry_id === entry.entry_id);
                     if (e2) e2.runtime_recommendation = next;
                   },
-                  `${entry.entry_id} (#${entry.source_quote_id}): ${rec} → ${next}`
+                  `${entry.entry_id} (#${entry.source_quote_id}): ${rec} → ${next}`,
+                  {
+                    change_type: "status_flip",
+                    entry_id: entry.entry_id,
+                    before: { runtime_recommendation: rec },
+                    after: { runtime_recommendation: next },
+                  }
                 );
               }}
               title="Click to toggle between must-keep and probable-keep"
@@ -1162,6 +1278,7 @@ export default function QuotesView() {
               setEditCuts={setEditCuts}
               onSave={() => {
                 const cutsCopy = [...editCuts];
+                const prevCuts = (entry._editCuts || []).map((r) => [...r]);
                 applyLocalEdit("trim",
                   (tl) => {
                     const e2 = tl.find((x) => x.entry_id === entry.entry_id);
@@ -1169,7 +1286,13 @@ export default function QuotesView() {
                   },
                   cutsCopy.length === 0
                     ? `Reset trim on ${entry.entry_id}`
-                    : `Trimmed ${entry.entry_id} (${cutsCopy.length} cut region${cutsCopy.length === 1 ? "" : "s"})`
+                    : `Trimmed ${entry.entry_id} (${cutsCopy.length} cut region${cutsCopy.length === 1 ? "" : "s"})`,
+                  {
+                    change_type: "trim",
+                    entry_id: entry.entry_id,
+                    before: { edit_cuts: prevCuts },
+                    after: { edit_cuts: cutsCopy },
+                  }
                 );
                 setEditingEntryId(null);
                 setEditCuts([]);
@@ -1205,7 +1328,18 @@ export default function QuotesView() {
                     const i = tl.findIndex((x) => x.entry_id === entry.entry_id);
                     if (i >= 0) tl.splice(i, 1);
                   },
-                  `Dropped ${entry.entry_id} (#${entry.source_quote_id})`
+                  `Dropped ${entry.entry_id} (#${entry.source_quote_id})`,
+                  {
+                    change_type: "drop",
+                    entry_id: entry.entry_id,
+                    before: {
+                      entry_id: entry.entry_id,
+                      source_quote_id: entry.source_quote_id,
+                      part: entryActOf(entry),
+                      runtime_recommendation: entry.runtime_recommendation,
+                    },
+                    after: null,
+                  }
                 );
               }}
             >Drop entry</button>
