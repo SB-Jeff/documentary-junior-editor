@@ -85,6 +85,12 @@ during the rough cut requires a SKILL-edit.md change — that file is owned by t
 Editing Coach. Until that lands, Jeff sets tight-candidate manually (which is exactly
 the clean workspace state this item asked for). Flagged in skill-review-notes; NOT
 editing SKILL-edit.md unilaterally.
+❓ OPEN QUESTION (Jeff, 2026-05-21): suspects three tiers may be unnecessary — that
+two (must-keep / probable-keep) might suffice. Will try the three-tier version in a
+real session. **For the Editing Coach to evaluate after real use:** does the
+tight-candidate tier measurably reduce the must-keep-as-workspace pattern (promote-
+then-demote reversals in the tweak log)? If not, revert to two-tier — it's a clean
+one-commit backout (2-state badge cycle + `inTightCut` = must-keep only).
 
 ### Tight_priority ranking inside probable-keeps (skill-side + viewer-side)
 **Source project:** 2026 Nanos Boston brand-video (May 2026).
