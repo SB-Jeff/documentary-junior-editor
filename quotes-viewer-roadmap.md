@@ -168,7 +168,11 @@ sub-cut (Rough or Tight, whichever is currently selected). Default: off
 viewer.
 **Priority:** P1 high-friction — meaningfully improves the "find unused
 material" workflow during reduction passes.
-**Status:** Filed
+**Status:** Shipped — added a "Hide quotes in current cut" toggle to the Library
+toolbar. Hides any source quote whose `num` appears as a `source_quote_id` on a
+timeline entry in the active round, respecting the Rough/Tight cut (Tight uses the
+shared `inTightCut` predicate). Default off; persisted per project in localStorage.
+Verified in a browser build (8 in-cut quotes hidden, choice survives reload).
 
 ### Quote Library — re-tag act assignment
 **Source project:** Surfaced during v5.5 work session (2026-05-21). Per Jeff:

@@ -606,6 +606,28 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .act-title { font-size: 18px; font-weight: 600; margin: 0; }
 .act-sub { color: var(--text-muted); font-size: 13px; }
 
+/* === Library toolbar (hide-in-cut toggle + search) === */
+.lib-toolbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+}
+.lib-hide-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none;
+}
+.lib-hide-toggle input { cursor: pointer; }
+.lib-hide-count {
+  font-size: 10px; font-weight: 600; color: var(--must); background: var(--must-soft);
+  border-radius: 999px; padding: 1px 8px; margin-left: 2px;
+}
+.lib-search {
+  flex: 1; min-width: 200px; max-width: 420px; font: inherit; font-size: 13px;
+  border: 1px solid var(--border-strong); border-radius: 8px; padding: 7px 12px;
+  background: var(--surface); color: var(--text);
+}
+.lib-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.lib-search-meta { font-size: 11px; color: var(--text-subtle); }
+
 /* === Library cards === */
 .lib-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: 8px;

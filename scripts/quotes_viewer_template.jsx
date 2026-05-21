@@ -519,6 +519,18 @@ export default function QuotesView() {
   const [speakerFilter, setSpeakerFilter] = useState("all");
   const [actFilter, setActFilter] = useState("all");
   const [reviewScope, setReviewScope] = useState("All");
+  // Quote Library: "Hide quotes already in the current cut" — persisted per project.
+  const [hideInCut, setHideInCut] = useState(() => {
+    try { return localStorage.getItem("odv-hideInCut-" + PROJECT_META.slug) === "1"; }
+    catch (_) { return false; }
+  });
+  function toggleHideInCut() {
+    setHideInCut((v) => {
+      const next = !v;
+      try { localStorage.setItem("odv-hideInCut-" + PROJECT_META.slug, next ? "1" : "0"); } catch (_) {}
+      return next;
+    });
+  }
 
   // === Per-round working timeline (deep-clone of canonical at first switch) ===
   const [workingByRound, setWorkingByRound] = useState(() => {
@@ -958,6 +970,22 @@ export default function QuotesView() {
     if (actFilter !== "all" && q.part !== actFilter) return false;
     return true;
   }
+  // Single source of truth for "is this entry in the Tight cut" (Item 7 widens
+  // this to include tight-candidate). Reused by the Library hide-in-cut filter.
+  function inTightCut(e) {
+    return e.runtime_recommendation === "must-keep";
+  }
+  // source_quote_ids present in the current cut (active round, respecting
+  // Rough/Tight). Used by the Library "Hide quotes in current cut" filter.
+  function sourceIdsInCut() {
+    const ids = new Set();
+    for (const e of getTimeline()) {
+      if (e.source_quote_id == null) continue;
+      if (cutFilter === "tight" && !inTightCut(e)) continue;
+      ids.add(e.source_quote_id);
+    }
+    return ids;
+  }
   function passesTimelineFilters(e) {
     if (speakerFilter !== "all") {
       const src = findSourceQuote(e.source_quote_id);
@@ -1096,8 +1124,11 @@ export default function QuotesView() {
 
   const renderLibrary = () => {
     const realActs = PROJECT_META.act_labels.filter((a) => a !== "Orphan");
-    const inScope = SOURCE_QUOTES.filter((q) => !q.is_orphan && passesSourceFilters(q));
-    const orphans = SOURCE_QUOTES.filter((q) => q.is_orphan && passesSourceFilters(q));
+    const inCutIds = hideInCut ? sourceIdsInCut() : null;
+    const passLib = (q) => passesSourceFilters(q) && (!inCutIds || !inCutIds.has(q.num));
+    const inScope = SOURCE_QUOTES.filter((q) => !q.is_orphan && passLib(q));
+    const orphans = SOURCE_QUOTES.filter((q) => q.is_orphan && passLib(q));
+    const hiddenCount = inCutIds ? inCutIds.size : 0;
     const acts = realActs.map((act) => ({
       name: act,
       list: inScope.filter((q) => q.part === act),
@@ -1183,6 +1214,13 @@ export default function QuotesView() {
 
     return (
       <div className="library-view">
+        <div className="lib-toolbar">
+          <label className="lib-hide-toggle" title="Hide source quotes already pulled into the current cut">
+            <input type="checkbox" checked={hideInCut} onChange={toggleHideInCut} />
+            Hide quotes in current cut
+            {hideInCut && hiddenCount > 0 && <span className="lib-hide-count">{hiddenCount} hidden</span>}
+          </label>
+        </div>
         {acts.map((a) => (
           <section key={a.name} className="act-section">
             <div className="act-header">
