@@ -513,11 +513,16 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
   border-bottom: 1px solid var(--border);
 }
 .hdr-row2-inner {
-  display: flex; align-items: center; gap: 14px;
+  display: flex; flex-direction: column; gap: 8px;
   padding: 10px 20px;
-  flex-wrap: wrap;
   max-width: 1100px;
   margin: 0 auto;
+}
+/* Each filter line is a horizontal row; the Cut block (margin-left:auto)
+   right-aligns on the Act line. Speaker sits on its own line beneath. */
+.hdr-filter-line {
+  display: flex; align-items: center; gap: 14px;
+  flex-wrap: wrap;
 }
 .hdr-title { font-size: 15px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .round-select {

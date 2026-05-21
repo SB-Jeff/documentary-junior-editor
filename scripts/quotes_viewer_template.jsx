@@ -1146,68 +1146,72 @@ export default function QuotesView() {
       {view !== "review" && (
         <div className="hdr-row2">
          <div className="hdr-row2-inner">
-          {/* Act filter */}
-          <div className="filter-group">
-            <span className="group-label">Act</span>
-            <button
-              className={`chip${actFilter === "all" ? " active" : ""}`}
-              onClick={() => setActFilter("all")}
-            >All</button>
-            {PROJECT_META.act_labels.filter((a) => a !== "Orphan").map((label, i) => (
+          {/* Line 1: Act filter + Cut block */}
+          <div className="hdr-filter-line">
+            <div className="filter-group">
+              <span className="group-label">Act</span>
               <button
-                key={label}
-                className={`chip${actFilter === label ? " active" : ""}`}
-                onClick={() => setActFilter(label)}
-                title={label}
-              >
-                Act {i + 1}
-              </button>
-            ))}
-          </div>
-          {/* Speaker filter */}
-          <div className="filter-group">
-            <span className="group-label">Speaker</span>
-            <button
-              className={`chip${speakerFilter === "all" ? " active" : ""}`}
-              onClick={() => setSpeakerFilter("all")}
-            >All</button>
-            {(PROJECT_META.speakers || []).map((s) => (
-              <button
-                key={s.slug}
-                className={`chip${speakerFilter === s.slug ? " active" : ""}`}
-                onClick={() => setSpeakerFilter(s.slug)}
-              >
-                {s.name}
-              </button>
-            ))}
-          </div>
-          {/* Cut block (Edit view only) */}
-          {view === "timeline" && (
-            <div className="cut-block">
-              <span className="group-label">Cut</span>
-              <div className="cut-toggle">
+                className={`chip${actFilter === "all" ? " active" : ""}`}
+                onClick={() => setActFilter("all")}
+              >All</button>
+              {PROJECT_META.act_labels.filter((a) => a !== "Orphan").map((label, i) => (
                 <button
-                  className={cutFilter === "rough" ? "active rough" : ""}
-                  onClick={() => setCutFilter("rough")}
-                >Rough</button>
-                <button
-                  className={cutFilter === "tight" ? "active tight" : ""}
-                  onClick={() => setCutFilter("tight")}
-                >Tight</button>
-              </div>
-              <span className={`cut-metric cut-metric-${cutFilter}`}>
-                <span className="val">{activeEntries}</span> entries · <span className="val">{fmtSec(activeSec)}</span>
-              </span>
-              {hasTightPriority && (
-                <button
-                  className={`tp-sort-toggle${tpSort ? " active" : ""}`}
-                  onClick={() => setTpSort((v) => !v)}
-                  title="Sort probable-keeps by the Edit Agent's tight-priority within each act (view only — does not change playback order)"
-                >↑ priority sort</button>
-              )}
-              <button className="cut-export" onClick={exportToFCPXML}>Export XML</button>
+                  key={label}
+                  className={`chip${actFilter === label ? " active" : ""}`}
+                  onClick={() => setActFilter(label)}
+                  title={label}
+                >
+                  Act {i + 1}
+                </button>
+              ))}
             </div>
-          )}
+            {/* Cut block (Edit view only) — shares the Act line, right-aligned */}
+            {view === "timeline" && (
+              <div className="cut-block">
+                <span className="group-label">Cut</span>
+                <div className="cut-toggle">
+                  <button
+                    className={cutFilter === "rough" ? "active rough" : ""}
+                    onClick={() => setCutFilter("rough")}
+                  >Rough</button>
+                  <button
+                    className={cutFilter === "tight" ? "active tight" : ""}
+                    onClick={() => setCutFilter("tight")}
+                  >Tight</button>
+                </div>
+                <span className={`cut-metric cut-metric-${cutFilter}`}>
+                  <span className="val">{activeEntries}</span> entries · <span className="val">{fmtSec(activeSec)}</span>
+                </span>
+                {hasTightPriority && (
+                  <button
+                    className={`tp-sort-toggle${tpSort ? " active" : ""}`}
+                    onClick={() => setTpSort((v) => !v)}
+                    title="Sort probable-keeps by the Edit Agent's tight-priority within each act (view only — does not change playback order)"
+                  >↑ priority sort</button>
+                )}
+                <button className="cut-export" onClick={exportToFCPXML}>Export XML</button>
+              </div>
+            )}
+          </div>
+          {/* Line 2: Speaker filter, beneath Act */}
+          <div className="hdr-filter-line">
+            <div className="filter-group">
+              <span className="group-label">Speaker</span>
+              <button
+                className={`chip${speakerFilter === "all" ? " active" : ""}`}
+                onClick={() => setSpeakerFilter("all")}
+              >All</button>
+              {(PROJECT_META.speakers || []).map((s) => (
+                <button
+                  key={s.slug}
+                  className={`chip${speakerFilter === s.slug ? " active" : ""}`}
+                  onClick={() => setSpeakerFilter(s.slug)}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          </div>
          </div>
         </div>
       )}
