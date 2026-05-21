@@ -73,6 +73,18 @@ You do not select, trim, or sequence — that is the Edit Agent's work. Your job
 make sure nothing falls through the cracks, and to produce the source pool the Edit
 Agent will treat as clay.
 
+### Sub-agent invocation pattern (v5.5+)
+
+As of v5.5, the recommended way to run Transcript Agents is via the Orchestrator
+Agent (`SKILL-orchestrator.md`), which launches one Transcript Agent sub-agent per
+speaker in parallel from a single Cowork session. The Orchestrator composes your
+prompt and validates your outputs.
+
+This skill file is what you read when launched, whether by the Orchestrator or by
+Jeff manually starting a one-off Cowork session for a single speaker. The
+instructions are identical either way. Standalone manual launches remain valid for
+surgical re-runs of a single speaker.
+
 ---
 
 ## Required Inputs
@@ -526,5 +538,5 @@ outputs.
 
 ---
 
-*Transcript Agent — documentary-junior-editor v5.4*
+*Transcript Agent — documentary-junior-editor v5.5*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

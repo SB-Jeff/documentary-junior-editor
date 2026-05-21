@@ -140,16 +140,50 @@ stale-state check:
 
 ---
 
-## Phase 0: Extract `.fcpxml` Files from `.fcpxmld` Packages
+## Phase 0: Extract `.fcpxml` Files from `.fcpxmld` Packages (REQUIRED)
 
-Final Cut Pro exports interview projects as `.fcpxmld` packages (directories).
-The `XML/exports/` folder will typically contain these packages rather than
-bare `.fcpxml` files. Before doing anything else, check whether the folder
-contains `.fcpxmld` packages and extract them.
+**This phase is required before Phase 1. Do not skip.** `build_fcpxml.py`'s
+`find_speaker_fcpxml()` matches only `*.fcpxml` files. If source files are
+still `.fcpxmld` packages when Phase 1 runs, the script silently finds
+nothing and downstream phases fail in confusing ways.
 
-Run:
+### Source location auto-detection
+
+Final Cut Pro exports interview projects as `.fcpxmld` packages
+(directories). The source files may live in one of two locations:
+
+- `XML/exports/` — the canonical path per `SKILL.md` folder structure
+- `xml/outputs/` — observed on the 2026 Nanos Boston project (the Params
+  Agent's handoff Notes section will flag which path was used)
+
+Auto-detect which path contains source files by checking both. Use
+whichever contains `.fcpxmld` packages or bare `.fcpxml` files. If both
+contain files, prefer `XML/exports/` and warn Jeff about the duplication.
+
+### Precondition check (run before extraction)
+
+Before calling `extract_fcpxml.py`, inspect the source path:
+
+1. List all `.fcpxmld` packages and all `.fcpxml` files in the path
+2. For each `.fcpxmld` package, check whether a matching `.fcpxml` file
+   exists alongside it (same basename, sibling location)
+3. If `.fcpxmld` packages exist with NO matching `.fcpxml` files, this
+   phase is required — proceed to extraction
+4. If `.fcpxmld` packages exist AND matching `.fcpxml` files also exist,
+   extraction has already run — skip to Phase 1
+5. If only `.fcpxml` files exist (no packages), extraction is not needed
+   — skip to Phase 1
+6. If no source files of either type exist at the detected path, this is
+   a hard precondition failure — stop the agent and tell Jeff to either
+   (a) confirm the source path is correct, or (b) export the source
+   FCPXMLs from Final Cut Pro before continuing
+
+### Extraction
+
+Run with the auto-detected path:
+
 ```
-python3 scripts/extract_fcpxml.py XML/exports/
+python3 scripts/extract_fcpxml.py [detected-path]/
 ```
 
 This script does the following for each `.fcpxmld` package:
@@ -164,6 +198,16 @@ script skips them automatically.
 
 **Important:** Do not attempt to parse `.fcpxmld` packages directly — they
 are directories, not XML files. Always extract first.
+
+### Why this phase is required
+
+This phase was upgraded from "suggested" to "required" in v5.4.1 after the
+2026 Nanos Boston project surfaced the failure mode: the Params Agent
+parses `Info.fcpxml` directly from inside each `.fcpxmld` package (its
+work is unaffected), but the FCPXML Agent then runs `build_fcpxml.py`
+which can't find any source files because they're still packages. Without
+the precondition check above, the failure is silent — files appear to
+exist, but the find function returns empty.
 
 ---
 
@@ -587,7 +631,7 @@ If Jeff approves the project, launch the Skill Review Agent:
 
 ---
 
-*FCPXML Agent — documentary-junior-editor v5.4*
+*FCPXML Agent — documentary-junior-editor v5.4.1*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *FCPXML generation delegated to `scripts/build_fcpxml.py`. Phase 3 code
 follow-ups currently OPEN (highest priority next code work): (1) v5 schema

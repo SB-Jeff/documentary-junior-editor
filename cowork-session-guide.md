@@ -1,11 +1,14 @@
 # Documentary Junior Editor — Cowork Session Guide
-### Version 5.2 | May 2026
+### Version 5.5 | May 2026
 
 ## Overview
 
-This guide walks through running the full documentary editing pipeline in Cowork sessions. Each agent runs as a separate Cowork session. Jeff drives every creative decision — the agents do the heavy lifting between decision points.
+This guide walks through running the full documentary editing pipeline in Cowork sessions. Each agent runs as a separate Cowork session — with one exception: the Orchestrator Agent (Step 2, new in v5.5) launches Transcript Agents and FCPXML Params Agent as parallel sub-agents from within a single Cowork session, collapsing what used to be N+1 sessions into 1. Jeff drives every creative decision — the agents do the heavy lifting between decision points.
 
-The pipeline has eight agents. Each agent declares its required model in its SKILL frontmatter. Every handoff document closes with a "Next agent + model + launch prompt" footer so transitions between sessions are paste-and-pick rather than reconstructed from memory.
+The pipeline has ten agents (v5.5):
+- **Step 0** Transcription · **Step 1** Creative Context · **Step 2** Orchestrator (launches FCPXML Params + Transcript ×N as sub-agents) · **Step 3** Synthesis · **Step 4** Edit ↔ FCPXML loop (multi-round, optionally with Editing Coach between rounds) · **Step 5a** Editing Coach (at-close) · **Step 5b** Skill Review
+
+Each agent declares its required model in its SKILL frontmatter. Every handoff document closes with a "Next agent + model + launch prompt" footer so transitions between sessions are paste-and-pick rather than reconstructed from memory.
 
 ---
 
@@ -205,48 +208,40 @@ original video file stays in place.
 
 ---
 
-### Step 2: FCPXML Params Agent + Transcript Agents (parallel fan-out)
+### Step 2: Orchestrator Agent (v5.5+)
 
-These two run in parallel after the Creative Context Agent completes. They have no dependency on each other; only on the Creative Context outputs.
-
-#### Step 2a: FCPXML Params Agent
-
-**Skill file:** `SKILL-fcpxml-params.md`
+**Skill file:** `SKILL-orchestrator.md`
 **Model:** Sonnet 4.6
-**Session type:** Cowork — autonomous
+**Session type:** Cowork — single coordination session that launches sub-agents
 
-**What's new in v5.0:** Per-interview `clip_type` detection — multicam vs. single-clip. The output `fcpxml-params-v[N].md` carries a `## Clip Types` table per interview, with the existing format/ID fields adjusted per clip type.
+**What's new in v5.5:** This step replaces the prior pattern of launching N+1 separate Cowork sessions (one Transcript Agent per speaker plus one FCPXML Params Agent). A single Orchestrator session launches all of those as parallel sub-agents, waits for completion, validates outputs exist on disk, and hands off to Synthesis. For a 10-speaker project, this collapses 11 manual session launches into 1.
 
 **Starter prompt — copy and paste into a new Cowork session (set model to Sonnet 4.6):**
 
-> You are the FCPXML Params Agent. Read `documentary-junior-editor/SKILL-fcpxml-params.md` and follow it exactly. The project folder is mounted. Read the sample narrative XML and per-interview captioned XMLs from `XML/exports/`. For each interview, detect whether it's multicam or single-clip and extract the appropriate FCPXML parameters (media reference IDs, angle IDs for multicam, asset ref ID + format for single-clip). Save `fcpxml-params-v1.md` (or higher) to `handoffs/`. Update `handoffs/pipeline-state.json`.
+> Read `documentary-junior-editor/SKILL-orchestrator.md` and run the Orchestrator Agent for this project. Creative Context has emitted approved `act-structure-v[N].md` and `creative-brief-summary-v[N].md` at version [N]. Discover all speaker transcripts in `transcripts/text/`, plan the sub-agent fan-out (Transcript Agent per speaker + FCPXML Params Agent), surface the plan for my confirmation, then launch the sub-agents in parallel. Validate all expected output files exist on disk before handing off to Synthesis. Update `handoffs/[project-slug]/pipeline-state.json` with both the orchestrator entry and each sub-agent's entry.
 
-#### Step 2b: Transcript Agent (one session per interview subject)
+*(For multi-project SSDs, replace `handoffs/` with `handoffs/[project-slug]/` throughout. For single-project SSDs, just `handoffs/`.)*
 
-**Skill file:** `SKILL-transcript.md`
-**Model:** Sonnet 4.6
-**Session type:** Cowork — runs per speaker, can run in parallel
+**How it runs:** The Orchestrator first reads `pipeline-state.json` and the Creative Context handoff version. It discovers speakers from `transcripts/text/`, plans which sub-agents need to launch (skipping any that are already current), then surfaces the plan to you for one-click confirmation before any sub-agents fire. After your approval, it launches all sub-agents in parallel via a single Task-tool message. Each sub-agent runs independently with its own context window. The Orchestrator waits for all returns, then independently verifies the expected output files exist on disk (don't trust sub-agent self-reports alone). When validation passes, it hands off to Synthesis.
 
-**What's new in v5.0:** Segment decomposition at tag time. Each tagged quote includes a `segments[]` array with verbatim text and per-segment timecodes — the source pool the Edit Agent's timeline entries reference.
+**Outputs saved to `handoffs/[project-slug]/` (created by sub-agents, validated by Orchestrator):**
+- Per speaker (×N speakers, 4 files each): `[speaker-slug]-tagged-quotes-v[N].json`, `[speaker-slug]-orphans-v[N].md`, `[speaker-slug]-discards-v[N].md`, `[speaker-slug]-summary-v[N].md`
+- One project-wide: `fcpxml-params-v[N].md`
+- Total expected: 4N + 1 files
 
-**Inputs:**
-- `handoffs/act-structure-v[N].md` (latest version from Step 1)
-- `handoffs/creative-brief-summary-v[N].md` (latest version from Step 1)
-- One transcript from `transcripts/text/`
+**Done when:** Orchestrator reports all sub-agents completed AND validation passes (file count matches, all `pipeline-state.json` entries written). Move to Step 3.
 
-**Starter prompt — copy and paste into a new Cowork session (one per speaker, set model to Sonnet 4.6):**
+#### Re-run patterns
 
-> You are the Transcript Agent. Read `documentary-junior-editor/SKILL-transcript.md` and follow it exactly. Your assigned interview is `transcripts/text/[SPEAKER NAME].txt`. Read the latest `handoffs/act-structure-v[N].md` and `handoffs/creative-brief-summary-v[N].md` for context, plus reference examples in `documentary-junior-editor/reference-examples/`. Catalog every usable quote from the assigned transcript — tagged by act label, verbatim, with rationale, and decompose each into `segments[]` per the v5.0 schema. Save all four required output files (versioned `-v[N]`) to `handoffs/`: tagged quotes JSON with segments, orphans, discards, and content summary. Verify all four files exist on disk before reporting completion. Update `handoffs/pipeline-state.json`.
+The Orchestrator is designed to be re-invoked for targeted scope without launching sub-agents you don't need:
 
-*(Replace `[SPEAKER NAME]` with the actual speaker name. For multi-project SSDs, replace `handoffs/` with `handoffs/[project-slug]/` throughout.)*
+- **Creative Context updated to v2 → re-run all Transcript Agents:** Just relaunch the Orchestrator. It detects the version bump and re-runs all speakers at the new version. FCPXML Params is unaffected and stays at v1.
+- **Single speaker needs re-tag:** Add scope to the prompt — "re-run only the Heather and Kevin Transcript Agents at the current Creative Context version."
+- **FCPXML Params re-extraction:** Rare. Explicitly request — "re-run only the FCPXML Params Agent."
 
-**Outputs saved to `handoffs/` (four files per speaker):**
-- `[speaker-slug]-tagged-quotes-v[N].json` (with segments[])
-- `[speaker-slug]-orphans-v[N].md`
-- `[speaker-slug]-discards-v[N].md`
-- `[speaker-slug]-summary-v[N].md`
+#### Falling back to manual standalone sessions
 
-**Done when:** All four files per speaker are verified on disk for every speaker. Wait for ALL speakers' Transcript Agents AND the FCPXML Params Agent to complete before moving to Step 3.
+The standalone session pattern (one Cowork session per Transcript Agent, one for FCPXML Params) still works — both skill files remain valid for direct invocation. Use it for surgical one-off work where the Orchestrator's plan-and-confirm overhead is more than the work itself. For first runs and bulk re-runs, the Orchestrator is the default.
 
 ---
 
@@ -335,7 +330,23 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 
 ---
 
-### Step 5: Skill Review Agent (post-project)
+### Step 5a: Editing Coach Agent (at-close, v5.4+)
+
+**Skill file:** `SKILL-editing-coach.md`
+**Model:** Opus 4.7
+**Session type:** Cowork — conversational
+
+**What it does:** Reads the Edit Agent's session feedback (the quote viewer's override log + Jeff's reasoning), identifies patterns where the Edit Agent's defaults diverged from Jeff's judgment, and turns those patterns into targeted updates to `SKILL-edit.md` and quote-viewer roadmap entries. Writes the Editing and Quote Viewer sections of the project's `lessons-learned.md`. Hands off to Skill Review via `skill-review-notes.md`.
+
+**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.7):**
+
+> Read `documentary-junior-editor/SKILL-editing-coach.md` and run the Editing Coach Agent for this project in **at-close mode**. Jeff has approved the final FCPXML cut. Read the saved viewer state, the tweak log (or fall back to my memory if not persisted), and the trimmed-quotes JSON variants. Walk me through the override patterns one cluster at a time, capture my reasoning per cluster, propose SKILL-edit.md diffs for my approval, file viewer roadmap entries, and write the Editing + Quote Viewer sections of `handoffs/[project-slug]/lessons-learned.md`. Leave a handoff note at `handoffs/[project-slug]/skill-review-notes.md` for the Skill Review Agent.
+
+Coach can also run **between-rounds** during Step 4 — invoke it after any Edit Agent round (typically between rough and tight) to course-correct the Edit Agent before the next pass. Use the same skill file, but tell it "between-rounds mode" in the prompt; output is a briefing for the next Edit Agent invocation rather than the full at-close ceremony.
+
+---
+
+### Step 5b: Skill Review Agent (post-project, after Coach)
 
 **Skill file:** `SKILL-review.md`
 **Model:** Opus 4.7
@@ -357,13 +368,14 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 |------|-------|-------|----------------|------------|
 | 0 | Transcription | Sonnet 4.6 | Light (speaker confirmation) | .txt transcripts + summary |
 | 1 | Creative Context | Opus 4.7 | Yes | act-structure-v[N].md (with Phase 0 Discovery) |
-| 2a | FCPXML Params | Sonnet 4.6 | No | fcpxml-params-v[N].md (with clip_type) |
-| 2b | Transcript (×N speakers) | Sonnet 4.6 | Light | per-speaker tagged quotes (with segments) |
+| 2 | Orchestrator | Sonnet 4.6 | Light (plan confirmation only) | launches FCPXML Params + Transcript Agent (×N) as parallel sub-agents; validates 4N+1 output files |
 | 3 | Synthesis | Sonnet 4.6 | Light | merged tagged-quotes-v[N].json |
 | 4a | Edit (round N) | Opus 4.7 | Yes — heavy (3 phases, live artifact) | trimmed-quotes-v[N].json + edit-handoff-v[N].md |
+| ↻ | (optional) Editing Coach between rounds | Opus 4.7 | Yes (conversational) | coach-briefing-v[N].md |
 | 4b | FCPXML (round N) | Sonnet 4.6 | No | rough_cut_v[N].fcpxml |
 | ↺ | (Jeff watches; loops 4a → 4b until approved) |  |  |  |
-| 5 | Skill Review | Opus 4.7 | Light | updated reference-examples + SKILL files |
+| 5a | Editing Coach (at-close) | Opus 4.7 | Yes (conversational) | Editing + Quote Viewer sections of lessons-learned.md; SKILL-edit.md diffs |
+| 5b | Skill Review | Opus 4.7 | Light | System + Forward-Looking + Reference Value sections of lessons-learned.md; reference-examples/[project]/ |
 
 `pipeline-state.json` in `handoffs/` tracks current versions and dependency edges throughout. Stale-state warnings surface in agent launches.
 

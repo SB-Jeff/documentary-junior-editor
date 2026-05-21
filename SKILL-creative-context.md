@@ -551,43 +551,50 @@ the schema in the v5.0 conventions doc.
 
 ## Next step
 
-After this agent completes, the pipeline fans out into two parallel branches:
+After this agent completes, hand off to the **Orchestrator Agent** (new in v5.5).
+The Orchestrator replaces what used to be N+1 separate Cowork sessions (one
+Transcript Agent per speaker plus one FCPXML Params Agent) with a single
+coordination session that launches all of those as parallel sub-agents, waits
+for completion, validates outputs, and hands off to Synthesis.
 
-1. **Per-speaker Transcript Agents** — one Cowork session per interview, each running
-   `SKILL-transcript.md` against one transcript file. They consume the act structure
-   and creative brief, decompose quotes into segments, and emit
-   `[speaker-slug]-tagged-quotes-v[N].json` and three companion files per speaker.
-2. **FCPXML Params Agent** — one Cowork session, running `SKILL-fcpxml-params.md`
-   against the source FCPXMLs in `XML/exports/`. It detects per-interview clip_type
-   (multicam vs. single_clip), extracts technical parameters, and emits
-   `fcpxml-params-v[N].md`. This branch is independent of the Transcript Agents.
+You do NOT launch Transcript Agents or FCPXML Params Agent directly from
+Creative Context anymore. That's the Orchestrator's job.
 
-### Launch prompts (copy into new Cowork sessions, set the model first)
+### Launch prompt for Orchestrator (copy into a new Cowork session, set model to sonnet-4.6)
 
-**For each interview, launch one Transcript Agent (sonnet-4.6):**
+> Read `documentary-junior-editor/SKILL-orchestrator.md` and run the Orchestrator
+> Agent for this project. Creative Context has emitted approved
+> `act-structure-v[N].md` and `creative-brief-summary-v[N].md` at version [N].
+> Discover all speaker transcripts in `transcripts/text/`, plan the sub-agent
+> fan-out (Transcript Agent per speaker + FCPXML Params Agent), surface the plan
+> for my confirmation, then launch the sub-agents in parallel. Validate all
+> expected output files exist on disk before handing off to Synthesis. Update
+> `handoffs/[project-slug]/pipeline-state.json` with both the orchestrator entry
+> and each sub-agent's entry.
 
-> Read `documentary-junior-editor/SKILL-transcript.md` and run the Transcript Agent
-> for [Speaker Name]. Read `handoffs/act-structure-v[N].md` and
-> `handoffs/creative-brief-summary-v[N].md` for context, then process
-> `transcripts/text/[Speaker Name].txt` and emit
-> `handoffs/[speaker-slug]-tagged-quotes-v1.json` (with segments[] decomposition),
-> `handoffs/[speaker-slug]-orphans-v1.md`,
-> `handoffs/[speaker-slug]-discards-v1.md`, and
-> `handoffs/[speaker-slug]-summary-v1.md`. Update
-> `handoffs/pipeline-state.json` on emit.
+*(For multi-project SSDs, replace `handoffs/` with `handoffs/[project-slug]/` in
+the Orchestrator's reading and in the prompts it composes for sub-agents.)*
 
-**For the FCPXML Params Agent (sonnet-4.6):**
+### What if I want to run Transcript or FCPXML Params Agents manually?
 
-> Read `documentary-junior-editor/SKILL-fcpxml-params.md` and run the FCPXML
-> Params Agent for this project. Inspect each interview's source FCPXML in
-> `XML/exports/`, detect clip_type per interview (multicam vs. single_clip), and
-> emit `handoffs/fcpxml-params-v1.md`. Update `handoffs/pipeline-state.json` on
-> emit.
+You still can — both skill files (`SKILL-transcript.md`, `SKILL-fcpxml-params.md`)
+remain valid for standalone Cowork sessions. The Orchestrator is the recommended
+default for first runs and bulk re-runs. Manual one-off sessions are appropriate
+for surgical work (e.g., re-running a single Transcript Agent on a specific
+speaker after fixing a transcript error) where launching the Orchestrator's
+plan-and-confirm flow would be more overhead than the targeted work.
 
-When all per-speaker Transcript Agents have emitted, launch the Synthesis Agent
-(sonnet-4.6) per `SKILL-synthesis.md`.
+For targeted re-runs through the Orchestrator (still single-session, no manual
+launches), just include the scope in the launch prompt:
+> ... re-run only the Heather and Kevin Transcript Agents against
+> act-structure-v2 ...
+
+When all per-speaker Transcript Agents and FCPXML Params Agent have emitted and
+the Orchestrator has validated outputs, the Orchestrator's handoff footer
+provides the launch prompt for the Synthesis Agent (sonnet-4.6) per
+`SKILL-synthesis.md`.
 
 ---
 
-*Creative Context Agent — documentary-junior-editor v5.4*
+*Creative Context Agent — documentary-junior-editor v5.5*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

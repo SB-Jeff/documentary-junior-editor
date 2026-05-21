@@ -43,6 +43,18 @@ editorial content. The rules are stated here for consistency across all agent sk
 files. Your job is to produce accurate technical parameters; the editorial agents
 above and below you handle the rules.
 
+### Sub-agent invocation pattern (v5.5+)
+
+As of v5.5, the recommended way to run the FCPXML Params Agent is via the
+Orchestrator Agent (`SKILL-orchestrator.md`), which launches you as a sub-agent in
+parallel with N Transcript Agent sub-agents from a single Cowork session. The
+Orchestrator composes your prompt and validates your output.
+
+This skill file is what you read when launched, whether by the Orchestrator or by
+Jeff manually starting a one-off Cowork session for an FCPXML Params re-run. The
+instructions are identical either way. Standalone manual launches remain valid for
+surgical re-extractions.
+
 ---
 
 ## Your Role
@@ -196,6 +208,21 @@ the closer framing of the subject; the wide angle is the wider framing. Read
 the `name` attribute on each `<mc-angle>` to determine which is which. If the
 names are ambiguous, document both angleIDs and note that Jeff should confirm.
 
+**Known pattern — camera file code naming (2026 Nanos Boston, May 2026).** When
+`<mc-angle>` `name` attributes are not human-readable ("tight"/"wide") but instead
+carry camera file codes, the convention observed across 8 of 10 Nanos speakers is:
+
+- `P1008xxx` → tele / zoom angle
+- `P1SBxxx` → wide angle
+
+Two Nanos speakers (Melissa, Peter) had explicit `name="tight"` and `name="wide"`
+on their `<mc-angle>` elements; the rest used the camera file code naming above.
+When you see this pattern, assign `P1008xxx` as tele/zoom and `P1SBxxx` as wide
+per the convention, but still document both angleIDs and flag for Jeff's eyeball
+confirmation before the FCPXML Agent commits angleIDs to cut selection. The
+filename-based inference is reliable but not authoritative — angle toggling can
+always be done in FCP regardless, so this is not a blocker.
+
 ---
 
 ## Phase 2: Produce Handoff
@@ -281,6 +308,29 @@ file:///path/to/Library.fcpbundle/
 
 [uid]
 
+## Project UID — intentionally omitted
+
+Do NOT extract the project UID from any source FCPXML. As of the v5.4-era fix
+to `scripts/generate_fcpxml.py`, the script no longer copies `uid` or `modDate`
+from the reference project (`Project Sample.fcpxmld`) into generated output.
+FCP now assigns a fresh project UID on each import.
+
+**Why:** In earlier versions, the same reference project UID was copied into
+every generated XML. When two generated XMLs were imported into the same FCP
+event, FCP encountered a project UID collision, re-processed the resource
+block, and created duplicate multicam entries in the library. The fix —
+omitting the project UID from generated output — is what prevents this
+re-processing cycle.
+
+The Library Location, Event Name, and Event UID extracted above (sourced from
+the source FCPXMLs, not the reference) are still required and must match the
+destination library exactly. Mismatch on those values causes a different
+duplicate-import bug, fixed pre-v5.0 by sourcing them from the source FCPXMLs.
+
+This is documentation of an applied fix, not a Phase 3 follow-up. The script
+is correct; this note exists so the Params Agent does not re-introduce project
+UID extraction in some future revision.
+
 ## Format Reference
 
 r1
@@ -321,13 +371,33 @@ r1
 
 - Angle naming convention (multicam): confirm that `name="zoom"` (tele/tight)
   is the default selected angle. The canonical "Angle IDs" section above uses
-  the tele angleID for each multicam speaker.
+  the tele angleID for each multicam speaker. See "Identifying tele vs wide"
+  in Phase 1 for the camera-file-code naming pattern observed on Nanos.
 - Single-clip interviews require the FCPXML Agent's single_clip code path
   (Lesson 10, v5.0). Captions match against captions that are direct children
   of `<asset-clip>` rather than nested under multicam.
 - Validation samples for single_clip live at
   `documentary-junior-editor/design-samples/single-clip/`.
 - Format reference, frame rate, color space as relevant.
+- **Source path detection.** Source FCPXMLs may live in either `XML/exports/`
+  (the documented canonical path) or `xml/outputs/` (observed on the 2026
+  Nanos Boston project). The Params Agent should auto-detect which path
+  contains source files and use that one throughout the handoff. Future
+  projects should standardize on `XML/exports/` per the SKILL.md folder
+  structure, but the Params Agent must tolerate either.
+- **`.fcpxmld` package flag for FCPXML Agent.** If the source FCPXMLs are
+  `.fcpxmld` packages (directories with `Info.fcpxml` inside) rather than
+  bare `.fcpxml` files, include an explicit flag in this handoff alerting
+  the FCPXML Agent to run Phase 0 (`extract_fcpxml.py`) before attempting
+  to read source files. `build_fcpxml.py`'s `find_speaker_fcpxml()` only
+  matches `*.fcpxml`, not `*.fcpxmld`, and will silently find no files if
+  extraction hasn't run. Add the flag as the first bullet under "Notes" in
+  the handoff:
+
+      - **`.fcpxmld` packages detected at [path].** FCPXML Agent: run
+        Phase 0 (`extract_fcpxml.py [path]`) before Phase 1. The Params
+        Agent has parsed `Info.fcpxml` directly from inside each package
+        for its own work, but downstream agents need extracted files.
 
 ---
 
@@ -430,5 +500,5 @@ Cowork; the agent completes in a few minutes for typical projects.
 
 ---
 
-*FCPXML Params Agent — documentary-junior-editor v5.4*
+*FCPXML Params Agent — documentary-junior-editor v5.5*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

@@ -1,5 +1,150 @@
 # Documentary Junior Editor — Changelog
 
+## v5.5 — 2026-05-21
+
+Minor release. New **Orchestrator Agent** formalizes the parallel sub-agent fan-out
+pattern that ran organically on the 2026 Nanos Boston project. Step 2 of the
+pipeline now collapses from N+1 separate Cowork sessions (one FCPXML Params + one
+Transcript Agent per speaker) into a single Orchestrator session that launches
+all of them as parallel sub-agents.
+
+For a 10-speaker project this is a 10× reduction in session-launch overhead.
+
+### Orchestrator Agent (new — `SKILL-orchestrator.md`)
+
+- **Tenth agent in the pipeline.** Inserted at Step 2, between Creative Context
+  and Synthesis. Model: sonnet-4.6 (coordination work, not creative judgment).
+- **Single coordination session.** One Cowork session launches all sub-agents in
+  parallel via a single Task-tool message with multiple invocations. Sub-agents
+  return when complete; Orchestrator validates outputs exist on disk.
+- **Plan-then-confirm pause point.** Orchestrator surfaces the planned fan-out
+  (which sub-agents, expected file count) for Jeff's one-click confirmation
+  before launching anything. This is the only human-in-the-loop moment.
+- **Re-run patterns documented.** Targeted re-runs work — Creative Context updated
+  to v2 triggers re-run of all Transcript Agents at v2; targeted speaker re-runs
+  scope to only those speakers; FCPXML Params re-extraction explicit-only.
+- **Standalone manual launches still valid.** Both `SKILL-transcript.md` and
+  `SKILL-fcpxml-params.md` retain their standalone Cowork session pattern for
+  surgical one-off work. Orchestrator is the default for first runs and bulk
+  re-runs.
+- **Failure handling: no auto-retry.** If any sub-agent fails or returns
+  incomplete output, Orchestrator reports and waits for Jeff's direction.
+  Failures usually indicate a deeper issue that auto-retry would just repeat.
+- **Pilot reference.** 2026 Nanos Boston brand-video (May 14, 2026) ran this
+  pattern organically before it was codified; all 41 expected output files
+  materialized on disk on first attempt.
+
+### `SKILL.md` (master)
+
+- Pipeline diagram updated: ten agents, Orchestrator inserted at Step 2.
+- Agent count updated from nine to ten throughout.
+- v5.5 highlights section added.
+
+### `SKILL-creative-context.md`
+
+- "Next step" section rewritten to hand off to Orchestrator instead of telling
+  Jeff to launch N+1 sessions manually.
+- Launch prompt for Orchestrator provided as the single handoff prompt (replaces
+  the prior multiple launch prompts for Transcript and FCPXML Params).
+- Note added: standalone manual launches of Transcript or FCPXML Params Agents
+  remain valid for surgical re-runs; Orchestrator is the recommended default.
+
+### `SKILL-transcript.md` and `SKILL-fcpxml-params.md`
+
+- Brief sub-agent invocation pattern section added under "Your Role" (Transcript)
+  and "Cardinal Rules" (FCPXML Params). Notes that the recommended invocation
+  path is via Orchestrator, but standalone manual launches remain valid.
+- Instructions themselves unchanged — both skills function identically whether
+  launched by the Orchestrator or by Jeff manually.
+
+### `cowork-session-guide.md`
+
+- Title version bumped to v5.5.
+- Step 2 collapsed from "Step 2a (FCPXML Params solo) + Step 2b (one Transcript
+  Agent per speaker)" to single "Step 2: Orchestrator Agent." Includes starter
+  prompt, how-it-runs walkthrough, expected output count, re-run patterns, and
+  fall-back-to-manual guidance.
+- Step 5 split into Step 5a (Editing Coach at-close, v5.4) and Step 5b (Skill
+  Review). The prior guide didn't reflect the v5.4 Coach split — folded in here.
+- Quick Reference table updated to show Orchestrator at Step 2 and the 5a/5b
+  split. Also adds the optional between-rounds Coach invocation in Step 4.
+- Overview text updated: pipeline now described as ten agents.
+
+### Version footers bumped
+
+- `SKILL.md` → v5.5 (current version line)
+- `SKILL-orchestrator.md` → v5.5 (new file)
+- `SKILL-creative-context.md` → v5.5
+- `SKILL-transcript.md` → v5.5
+- `SKILL-fcpxml-params.md` → v5.5 (was v5.4.1; this release supersedes)
+- `cowork-session-guide.md` → v5.5
+
+`SKILL-edit.md`, `SKILL-fcpxml.md`, `SKILL-synthesis.md`, `SKILL-transcription.md`,
+`SKILL-editing-coach.md`, `SKILL-review.md` unchanged in v5.5 — they remain at
+v5.4 or v5.4.1.
+
+## v5.4.1 — 2026-05-21
+
+Patch release. Three Nanos technical findings landed into the FCPXML Params and
+FCPXML Agent skill files so the next project doesn't re-discover them. Driven by
+the 2026 Nanos Boston brand-video FCPXML Params Agent session (May 14, 2026)
+which surfaced the failure modes during first-run execution.
+
+### `SKILL-fcpxml-params.md`
+
+- **New "Project UID — intentionally omitted" section.** Documents the
+  `generate_fcpxml.py` fix that removed the block copying `uid`/`modDate` from
+  the reference project (`Project Sample.fcpxmld`). Explains the duplicate-
+  multicam-on-second-import bug it prevents. Exists to ensure the Params Agent
+  doesn't re-introduce project UID extraction in a future revision.
+- **Known pattern: camera file code angle naming.** When `<mc-angle>` `name`
+  attributes carry camera file codes instead of human-readable "tight"/"wide"
+  labels, the convention observed on Nanos (8 of 10 speakers) is `P1008xxx` =
+  tele/zoom, `P1SBxxx` = wide. Documented in the "Identifying tele vs wide"
+  section. Future projects assign by this pattern but still flag for Jeff's
+  eyeball confirmation; not a blocker since angle toggling works in FCP.
+- **Source path detection.** Source FCPXMLs may live at `XML/exports/`
+  (canonical per `SKILL.md`) or `xml/outputs/` (observed on Nanos). Params Agent
+  must auto-detect. Future projects should standardize on `XML/exports/`.
+- **`.fcpxmld` package flag for FCPXML Agent.** If source FCPXMLs are
+  `.fcpxmld` packages (directories with `Info.fcpxml` inside), the handoff must
+  include an explicit flag alerting the FCPXML Agent to run Phase 0
+  (`extract_fcpxml.py`) before reading source files. Params Agent itself parses
+  `Info.fcpxml` directly from packages so its own work is unaffected, but
+  `build_fcpxml.py` downstream can't find any source files because it matches
+  only `*.fcpxml`, not `*.fcpxmld`.
+
+### `SKILL-fcpxml.md`
+
+- **Phase 0 upgraded from "suggested" to "REQUIRED".** Added auto-detection
+  between `XML/exports/` and `xml/outputs/` paths. Added a precondition check
+  that distinguishes (a) packages-need-extraction, (b) already-extracted, (c)
+  files-only-no-packages, (d) no-source-files-found-stop-the-agent. The last
+  case is a hard fail; the prior version of Phase 0 would silently proceed and
+  fail in confusing ways downstream when `find_speaker_fcpxml()` returned
+  empty.
+- Added a "Why this phase is required" section citing the Nanos failure mode
+  so the requirement isn't dropped in a future cleanup pass.
+
+### Code work referenced
+
+`scripts/generate_fcpxml.py` — block copying `uid`/`modDate` from reference
+project removed. SHIPPED (in the same Nanos session work).
+
+`scripts/build_fcpxml.py` — no changes required for the Nanos fixes. The
+`find_speaker_fcpxml()` function still only matches `*.fcpxml`; the fix is
+upstream (Phase 0 must run first). Adding `.fcpxmld` package handling directly
+in `build_fcpxml.py` could be a future enhancement, but extraction-as-required-
+precondition is the cleaner pattern.
+
+### Version footers bumped
+
+- `SKILL-fcpxml-params.md` → v5.4.1
+- `SKILL-fcpxml.md` → v5.4.1
+
+Other v5.4 files unchanged. `SKILL.md` (master) stays at v5.4 — this is a
+patch to two agent files, not a release-level update.
+
 ## v5.4 — 2026-05-21
 
 Pipeline learning-loop release. Two foundational changes: narrative coherence formally

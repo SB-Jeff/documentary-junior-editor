@@ -92,7 +92,7 @@ segments assembled in an incoherent order still violate Rule 2.
 
 ## The Pipeline
 
-The editing workflow is divided into nine specialized agents. Each agent has its own
+The editing workflow is divided into ten specialized agents. Each agent has its own
 skill file, operates with a focused context window, and hands off structured output to
 the project folder for the next agent to read. Jeff is surfaced only at creative
 decision points.
@@ -103,16 +103,19 @@ Transcription Agent      →  transcripts/text/[speaker].txt + transcription-sum
 Creative Context Agent   →  Phase 0 — Discovery (Drive + Gmail)
                             creative-brief-summary-v[N].md + act-structure-v[N].md  ← Jeff approves
         ↓
-┌───────────────────────────────────────────┐
-│  Parallel fan-out                         │
-│                                           │
+Orchestrator Agent       →  launches parallel sub-agents (single Cowork session,
+                            replaces v5.4 N+1-session manual fan-out)
+        ↓
+┌───────────────────────────────────────────────────────────────┐
+│  Parallel sub-agents launched by Orchestrator                 │
+│                                                               │
 │  FCPXML Params Agent  → fcpxml-params-v[N].md (with per-interview clip_type)
-│                                           │
-│  Transcript Agent (×N) → per-speaker      │
+│                                                               │
+│  Transcript Agent (×N) → per-speaker                          │
 │  (one per interview)     tagged-quotes-v[N].json (with segments[]),
 │                          orphans, discards, summary
-└───────────────────────────────────────────┘
-        ↓ (fan-in: wait for all)
+└───────────────────────────────────────────────────────────────┘
+        ↓ (Orchestrator waits for all, validates outputs, hands off)
 Synthesis Agent          →  merged tagged-quotes-v[N].json (segments preserved),
                             orphan-quotes, discard-summary, transcript-summary
         ↓
@@ -141,8 +144,11 @@ Skill Review Agent       →  pipeline-wide review: tech issues, system
                             ideas, reference-example contribution
 ```
 
-The pipeline is now nine agents long. Editing Coach can also run between Edit Agent
-rounds (lighter mode) to course-correct mid-project before the final pass.
+The pipeline is now ten agents long. Orchestrator (v5.5) collapses the prior
+N+1-session fan-out at Step 2 into a single coordination session that launches
+Transcript Agents and FCPXML Params Agent as parallel sub-agents. Editing Coach
+(v5.4) can also run between Edit Agent rounds (lighter mode) to course-correct
+mid-project before the final pass.
 
 ### Human-in-the-Loop Pause Points
 
@@ -499,7 +505,36 @@ fallback if n8n has issues.
 
 See `CHANGELOG.md` for full version history.
 
-Current version: 5.4 — May 2026
+Current version: 5.5 — May 2026
+
+### v5.5 highlights (Orchestrator Agent)
+
+- **New Orchestrator Agent** (`SKILL-orchestrator.md`). Tenth agent in the pipeline,
+  inserted at Step 2 between Creative Context and Synthesis. Replaces the manual
+  N+1-session fan-out pattern (one Cowork session for FCPXML Params + one per
+  Transcript Agent) with a single coordination session that launches all of those
+  as parallel sub-agents, waits for completion, validates outputs exist on disk,
+  hands off to Synthesis. Formalizes the orchestration pilot that ran organically
+  on the 2026 Nanos Boston project (41 output files on first attempt).
+- **`cowork-session-guide.md` Step 2 collapsed** from "Step 2a (FCPXML Params) +
+  Step 2b (one Transcript Agent per speaker)" to single "Step 2: Orchestrator
+  Agent." Down from 11+ session launches to 1 for a 10-speaker project.
+- **Re-run patterns documented** in `SKILL-orchestrator.md`. Orchestrator can be
+  re-invoked for targeted scope (re-run after Creative Context update, re-run
+  specific speakers, re-run FCPXML Params only).
+- **Sub-agent invocation pattern formalized.** Standard prompt templates for
+  Transcript Agent and FCPXML Params Agent sub-agents are in
+  `SKILL-orchestrator.md`. Sub-agents launch in parallel via a single Task-tool
+  message with multiple invocations.
+
+### v5.4.1 highlights (XML scripting fixes from Nanos)
+
+Patch release. Three Nanos technical findings documented in SKILL-fcpxml-params.md
+and SKILL-fcpxml.md: project UID intentional omission (prevents duplicate-multicam-
+on-second-import), camera-file-code angle naming pattern (P1008xxx tele, P1SBxxx
+wide), source path auto-detection (XML/exports/ vs xml/outputs/), Phase 0
+upgraded from suggested to REQUIRED with precondition check. See CHANGELOG.md for
+detail.
 
 ### v5.4 highlights (Cardinal Rule 2 + Editing Coach Agent)
 
