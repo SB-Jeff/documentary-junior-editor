@@ -641,20 +641,78 @@ export default function QuotesView() {
 
   // === Drag-to-reorder state (pointer-events based) ===
   // Native HTML5 drag-and-drop is unreliable inside Cowork's sandboxed artifact
-  // iframe (the regression Jeff hit). Pointer events + setPointerCapture work in
-  // every context — plain browser, sandboxed iframe — and are synthetically
-  // testable. Reorder is constrained to within an act (cross-act moves use the
-  // act-reassign dropdown); ↑/↓ buttons remain as a fallback.
+  // iframe. Pointer events + setPointerCapture work in every context and are
+  // synthetically testable. The WHOLE card is a drag source (not just the
+  // left-edge grip) — grabbing the quote is what Jeff reaches for — except over
+  // buttons and the trim/text editors, which keep their normal behavior. A small
+  // move threshold distinguishes a drag from a click, and text selection is
+  // suppressed during a drag. Reorder is constrained to within an act (cross-act
+  // moves use the act-reassign dropdown); ↑/↓ buttons remain as a fallback.
   const [dragId, setDragId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
   const dragIdRef = useRef(null);
   const dragOverRef = useRef(null);
+  const dragStartRef = useRef(null);  // { x, y, active } between pointerdown and threshold
 
   function clearPointerDrag() {
     dragIdRef.current = null;
     dragOverRef.current = null;
+    dragStartRef.current = null;
+    try { document.body.style.userSelect = ""; } catch (_) {}
     setDragId(null);
     setDragOverId(null);
+  }
+
+  // True when a pointerdown landed on something that should keep its own
+  // behavior (buttons, the trim editor's selectable text, inputs, popups) —
+  // those must not start a card drag.
+  function isInteractiveDragTarget(el) {
+    return !!(el && el.closest && el.closest(
+      "button, input, textarea, select, a, [contenteditable], " +
+      ".reassign-pop, .trim-panel, .split-panel, .tl-quote-hint, .ins-secs"
+    ));
+  }
+
+  // Pointer-drag handler props shared by spoken and interstitial cards.
+  function cardDragHandlers(entry) {
+    return {
+      onPointerDown: (e) => {
+        if (e.button !== 0) return;                 // left button only
+        if (isInteractiveDragTarget(e.target)) return;
+        dragIdRef.current = entry.entry_id;
+        dragOverRef.current = entry.entry_id;
+        dragStartRef.current = { x: e.clientX, y: e.clientY, active: false };
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+      },
+      onPointerMove: (e) => {
+        if (!dragIdRef.current) return;
+        const st = dragStartRef.current;
+        if (st && !st.active) {
+          if (Math.abs(e.clientX - st.x) + Math.abs(e.clientY - st.y) < 5) return;
+          st.active = true;                          // crossed the drag threshold
+          try { document.body.style.userSelect = "none"; } catch (_) {}
+          try { const s = window.getSelection(); s && s.removeAllRanges(); } catch (_) {}
+          setDragId(entry.entry_id);
+        }
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const card = el && el.closest ? el.closest(".tl-card") : null;
+        if (!card || !card.id) return;
+        const tl = getTimeline();
+        const de = tl.find((x) => x.entry_id === dragIdRef.current);
+        const oe = tl.find((x) => x.entry_id === card.id);
+        if (!de || !oe || entryActOf(de) !== entryActOf(oe)) return;
+        if (card.id !== dragOverRef.current) {
+          dragOverRef.current = card.id;
+          setDragOverId(card.id);
+        }
+      },
+      onPointerUp: (e) => {
+        try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {}
+        const wasActive = dragStartRef.current && dragStartRef.current.active;
+        if (wasActive) finishPointerDrag(); else clearPointerDrag();
+      },
+      onPointerCancel: clearPointerDrag,
+    };
   }
 
   function finishPointerDrag() {
@@ -1337,40 +1395,10 @@ export default function QuotesView() {
     ));
   }
 
-  // Shared left-edge drag handle (pointer-events based) — used by both spoken
-  // and interstitial cards so reorder behaves identically for every entry type.
-  const renderDragHandle = (entry) => (
-    <div
-      className="tl-drag"
-      title="Drag to reorder"
-      onPointerDown={(e) => {
-        e.preventDefault();
-        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
-        dragIdRef.current = entry.entry_id;
-        dragOverRef.current = entry.entry_id;
-        setDragId(entry.entry_id);
-        setDragOverId(entry.entry_id);
-      }}
-      onPointerMove={(e) => {
-        if (!dragIdRef.current) return;
-        const el = document.elementFromPoint(e.clientX, e.clientY);
-        const card = el && el.closest ? el.closest(".tl-card") : null;
-        if (!card || !card.id) return;
-        const tl = getTimeline();
-        const de = tl.find((x) => x.entry_id === dragIdRef.current);
-        const oe = tl.find((x) => x.entry_id === card.id);
-        if (!de || !oe || entryActOf(de) !== entryActOf(oe)) return;
-        if (card.id !== dragOverRef.current) {
-          dragOverRef.current = card.id;
-          setDragOverId(card.id);
-        }
-      }}
-      onPointerUp={(e) => {
-        try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (_) {}
-        finishPointerDrag();
-      }}
-      onPointerCancel={clearPointerDrag}
-    >
+  // Left-edge grip — a visual affordance only. The whole card is the drag
+  // source (see cardDragHandlers); pointerdown on this grip bubbles to the card.
+  const renderDragHandle = () => (
+    <div className="tl-drag" title="Drag anywhere on the card to reorder" aria-hidden="true">
       <svg width="10" height="20" viewBox="0 0 10 20" fill="currentColor">
         <circle cx="2" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/>
         <circle cx="2" cy="10" r="1.4"/><circle cx="8" cy="10" r="1.4"/>
@@ -1392,8 +1420,9 @@ export default function QuotesView() {
         key={entry.entry_id}
         id={entry.entry_id}
         className={`tl-card tl-interstitial ins-${entry.type} is-${rec}${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`}
+        {...cardDragHandlers(entry)}
       >
-        {renderDragHandle(entry)}
+        {renderDragHandle()}
         <div className="tl-body">
           <div className="tl-card-head">
             <span className="ins-type-badge">{typeLabel}</span>
@@ -1549,8 +1578,9 @@ export default function QuotesView() {
         key={entry.entry_id}
         id={entry.entry_id}
         className={`tl-card is-${rec}${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`}
+        {...cardDragHandlers(entry)}
       >
-        {renderDragHandle(entry)}
+        {renderDragHandle()}
         <div className="tl-body">
           <div className="tl-card-head">
             <span className={idClass}>{idLabel}</span>

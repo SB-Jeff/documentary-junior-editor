@@ -700,10 +700,16 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
   background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
   overflow: visible;
   box-shadow: var(--shadow);
+  cursor: grab;
+  touch-action: none;
 }
-.tl-card.dragging { opacity: 0.4; }
+.tl-card:active { cursor: grabbing; }
+.tl-card.dragging { opacity: 0.45; cursor: grabbing; }
 .tl-card.drag-over { box-shadow: 0 -3px 0 0 var(--accent), var(--shadow); }
-.tl-drag { touch-action: none; }
+/* Interactive zones inside a card keep their own cursor (buttons set pointer
+   via the button rule; text editors get a text caret so they read as editable). */
+.trim-text, .ins-text, .ins-add-text, .tl-card input, .tl-card textarea { cursor: text; }
+.tl-card button, .tl-quote-hint, .split-marker { cursor: pointer; }
 .tl-card.is-must-keep { border-left: 4px solid var(--must); }
 .tl-card.is-tight-candidate { border-left: 4px solid var(--tight); }
 .tl-card.is-probable-keep { border-left: 4px solid var(--probable); }

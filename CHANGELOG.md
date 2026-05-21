@@ -20,7 +20,10 @@ Editing Coach (see "Cross-scope dependencies" in the roadmap).
 - **Drag-to-reorder fixed (P0 regression).** Root cause: native HTML5 drag-and-drop
   is unreliable inside Cowork's sandboxed artifact iframe. Reimplemented with pointer
   events (`setPointerCapture` + `pointermove`/`pointerup`), robust in every context.
-  Within-act reorder; cross-act moves remain on the act-reassign dropdown.
+  The **whole card** is the drag source (excluding buttons + trim/text editors), with
+  a 5px click-vs-drag threshold and mid-drag selection suppression — the left-edge grip
+  alone was undiscoverable. Within-act reorder; cross-act moves use the act-reassign
+  dropdown.
 - **Interstitials restored (P0 regression).** "+ interstitial" insertion controls
   between every Edit-view entry and at each act head, with an inline editor
   (interstitial / title_card / context_beat, text, duration). Non-spoken entries get

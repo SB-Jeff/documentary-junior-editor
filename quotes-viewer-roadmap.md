@@ -131,8 +131,13 @@ Edit view experience.
 **Status:** Shipped — root cause: native HTML5 drag-and-drop is unreliable inside
 Cowork's sandboxed artifact iframe. Reimplemented drag using pointer events
 (`onPointerDown` + `setPointerCapture` + `onPointerMove`/`onPointerUp`), which work
-in every context and are synthetically testable. Verified in a browser build
-(within-act reorder + logged op). NOTE for Coach/SKILL-edit.md: SKILL-edit.md:1080
+in every context and are synthetically testable. **The whole card is the drag source**
+(not just the small left-edge grip — grabbing the quote was the natural gesture and
+the handle-only design made the feature undiscoverable), excluding buttons and the
+trim/text editors; a 5px move threshold distinguishes a drag from a click and text
+selection is suppressed mid-drag. Verified with real mouse drags in a browser
+(body-drag reorders, buttons/trim still work, no text-selection hijack).
+NOTE for Coach/SKILL-edit.md: SKILL-edit.md:1080
 says drag reorders "within or across acts," but the implementation (both before and
 after this fix) constrains drag to within an act; cross-act moves go through the
 act-reassign dropdown. Flagging the doc/behavior discrepancy — not changing
