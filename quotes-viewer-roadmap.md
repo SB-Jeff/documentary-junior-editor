@@ -254,6 +254,104 @@ match, and composition with the speaker filter).
 
 ---
 
+## Open items — hammer-ner-2026 batch (filed 2026-05-29)
+
+> **Provenance note:** These six entries were reconstructed on 2026-05-29 in the viewer
+> dev session from the launcher brief; the original Coach filing was not recovered on
+> disk (no project-scoped roadmap, tweak-log, or lessons-learned survived in
+> `handoffs/hammer-ner-2026/`). Open specifics that the brief deferred "to the entry"
+> were settled directly with Jeff on 2026-05-29 and are recorded inline below.
+> Entries 1–3 are one coherent redesign of how the viewer represents cut membership —
+> built together. Items 4 and 5 are more separable.
+
+### AUTHORITATIVE membership model — Tight / Loose / Library
+**Source project:** hammer-ner-2026 (May 2026)
+**Problem:** The viewer's current model — one timeline with a per-entry conviction tier
+(`must-keep` / `tight-candidate` / `probable-keep`) plus a Rough/Tight *view* filter —
+conflates "how convinced am I" with "is it in the cut." It produced the
+must-keep-as-workspace contamination and the promote/demote churn. The mental model an
+editor actually works in is membership, not conviction.
+**Proposed change:** Replace conviction tiers + the Rough/Tight toggle with an
+authoritative two-window membership model over three strata. **Tight** = the active
+default working cut. **Loose** = a fuller reference cut, kept **LIVE** (re-derived from
+current state, never frozen). **Library** = the full source pool. Three verbs move
+entries between strata (see "Three persistent strata" below). Retire
+`runtime_recommendation`, `REC_CYCLE`, the rec badge, `cutFilter`, and `inTightCut`
+entirely. This supersedes and obviates the earlier `tight-candidate` work and its
+cross-scope dependency (Edit Agent populating `tight-candidate`) — flag for Coach.
+**Priority:** P0 — foundational; everything else builds on it.
+**Status:** Filed.
+
+### Three persistent strata an editor dances between
+**Source project:** hammer-ner-2026 (May 2026)
+**Problem:** Membership needs an unambiguous containment rule and unambiguous verbs, or
+"drop" becomes destructive-by-accident and the windows drift out of sync.
+**Proposed change:** Enforce **Library ⊇ Loose ⊇ Tight**. Tight is the hub. Verbs
+(settled with Jeff 2026-05-29):
+- **Cut** — Tight → Loose. The only one-level demotion; lives in the Tight window.
+- **Add** — Loose → Tight, *and* Library → Tight (pulling a quote from the Library lands
+  it straight in Tight). Upward movement always targets Tight.
+- **Drop** — Tight or Loose → Library, all the way back (a one-level drop would just
+  duplicate Cut, so there is no intermediate stop and no separate "banish" verb).
+
+This gives Loose a clean meaning: *entries cut from Tight but not dropped.* The only way
+into Loose is by cutting from Tight. Naming: strata Tight / Loose / Library (avoid
+"archive" — collides with version history); verbs Cut / Add / Drop. Dropping from tight
+demotes to **Library**, not Loose (resolves the brief's internal contradiction).
+**Priority:** P0 — the data/containment detail behind the membership model.
+**Status:** Filed.
+
+### Unify Edit + Review into one page with per-card reveal
+**Source project:** hammer-ner-2026 (May 2026)
+**Problem:** Edit and Review are separate tabs; you can't read the cut clean and tweak
+one quote in place without tab-switching and losing your place.
+**Proposed change:** Collapse Edit and Review into one surface. Default = clean read
+(Review styling). Any card flips to edit-in-place ("uncover the stone for that one
+quote") while surrounding cards stay clean; multiple cards open at once; a global
+all-on / all-off control.
+**Priority:** P1.
+**Status:** Filed.
+
+### "Talk to agent" should send iteratively (send-and-keep-working)
+**Source project:** hammer-ner-2026 (May 2026)
+**Problem:** The "Talk to agent" panel is a single cumulative catalog sent once. You
+can't fire off a scoped batch mid-session and keep working — the model is one-shot.
+**Proposed change:** Per-send queue: accumulate tweaks → Send a scoped batch at any time
+(no viewer rebuild, Jeff keeps working) → panel **clears** and accumulates fresh for the
+next batch. **Send-and-keep-working only — NOT live in-place rebuild.** Decisions
+settled with Jeff 2026-05-29:
+- **Persistence:** keep one cumulative `handoffs/[slug]/tweak-log-v[N].json` (Option A),
+  appending every batch into it with a `batch` number + timestamp on each op so batch
+  boundaries are preserved. Coach reads one file (matches `SKILL-editing-coach.md`).
+- **Per-batch intent note:** one free-text reasoning note per batch, entered at Send
+  time and stored on the batch, so the reasoning travels with the ops it explains.
+- **Retire "Comment on this":** the per-op comment button (and its `comment` op) is
+  removed; per-batch notes replace it. ⚑ Cross-scope flag for Coach: this drops the
+  per-entry "Comment on this" annotations that `SKILL-editing-coach.md` lists as a named
+  pattern category — Coach's documented input changes. Not editing the Coach skill file
+  from the viewer project.
+**Priority:** P1.
+**Status:** Filed.
+
+### BUG: split function duplicates the quote instead of splitting it
+**Source project:** hammer-ner-2026 (May 2026)
+**Problem:** Splitting an entry clones the full `segments[]` onto both halves instead of
+partitioning the segment range — you get two copies of the whole quote, not a head and a
+tail.
+**Proposed change:** Split should partition the segment range across the two entries
+(head → A, tail → B) with the boundary trims set on each side, preserving verbatim
+integrity. Self-contained; can ship independently of the membership rework.
+**Priority:** P1.
+**Status:** Filed.
+
+### [SUPERSEDED] Replace rough/tight toggle + conviction tiers with subtractive refinement in place
+**Source project:** earlier entry, pre-2026-05-29 (original text not recovered)
+**Status:** Superseded in terminology by the AUTHORITATIVE membership model above
+(rough → Loose, tight → Tight). Implement to the membership model where they differ.
+Retained as a pointer only; no separate build item.
+
+---
+
 ## Cross-scope dependencies — for Editing Coach / Skill Review
 
 The viewer batch (v5.6, 2026-05-21) shipped the **viewer + build-script halves** of
@@ -280,4 +378,4 @@ the behavior — surfaced for the skill owners to decide.
 
 *Maintained as part of the `documentary-junior-editor` skill set. Coach writes here;
 the Claude Code viewer project reads here.*
-*Current as of: 2026-05-21*
+*Current as of: 2026-05-29*
