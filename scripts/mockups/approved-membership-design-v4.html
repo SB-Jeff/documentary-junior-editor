@@ -1,0 +1,585 @@
+<!doctype html>
+<!-- membership mockup v4 — critique fixes + Library rework (Jeff's notes) -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup v4 — Tight / Loose / Library + unified Edit page</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --surface-2: #f5f5f4;
+    --border: #e7e5e4; --border-strong: #d6d3d1;
+    --text: #1c1917; --text-muted: #57534e; --text-subtle: #78716c;
+    --accent: #0369a1; --accent-soft: #e0f2fe; --accent-strong: #075985;
+    --must: #059669; --must-soft: #d1fae5;          /* TIGHT */
+    --tight: #0d9488; --tight-soft: #ccfbf1;
+    --probable: #2563eb; --probable-soft: #dbeafe;  /* LOOSE */
+    --warn: #d97706; --warn-soft: #fef3c7;
+    --danger: #dc2626; --danger-soft: #fee2e2;
+    --highlight: #fde68a;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.05);
+    color-scheme: light;
+    font: 14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); }
+
+  .mock-banner { background:#1c1917; color:#fafaf9; padding:10px 20px; font-size:12.5px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  .mock-banner b { color:#fde68a; }
+  .mock-tag { background:#fde68a; color:#1c1917; font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:.05em; padding:2px 8px; border-radius:4px; }
+
+  .hdr { background: var(--surface); border-bottom:1px solid var(--border); padding:14px 20px 0; position:sticky; top:0; z-index:10; }
+  .hdr-row1 { display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding-bottom:12px; }
+  .proj-title { font-size:16px; font-weight:700; margin:0; }
+  .round-sel { font:inherit; font-size:12px; padding:5px 10px; border:1px solid var(--border-strong); border-radius:6px; background: var(--surface); }
+  .mode-toggle { margin-left:auto; display:inline-flex; gap:2px; background: var(--surface-2); padding:3px; border-radius:8px; }
+  .mode-toggle button { background:transparent; border:0; padding:6px 16px; border-radius:6px; font-size:13px; color: var(--text-muted); font-weight:500; cursor:pointer; }
+  .mode-toggle button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+  .hdr-row2 { border-top:1px solid var(--border); padding:10px 0; }
+  .hdr-filter-line { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  .hdr-filter-line:last-child { margin-bottom:0; }
+  .filter-group { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border:1px solid var(--border-strong); border-radius:8px; }
+  .group-label { color: var(--text-subtle); margin-right:4px; font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+  .chip { background:transparent; border:1px solid transparent; color: var(--text-muted); padding:3px 10px; border-radius:999px; font-size:12px; cursor:pointer; }
+  .chip.active { background: var(--text); color:#fff; border-color: var(--text); }
+
+  .win-block { display:inline-flex; align-items:center; gap:10px; padding:3px 4px 3px 10px; margin-left:auto; border:1px solid var(--border-strong); border-radius:8px; }
+  .win-toggle { display:inline-flex; gap:2px; }
+  .win-toggle button { background:transparent; border:0; padding:4px 12px; border-radius:4px; font-size:12px; color: var(--text-muted); font-weight:500; cursor:pointer; }
+  .win-toggle button.active.tight { background: var(--must-soft); color: var(--must); }
+  .win-toggle button.active.loose { background: var(--probable-soft); color: var(--probable); }
+  .win-metric { font-size:12px; padding-left:10px; border-left:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  .win-metric .val { font-weight:600; }
+  .win-metric.tight .val { color: var(--must); }
+  .win-metric.loose .val { color: var(--probable); }
+  .cut-export { background: var(--accent); color:#fff; border:1px solid var(--accent); border-radius:6px; padding:5px 14px; font-size:12px; font-weight:500; cursor:pointer; margin-left:4px; }
+  /* export handoff modal */
+  .export-overlay { position:fixed; inset:0; background:rgba(28,25,23,.45); z-index:60; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .export-modal { background: var(--surface); border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,.25); max-width:620px; width:100%; padding:22px 24px; }
+  .export-modal h3 { margin:0 0 4px; font-size:16px; }
+  .export-sub { color: var(--text-muted); font-size:13px; margin:0 0 16px; }
+  .export-step { display:flex; gap:10px; align-items:flex-start; margin-bottom:12px; }
+  .export-num { flex:none; width:22px; height:22px; border-radius:50%; background: var(--accent-soft); color: var(--accent-strong); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .export-step-body { font-size:13px; line-height:1.5; }
+  .export-step-body code { background: var(--surface-2); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:12px; }
+  .export-ok { font-size:11px; font-weight:600; color: var(--must); }
+  .export-promptbox { position:relative; margin:6px 0 0; }
+  .export-prompt { width:100%; min-height:150px; font:12px/1.5 ui-monospace,Menlo,monospace; color: var(--text); background: var(--surface-2); border:1px solid var(--border-strong); border-radius:8px; padding:12px; resize:vertical; }
+  .export-copy { position:absolute; top:8px; right:8px; background: var(--accent); color:#fff; border:0; border-radius:6px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  .export-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  .export-win { font-weight:700; }
+  .export-win.tight { color: var(--must); }
+  .export-win.loose { color: var(--probable); }
+
+  .reveal-block { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border:1px solid var(--border-strong); border-radius:8px; margin-left:auto; }
+  .reveal-block button { background: var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:4px 10px; font-size:12px; color: var(--text); cursor:pointer; }
+
+  .main { padding:22px 20px 130px; max-width:1100px; margin:0 auto; }
+  .act-section { margin-bottom:30px; }
+  .act-header { display:flex; align-items:baseline; gap:12px; padding:8px 0; margin-bottom:14px; border-bottom:2px solid var(--border-strong); }
+  .act-title { font-size:18px; font-weight:600; margin:0; }
+  .act-sub { color: var(--text-muted); font-size:13px; }
+
+  .speaker-tag { font-size:11px; padding:2px 8px; border-radius:999px; font-weight:500; }
+  .tc { color: var(--text-subtle); font-size:11px; font-family: ui-monospace,Menlo,monospace; }
+
+  /* clean read card */
+  .read-card { padding:10px 14px 14px 16px; border-bottom:1px solid var(--border); border-left:3px solid transparent; position:relative; }
+  .read-card.tight-mark { border-left-color: var(--must); }
+  .read-card.loose-mark { border-left-color: var(--probable); background: rgba(37,99,235,0.035); }
+  .read-card .rc-head { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+  .read-card .rc-quote { font-size:16px; line-height:1.6; margin:2px 0 0; }
+  .mship-chip { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:2px 8px; border-radius:999px; }
+  .mship-chip.tight { color: var(--must); background: var(--must-soft); }
+  .mship-chip.loose { color: var(--probable); background: var(--probable-soft); }
+  .rc-tools { margin-left:auto; display:inline-flex; gap:4px; align-items:center; }
+  .rc-tool { background:transparent; border:1px solid var(--border); color: var(--text-subtle); font-size:12px; padding:3px 9px; border-radius:6px; cursor:pointer; opacity:.6; transition:opacity .12s, background .12s, color .12s, border-color .12s; }
+  .read-card:hover .rc-tool, .read-card:focus-within .rc-tool { opacity:1; }
+  .rc-tool:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+  .rc-tool:focus-visible { opacity:1; outline:2px solid var(--accent); outline-offset:1px; }
+  .rc-tool.cut:hover { background: var(--probable-soft); color: var(--probable); border-color: var(--probable); }
+  .rc-tool.add:hover { background: var(--must-soft); color: var(--must); border-color: var(--must); }
+  .rc-tool.drop:hover { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+  .rc-tool.edit:hover { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--accent); }
+
+  /* revealed edit card */
+  .tl-card { display:flex; background: var(--surface); border:1px solid var(--border); border-radius:8px; box-shadow: var(--shadow); margin:12px 0; overflow:visible; }
+  .tl-card.tight { border-left:4px solid var(--must); }
+  .tl-card.loose { border-left:4px solid var(--probable); }
+  .tl-drag { display:flex; align-items:stretch; padding:0 6px; color: var(--text-subtle); background: var(--surface-2); border-right:1px solid var(--border); border-radius:7px 0 0 7px; }
+  .tl-drag span { margin:auto; }
+  .tl-body { flex:1; padding:12px 14px; min-width:0; }
+  .tl-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+  .mship-badge { font-size:11px; padding:2px 9px; border-radius:4px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .mship-badge.tight { background: var(--must-soft); color: var(--must); }
+  .mship-badge.loose { background: var(--probable-soft); color: var(--probable); }
+  .move-btn { background: var(--surface-2); border:1px solid var(--border); border-radius:4px; padding:3px 8px; font-size:12px; color: var(--text-muted); font-family: ui-monospace,Menlo,monospace; cursor:pointer; }
+  .mini-btn { background: var(--surface-2); border:1px solid var(--border); border-radius:4px; padding:4px 9px; font-size:12px; cursor:pointer; color: var(--text-muted); display:inline-flex; align-items:center; gap:4px; }
+  .mini-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+  .mini-btn.on { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--accent); }
+  .act-tag-btn { font-size:11px; padding:3px 8px; border-radius:4px; cursor:pointer; background: var(--surface-2); color: var(--text-muted); border:1px solid transparent; }
+  .tl-tools { display:inline-flex; gap:6px; align-items:center; padding-left:10px; margin-left:6px; border-left:1px solid var(--border); }
+  .rc-collapse { margin-left:auto; background:transparent; border:1px solid var(--border); color: var(--text-subtle); font-size:12px; padding:3px 9px; border-radius:6px; cursor:pointer; }
+  .tl-quote { line-height:1.6; font-size:15px; margin:8px 0 0; }
+  /* trim mode: full quote as ONE selectable left-aligned paragraph (real char-range trim) */
+  .tl-quote.trimming { line-height:1.8; text-align:left; user-select:text; cursor:text; }
+  .tl-quote.trimming ::selection { background: var(--accent-soft); }
+  .trimmed { color: var(--danger); text-decoration: line-through; opacity:.6; }
+  /* a cut region: struck-through inline, stays readable, click target to restore */
+  .cut-region { color: var(--danger); text-decoration: line-through; text-decoration-color: var(--danger); opacity:.7; background: var(--danger-soft); border-radius:2px; }
+  .tp-hint { font-size:11px; color: var(--text-subtle); margin-top:8px; font-style:italic; }
+  .tp-hint kbd { font-style:normal; font-family:ui-monospace,Menlo,monospace; font-size:10px; background: var(--surface-2); border:1px solid var(--border-strong); border-radius:3px; padding:0 4px; }
+  .trim-bar { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .trim-cut-btn { font-size:12px; font-weight:600; color: var(--danger); background: var(--surface); border:1px solid var(--danger); border-radius:6px; padding:4px 12px; cursor:pointer; }
+  .trim-cut-btn:hover { background: var(--danger-soft); }
+  .trim-reset { font-size:11px; font-weight:600; color: var(--accent); background:transparent; border:1px solid var(--border); border-radius:5px; padding:4px 10px; cursor:pointer; }
+  .trim-reset:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+
+  .tl-notes { color: var(--text-muted); font-size:12px; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border); font-style:italic; }
+  .tl-notes b { color: var(--text-subtle); font-style:normal; font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+  .tl-actions { display:flex; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); flex-wrap:wrap; align-items:center; }
+  .btn { background: var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:12px; color: var(--text); cursor:pointer; }
+  .btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .btn-cut { color: var(--probable); border-color: var(--probable-soft); background: var(--probable-soft); }
+  .btn-cut:hover { background: var(--probable); color:#fff; border-color: var(--probable); }
+  .btn-add { color: var(--must); border-color: var(--must-soft); background: var(--must-soft); }
+  .btn-add:hover { background: var(--must); color:#fff; border-color: var(--must); }
+  .btn-drop { color: var(--danger); }
+  .btn-drop:hover { background: var(--danger-soft); border-color: var(--danger); }
+  .verb-note { font-size:11px; color: var(--text-subtle); margin-left:4px; }
+  /* FIX 3: destination spelled out on each verb so Cut / Drop can't be confused */
+  .verb-dest { font-size:11px; font-weight:600; opacity:.75; margin-left:1px; }
+
+  /* library */
+  .lib-toolbar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  .lib-hide-toggle { display:inline-flex; align-items:center; gap:6px; font-size:12px; color: var(--text-muted); cursor:pointer; }
+  .lib-search { flex:1; min-width:200px; max-width:420px; font:inherit; font-size:13px; border:1px solid var(--border-strong); border-radius:8px; padding:7px 12px; background: var(--surface); }
+  .lib-search:focus { outline:none; border-color: var(--accent); box-shadow:0 0 0 2px var(--accent-soft); }
+  .lib-search-meta { font-size:11px; color: var(--text-subtle); }
+  .lib-card { background: var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:10px; box-shadow: var(--shadow); border-left:4px solid transparent; }
+  .lib-card.in-edit { border-left-color: var(--must); }
+  .qid { font-weight:600; color: var(--text); background: var(--surface-2); padding:2px 8px; border-radius:4px; font-size:13px; }
+  .lib-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+  .lib-actdrop { font-size:11px; padding:3px 8px; border-radius:4px; cursor:pointer; background: var(--surface-2); color: var(--text-muted); border:1px solid var(--border); }
+  .lib-actdrop:hover { border-color: var(--border-strong); }
+  .lib-quote { line-height:1.55; margin:8px 0 10px; }
+  .lib-rationale { color: var(--text-muted); font-size:12.5px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); }
+  .lib-rationale b { color: var(--text-subtle); font-size:10px; text-transform:uppercase; letter-spacing:.06em; margin-right:4px; }
+  .lib-actions { display:flex; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); align-items:center; }
+  .in-edit-label { font-size:12px; font-weight:600; color: var(--must); display:inline-flex; align-items:center; gap:5px; }
+
+  /* talk to agent */
+  .send-panel { position:fixed; right:20px; bottom:20px; width:340px; background: var(--surface); border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.14); z-index:40; }
+  .send-panel.has-pending { border-color: var(--accent); }
+  .sp-head { display:flex; align-items:center; gap:8px; padding:10px 14px; cursor:pointer; }
+  .sp-title { font-weight:600; font-size:13px; }
+  .sp-count { font-size:11px; font-weight:700; background: var(--accent); color:#fff; border-radius:999px; padding:1px 8px; }
+  .sp-toggle { margin-left:auto; color: var(--text-subtle); font-size:11px; }
+  .sp-body { padding:0 14px 12px; border-top:1px solid var(--border); }
+  .sp-section-title { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-subtle); margin:10px 0 4px; }
+  .sp-ops { list-style:none; padding:0; margin:0; font-size:12px; }
+  .sp-ops li { padding:3px 0; border-bottom:1px dashed var(--border); color: var(--text-muted); }
+  .sp-textarea { width:100%; font:inherit; font-size:12px; border:1px solid var(--border-strong); border-radius:6px; padding:8px; resize:vertical; min-height:54px; }
+  .sp-foot { display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .sp-send { background: var(--accent); color:#fff; border:1px solid var(--accent); border-radius:6px; padding:6px 16px; font-size:12px; font-weight:600; cursor:pointer; }
+  .sp-batchnote { font-size:11px; color: var(--text-subtle); }
+  body.panel-open .main { padding-right: 380px; }
+
+  .hidden { display:none !important; }
+  .note-pill { background: var(--warn-soft); color: var(--warn); border:1px dashed var(--warn); border-radius:6px; padding:8px 12px; font-size:12px; margin:0 0 14px; }
+</style>
+</head>
+<body class="panel-open">
+
+<div class="mock-banner">
+  <span class="mock-tag">Mockup v4</span>
+  <span><b>Library rework:</b> not in edit → <b>Add</b> button · already in edit → <b>In Edit</b> label · act dropdown defaults to the quote's current act · no "view in timeline" link.</span>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-row1">
+    <h1 class="proj-title">Hammer NER 2026 — Quote Viewer</h1>
+    <select class="round-sel"><option>Round 1 · v1</option><option>+ Save current as new round</option></select>
+    <div class="mode-toggle">
+      <button id="tab-edit" class="active" onclick="setTab('edit')">Edit</button>
+      <button id="tab-lib" onclick="setTab('lib')">Quote Library</button>
+    </div>
+  </div>
+  <div class="hdr-row2" id="edit-controls">
+    <div class="hdr-filter-line">
+      <div class="filter-group">
+        <span class="group-label">Act</span>
+        <button class="chip active">All</button>
+        <button class="chip">Act 1</button>
+        <button class="chip">Act 2</button>
+        <button class="chip">Act 3</button>
+      </div>
+      <div class="win-block">
+        <span class="group-label">Window</span>
+        <div class="win-toggle">
+          <button id="win-tight" class="active tight" onclick="setWindow('tight')">Tight</button>
+          <button id="win-loose" class="loose" onclick="setWindow('loose')">Loose</button>
+        </div>
+        <span class="win-metric tight" id="win-metric"><span class="val" id="win-count">5</span> entries · <span class="val" id="win-time">2:48</span></span>
+        <button class="cut-export" onclick="openExport()">→ Send to FCPXML Agent</button>
+      </div>
+    </div>
+    <div class="hdr-filter-line">
+      <div class="filter-group">
+        <span class="group-label">Speaker</span>
+        <button class="chip active">All</button>
+        <button class="chip">Isiah</button>
+        <button class="chip">Addie</button>
+        <button class="chip">Mike</button>
+      </div>
+      <div class="reveal-block">
+        <span class="group-label">Reveal</span>
+        <button onclick="revealAll(true)">Reveal all</button>
+        <button onclick="revealAll(false)">Collapse all</button>
+      </div>
+    </div>
+  </div>
+  <!-- Library filter row -->
+  <div class="hdr-row2 hidden" id="lib-controls">
+    <div class="hdr-filter-line">
+      <div class="filter-group">
+        <span class="group-label">Act</span>
+        <button class="chip active">All</button>
+        <button class="chip">Act 1</button>
+        <button class="chip">Act 2</button>
+        <button class="chip">Act 3</button>
+      </div>
+      <div class="filter-group">
+        <span class="group-label">Speaker</span>
+        <button class="chip active">All</button>
+        <button class="chip">Isiah</button>
+        <button class="chip">Addie</button>
+        <button class="chip">Mike</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PAGE -->
+<div class="main" id="page-edit">
+  <div class="note-pill">
+    <b>Clean read by default.</b> Persistent low-key controls (✎ Edit + the common verb) — no hover needed, keyboard-reachable. <b>Window → Loose</b> shows entries cut from Tight but not dropped, marked on every card. <b>Cut</b> = Tight→Loose · <b>Add</b> = Loose/Library→Tight · <b>Drop</b> = either→Library.
+  </div>
+  <div class="act-section">
+    <div class="act-header"><h2 class="act-title">Act 1 — The Why</h2><span class="act-sub" id="act1-sub"></span></div>
+    <div id="cards-1"></div>
+  </div>
+  <div class="act-section">
+    <div class="act-header"><h2 class="act-title">Act 2 — The Work</h2></div>
+    <div id="cards-2"></div>
+  </div>
+</div>
+
+<!-- LIBRARY PAGE -->
+<div class="main hidden" id="page-lib">
+  <div class="lib-toolbar">
+    <input class="lib-search" placeholder="Search quote text or rationale…">
+    <label class="lib-hide-toggle"><input type="checkbox"> Hide quotes in current cut</label>
+    <span class="lib-search-meta">showing 3 of 373</span>
+  </div>
+  <div id="lib-cards"></div>
+</div>
+
+<!-- EXPORT HANDOFF MODAL -->
+<div class="export-overlay hidden" id="export-overlay">
+  <div class="export-modal">
+    <h3>Send the <span class="export-win tight" id="export-winlabel">Tight</span> cut to the FCPXML Agent</h3>
+    <p class="export-sub">The viewer writes the cut to disk, then hands the build to the FCPXML Agent — the tool built to caption-match, branch by clip type, and handle FCP import issues. (The viewer doesn't build the XML itself; that step is failure-prone without the agent around it.)</p>
+    <div class="export-step">
+      <span class="export-num">1</span>
+      <div class="export-step-body">
+        <span class="export-ok">✓ Done</span> — wrote <code id="export-file">handoffs/hammer-ner-2026/trimmed-quotes-v1.json</code> (the <span id="export-winword">Tight</span> cut: <span id="export-winstats">5 entries · 2:48</span>).
+      </div>
+    </div>
+    <div class="export-step">
+      <span class="export-num">2</span>
+      <div class="export-step-body">
+        Open a new Cowork task and paste this FCPXML Agent prompt:
+        <div class="export-promptbox">
+          <textarea class="export-prompt" id="export-prompt" readonly></textarea>
+          <button class="export-copy" onclick="copyExportPrompt()" id="export-copybtn">Copy</button>
+        </div>
+      </div>
+    </div>
+    <div class="export-actions">
+      <button class="btn" onclick="closeExport()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- TALK TO AGENT -->
+<div class="send-panel has-pending" id="send-panel">
+  <div class="sp-head" onclick="togglePanel()">
+    <span class="sp-title">Talk to agent</span>
+    <span class="sp-count">2</span>
+    <span class="sp-toggle" id="sp-toggle">▼</span>
+  </div>
+  <div class="sp-body" id="sp-body">
+    <div class="sp-section-title">This batch — pending tweaks</div>
+    <ul class="sp-ops">
+      <li>Cut "We had nothing that first year…" (Mike) → Loose</li>
+      <li>Trim head of "The first thing we teach…" (Addie)</li>
+    </ul>
+    <div class="sp-section-title">Why this batch? <span style="text-transform:none;letter-spacing:0;color:var(--text-subtle)">(per-batch intent note)</span></div>
+    <textarea class="sp-textarea" placeholder="e.g. Tightening Act 1 open — these felt redundant once #3 landed."></textarea>
+    <div class="sp-foot">
+      <button class="sp-send">Send batch</button>
+      <span class="sp-batchnote">Sends &amp; keeps working · clears for next batch</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SPK = {
+    isiah: {name:'Isiah', bg:'#dbeafe', fg:'#1e3a8a'},
+    addie: {name:'Addie', bg:'#fce7f3', fg:'#9d174d'},
+    mike:  {name:'Mike',  bg:'#ede9fe', fg:'#5b21b6'},
+  };
+  const entries = [
+    {id:'e1', act:1, spk:'isiah', tc:'00:02:14', mship:'tight', revealed:false, trimOpen:false,
+      quote:'When the bell rings, the gym is the one place nobody\'s keeping score of where you came from.'},
+    {id:'e2', act:1, spk:'addie', tc:'00:05:31', mship:'tight', revealed:true, trimOpen:true,
+      note:'Intro open — Hammer\'s mission.',
+      quote:'Honestly? The first thing we teach isn\'t the sport. You know, a lot of them have never been on a team. It\'s that someone\'s glad you walked in today.',
+      // Character-range cuts: head ("Honestly? ") + a mid cut ("a lot of them ").
+      cuts:[[0,10],[68,82]]},
+    {id:'e3', act:1, spk:'mike', tc:'00:09:02', mship:'loose', revealed:false, trimOpen:false,
+      quote:'We had nothing that first year. One net, a borrowed van, and a lot of stubbornness.'},
+    {id:'e4', act:1, spk:'isiah', tc:'00:11:48', mship:'tight', revealed:false, trimOpen:false,
+      quote:'My coach saw something in me before I could see it myself. Now I get to be that for somebody else.'},
+    {id:'e5', act:1, spk:'addie', tc:'00:14:20', mship:'loose', revealed:false, trimOpen:false,
+      quote:'Some days it\'s just making sure they ate. The wins look different than people expect.'},
+    {id:'e6', act:2, spk:'mike', tc:'00:21:05', mship:'tight', revealed:false, trimOpen:false,
+      quote:'You can\'t fake showing up. The kids know who\'s really there for them.'},
+    {id:'e7', act:2, spk:'isiah', tc:'00:24:39', mship:'tight', revealed:false, trimOpen:false,
+      quote:'We measure it in the ones who come back as mentors. That\'s the whole scoreboard.'},
+  ];
+
+  // Library source quotes. inEdit = appears anywhere in the cut (Tight OR Loose) — Library is binary.
+  // act = the quote's current act tag (the dropdown defaults to this).
+  const libQuotes = [
+    {num:3,  spk:'isiah', tc:'0:35–0:39', act:'Act 1 — The Why', inEdit:true,
+      quote:'When the bell rings, the gym is the one place nobody\'s keeping score of where you came from.',
+      why:'Anchors the safe-space theme that the Act 1 origin story builds on.'},
+    {num:41, spk:'addie', tc:'1:13–1:59', act:'Act 1 — The Why', inEdit:false,
+      quote:'I didn\'t think I\'d stay. I thought I\'d do a season and leave. That was four years ago.',
+      why:'Personal stakes — the reluctant-commitment beat for the staff thread.'},
+    {num:58, spk:'mike', tc:'2:02–2:11', act:'Act 2 — The Work', inEdit:false,
+      quote:'You can\'t fake showing up. The kids know. They always know who\'s really there for them.',
+      why:'Authenticity line; strong candidate for the Act 2 close.'},
+  ];
+
+  let currentWindow = 'tight';
+  const inWindow = e => currentWindow === 'loose' ? true : e.mship === 'tight';
+
+  // ===== Character-range trim (matches the real viewer: select text + cut) =====
+  // e.cuts = [[startChar, endChar], ...] over e.quote. Multiple regions, anywhere,
+  // mid-sentence allowed. Snapped to word boundaries.
+  function keptText(e){
+    const cuts = e.cuts || [];
+    if(!cuts.length) return e.quote;
+    let out = '', pos = 0;
+    cuts.slice().sort((a,b)=>a[0]-b[0]).forEach(([s,en])=>{ out += e.quote.slice(pos,s); pos = en; });
+    out += e.quote.slice(pos);
+    return out.replace(/\s+/g,' ').trim();
+  }
+  function snapWord(text,s,en){
+    while(s>0 && text[s-1]!==' ') s--;
+    while(en<text.length && text[en]!==' ') en++;
+    return [s,en];
+  }
+  function isCut(e,i){ return (e.cuts||[]).some(([s,en])=>i>=s && i<en); }
+  // Render the full quote char-by-char grouped into cut / kept spans for the trim editor.
+  function trimHTML(e){
+    const segs=[]; let cur=null;
+    for(let i=0;i<e.quote.length;i++){
+      const c=isCut(e,i);
+      if(!cur||cur.cut!==c){ cur={cut:c,text:''}; segs.push(cur); }
+      cur.text+=e.quote[i];
+    }
+    return segs.map(sg=> sg.cut
+      ? `<span class="cut-region">${sg.text}</span>`
+      : `<span>${sg.text}</span>`).join('');
+  }
+
+  function cleanCard(e){
+    const s = SPK[e.spk];
+    const showChip = currentWindow === 'loose';
+    const markCls = showChip ? (e.mship === 'loose' ? ' loose-mark' : ' tight-mark') : '';
+    const chip = showChip ? `<span class="mship-chip ${e.mship}">${e.mship}</span>` : '';
+    // Clean read carries NO editing verbs — only Edit. Cut/Drop are editing moves, available
+    // inside the revealed edit card.
+    return `<div class="read-card${markCls}" id="rc-${e.id}">
+      <div class="rc-head">
+        <span class="speaker-tag" style="background:${s.bg};color:${s.fg}">${s.name}</span>
+        <span class="tc">${e.tc}</span>${chip}
+        <span class="rc-tools">
+          <button class="rc-tool edit" onclick="toggleReveal('${e.id}')">✎ Edit</button>
+        </span>
+      </div>
+      <p class="rc-quote">${keptText(e)}</p>
+    </div>`;
+  }
+
+  function editCard(e){
+    const s = SPK[e.spk];
+    // Membership verb is the only state-changing action; shown plain, destination in a tooltip.
+    const verb = e.mship==='tight'
+      ? `<button class="btn btn-cut" onclick="setMship('${e.id}','loose')" title="Cut to the Loose window — stays in play, not dropped">Cut <span class="verb-dest">→ Loose</span></button>`
+      : `<button class="btn btn-add" onclick="setMship('${e.id}','tight')" title="Add back to the Tight cut">Add Back <span class="verb-dest">→ Tight</span></button>`;
+    const notes = e.note ? `<div class="tl-notes"><b>Notes</b> ${e.note}</div>` : '';
+    // Trim = SELECT any text + Cut (mid-sentence OK). Char-range cuts, word-snapped.
+    const anyCut = (e.cuts||[]).length>0;
+    const resetBtn = anyCut
+      ? `<button class="trim-reset" onclick="resetTrim('${e.id}')" title="Restore all cut text">↩ Reset trim</button>`
+      : '';
+    const quoteLine = e.trimOpen
+      ? `<p class="tl-quote trimming" id="trimtext-${e.id}">${trimHTML(e)}</p>
+         <div class="trim-bar"><button class="trim-cut-btn" onclick="cutSelection('${e.id}')">✁ Cut selection</button>${resetBtn}</div>`
+      : `<p class="tl-quote">${keptText(e)}</p>`;
+    return `<div class="tl-card ${e.mship}" id="rc-${e.id}">
+      <div class="tl-drag" title="Drag to reorder"><span>⠿</span></div>
+      <div class="tl-body">
+        <div class="tl-head">
+          <span class="speaker-tag" style="background:${s.bg};color:${s.fg}">${s.name}</span>
+          <span class="tc">${e.tc}</span>
+          <span class="tl-tools">
+            <button class="mini-btn ${e.trimOpen?'on':''}" onclick="toggleTrim('${e.id}')">${e.trimOpen?'▾':'▸'} Trim</button>
+            <button class="mini-btn">✂ Split</button>
+            <button class="act-tag-btn">Act 1 ▾</button>
+          </span>
+          <button class="rc-collapse" onclick="toggleReveal('${e.id}')">✕ Done</button>
+        </div>
+        ${quoteLine}
+        ${notes}
+        <div class="tl-actions">${verb}<button class="btn btn-drop" onclick="dropEntry('${e.id}')" title="Remove from the cut, back to the Library">Drop <span class="verb-dest">→ Library</span></button></div>
+      </div>
+    </div>`;
+  }
+
+  function libCard(q){
+    const s = SPK[q.spk];
+    // Jeff's notes: Add button if not in edit, else just an "In Edit" label.
+    // Act dropdown defaults to the quote's current act. No "view in timeline".
+    const action = q.inEdit
+      ? `<span class="in-edit-label">✓ In Edit</span>`
+      : `<button class="btn btn-add">Add</button>`;
+    return `<div class="lib-card${q.inEdit?' in-edit':''}">
+      <div class="lib-head">
+        <span class="qid">#${q.num}</span>
+        <span class="speaker-tag" style="background:${s.bg};color:${s.fg}">${SPK[q.spk].name}</span>
+        <button class="lib-actdrop">${q.act} ▾</button>
+        <span class="tc">${q.tc}</span>
+      </div>
+      <div class="lib-quote">"${q.quote}"</div>
+      <div class="lib-rationale"><b>Why</b> ${q.why}</div>
+      <div class="lib-actions">${action}</div>
+    </div>`;
+  }
+
+  function render(){
+    [1,2].forEach(act => {
+      document.getElementById('cards-'+act).innerHTML =
+        entries.filter(e=>e.act===act && inWindow(e)).map(e=> e.revealed?editCard(e):cleanCard(e)).join('');
+    });
+    const tightCount = entries.filter(e=>e.mship==='tight').length;
+    const shown = entries.filter(e=>inWindow(e)).length;
+    document.getElementById('win-count').textContent = currentWindow==='tight'?tightCount:shown;
+    document.getElementById('win-time').textContent = currentWindow==='tight'?'2:48':'3:51';
+    document.getElementById('win-metric').className = 'win-metric '+currentWindow;
+    document.getElementById('act1-sub').textContent =
+      currentWindow==='tight' ? tightCount+' in Tight' : shown+' shown (Tight + Loose)';
+    document.getElementById('lib-cards').innerHTML = libQuotes.map(libCard).join('');
+  }
+  function toggleReveal(id){ const e=entries.find(x=>x.id===id); if(e){ e.revealed=!e.revealed; render(); } if(window.event&&window.event.stopPropagation) window.event.stopPropagation(); }
+  function toggleTrim(id){ const e=entries.find(x=>x.id===id); e.trimOpen=!e.trimOpen; render(); }
+  // Selection-based trim: read the highlighted range within the quote text, snap to
+  // words, toggle it as a cut region (cut if mostly-kept, restore if mostly-cut).
+  function cutSelection(id){
+    const e=entries.find(x=>x.id===id);
+    const host=document.getElementById('trimtext-'+id);
+    const sel=window.getSelection();
+    if(!host||!sel||sel.rangeCount===0||sel.isCollapsed){ alert('Select some text in the quote first.'); return; }
+    // compute char offsets within host
+    let off=0,start=null,end=null;
+    const walker=document.createTreeWalker(host,NodeFilter.SHOW_TEXT,null);
+    while(walker.nextNode()){
+      const node=walker.currentNode, len=node.textContent.length;
+      if(node===sel.anchorNode){ const o=off+sel.anchorOffset; start=start===null?o:start; end=o; }
+      if(node===sel.focusNode){ const o=off+sel.focusOffset; start=start===null?o:start; end=o; }
+      off+=len;
+    }
+    if(start===null||end===null||start===end){ sel.removeAllRanges(); return; }
+    if(start>end){ const t=start; start=end; end=t; }
+    [start,end]=snapWord(e.quote,start,end);
+    // toggle: if selection lies inside an existing cut, restore that region; else add a cut
+    e.cuts=e.cuts||[];
+    const inside=e.cuts.find(([s,en])=>start>=s&&end<=en);
+    if(inside){ e.cuts=e.cuts.filter(c=>c!==inside); }
+    else { e.cuts.push([start,end]); e.cuts.sort((a,b)=>a[0]-b[0]); }
+    sel.removeAllRanges(); render();
+  }
+  function resetTrim(id){ const e=entries.find(x=>x.id===id); e.cuts=[]; render(); }
+  function revealAll(v){ entries.forEach(e=>{ if(inWindow(e)) e.revealed=v; }); render(); }
+  function setMship(id,m){ entries.find(x=>x.id===id).mship=m; render(); }
+  function dropEntry(id){ const i=entries.findIndex(x=>x.id===id); entries.splice(i,1); render(); }
+  function setWindow(w){
+    currentWindow=w;
+    document.getElementById('win-tight').className = w==='tight'?'active tight':'tight';
+    document.getElementById('win-loose').className = w==='loose'?'active loose':'loose';
+    render();
+  }
+  function setTab(t){
+    document.getElementById('tab-edit').className = t==='edit'?'active':'';
+    document.getElementById('tab-lib').className = t==='lib'?'active':'';
+    document.getElementById('page-edit').className = t==='edit'?'main':'main hidden';
+    document.getElementById('page-lib').className = t==='lib'?'main':'main hidden';
+    document.getElementById('edit-controls').className = t==='edit'?'hdr-row2':'hdr-row2 hidden';
+    document.getElementById('lib-controls').className = t==='lib'?'hdr-row2':'hdr-row2 hidden';
+  }
+  // Export = write the cut JSON (reliable) + hand a ready-to-paste FCPXML Agent prompt.
+  function openExport(){
+    const win = currentWindow;            // builds whatever window is selected
+    const label = win === 'tight' ? 'Tight' : 'Loose';
+    const count = win === 'tight' ? entries.filter(e=>e.mship==='tight').length : entries.filter(e=>inWindow(e)).length;
+    const time = win === 'tight' ? '2:48' : '3:51';
+    document.getElementById('export-winlabel').textContent = label;
+    document.getElementById('export-winlabel').className = 'export-win '+win;
+    document.getElementById('export-winword').textContent = label;
+    document.getElementById('export-winstats').textContent = count+' entries · '+time;
+    const prompt =
+`You are the FCPXML Agent. Read documentary-junior-editor/SKILL-fcpxml-params.md and documentary-junior-editor/SKILL-fcpxml.md and follow them exactly. The project folder is mounted.
+
+Build the ${label.toUpperCase()} cut for hammer-ner-2026. Per handoffs/pipeline-state.json, read handoffs/hammer-ner-2026/fcpxml-params-v1.md, handoffs/hammer-ner-2026/trimmed-quotes-v1.json (just written from the viewer — ${win} window, ${count} entries), handoffs/hammer-ner-2026/edit-handoff-v1.md, and handoffs/hammer-ner-2026/act-structure-v1.md.
+
+Cross-reference timecodes against the captioned FCPXMLs in XML/exports/, branch generation by per-interview clip_type, and emit one clip per source segment per timeline entry. Save to XML/imports/hammer-ner-2026_${win}_cut_v1.fcpxml. Update handoffs/hammer-ner-2026/pipeline-state.json.
+
+Set model to Sonnet 4.6.`;
+    document.getElementById('export-prompt').value = prompt;
+    document.getElementById('export-copybtn').textContent = 'Copy';
+    document.getElementById('export-overlay').className = 'export-overlay';
+  }
+  function closeExport(){ document.getElementById('export-overlay').className = 'export-overlay hidden'; }
+  function copyExportPrompt(){
+    const ta = document.getElementById('export-prompt');
+    ta.select();
+    try { navigator.clipboard.writeText(ta.value); } catch(e){}
+    document.getElementById('export-copybtn').textContent = 'Copied ✓';
+  }
+  function togglePanel(){
+    const b=document.getElementById('sp-body'), t=document.getElementById('sp-toggle');
+    const open=b.style.display!=='none';
+    b.style.display=open?'none':''; t.textContent=open?'▲':'▼';
+    document.body.classList.toggle('panel-open', !open);
+  }
+  render();
+</script>
+</body>
+</html>
