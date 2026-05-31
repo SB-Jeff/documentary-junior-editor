@@ -1,5 +1,5 @@
 # Documentary Junior Editor — Cowork Session Guide
-### Version 5.5 | May 2026
+### Version 5.7 | May 2026
 
 ## Overview
 
@@ -308,6 +308,9 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 - `trimmed-quotes-v[N].json` — timeline of entries with `segments[]`, all editorial decisions
 - `[project-slug]_quotes_view.html` — live artifact's final state for this round (overwrites; same name across rounds)
 
+**At project close (once, not per round):**
+- `edit-agent-lessons-v[N].md` — the Edit Agent's own capture of editorial lessons, structural patterns, and schema/tooling gaps from the session (SKILL-edit.md Phase 7, item 5). This is the lightweight, reliable feedback path: the Editing Coach and Skill Review Agents read it as a first-class input, and it stands on its own if neither runs.
+
 #### Step 4b: FCPXML Agent
 
 **Skill file:** `SKILL-fcpxml.md` (+ `SKILL-fcpxml-params.md` for reference IDs)
@@ -319,9 +322,14 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 - **Segment-aware clip generation.** Each timeline entry's `segments[]` produces one clip per source segment in entry order. Internal drops within an entry produce gaps in the source-clip play but stay within the entry's clip cluster.
 - **Caption-matcher TC-window optimization** promoted to standard practice (±15s buffer per quote).
 
+**What's new in v5.7 (from the Hammer NER 2026 FCPXML review):**
+- **Cut-selection confirmation (Phase 1, step 1.6).** Before generating, the agent now states the must-keep vs. probable-keep entry counts and asks which cut(s) to emit — rough (all entries), tight (must-keep only), or both — rather than assuming the handoff's designated cut. Removes the regenerate-when-Jeff-wanted-the-other-cut round-trip.
+- **Reference FCPXML required for all projects.** The Params Agent must set the reference FCPXML (`Project Sample.fcpxmld`) even on all-multicam projects — `build_fcpxml.py` needs it for the project skeleton. (See Step 2 / SKILL-fcpxml-params.md.)
+- **Speaker keys must match the timeline.** Params speaker names come from the Synthesis `speaker` field, not FCPXML media metadata; an exact-match mismatch silently drops clips. (See Troubleshooting.)
+
 **Starter prompt — round N (set model to Sonnet 4.6):**
 
-> You are the FCPXML Agent. Read `documentary-junior-editor/SKILL-fcpxml-params.md` and `documentary-junior-editor/SKILL-fcpxml.md` and follow them exactly. The project folder is mounted. Per `handoffs/pipeline-state.json`, read the latest `handoffs/fcpxml-params-v[N].md`, `handoffs/trimmed-quotes-v[N].json` (timeline entries with segments), `handoffs/edit-handoff-v[N].md`, and `handoffs/act-structure-v[N].md`. Cross-reference timecodes against the captioned FCPXMLs in `XML/exports/`, branch generation logic by per-interview `clip_type`, and emit one clip per source segment per timeline entry. Save the output to `XML/imports/[project-slug]_rough_cut_v[N].fcpxml` (or `_reduction_v[N].fcpxml` if the round was a Reduction emission). Update `handoffs/pipeline-state.json`.
+> You are the FCPXML Agent. Read `documentary-junior-editor/SKILL-fcpxml-params.md` and `documentary-junior-editor/SKILL-fcpxml.md` and follow them exactly. The project folder is mounted. Per `handoffs/pipeline-state.json`, read the latest `handoffs/fcpxml-params-v[N].md`, `handoffs/trimmed-quotes-v[N].json` (timeline entries with segments), `handoffs/edit-handoff-v[N].md`, and `handoffs/act-structure-v[N].md`. Cross-reference timecodes against the captioned FCPXMLs in `XML/exports/`, branch generation logic by per-interview `clip_type`, and emit one clip per source segment per timeline entry. **Before generating, state the must-keep vs. probable-keep entry counts and ask me which cut(s) to produce — rough, tight, or both — and don't generate until I confirm.** Save the output to `XML/imports/[project-slug]_rough_cut_v[N].fcpxml` (and/or `_tight_cut_v[N].fcpxml`, or `_reduction_v[N].fcpxml` if the round was a Reduction emission). Update `handoffs/pipeline-state.json`.
 
 **Output:**
 - `[project-slug]_rough_cut_v[N].fcpxml` (or `_reduction_v[N].fcpxml`) in `XML/imports/`, ready to import into Final Cut Pro
@@ -343,6 +351,8 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 > Read `documentary-junior-editor/SKILL-editing-coach.md` and run the Editing Coach Agent for this project in **at-close mode**. Jeff has approved the final FCPXML cut. Read the saved viewer state, the tweak log (or fall back to my memory if not persisted), and the trimmed-quotes JSON variants. Walk me through the override patterns one cluster at a time, capture my reasoning per cluster, propose SKILL-edit.md diffs for my approval, file viewer roadmap entries, and write the Editing + Quote Viewer sections of `handoffs/[project-slug]/lessons-learned.md`. Leave a handoff note at `handoffs/[project-slug]/skill-review-notes.md` for the Skill Review Agent.
 
 Coach can also run **between-rounds** during Step 4 — invoke it after any Edit Agent round (typically between rough and tight) to course-correct the Edit Agent before the next pass. Use the same skill file, but tell it "between-rounds mode" in the prompt; output is a briefing for the next Edit Agent invocation rather than the full at-close ceremony.
+
+**Coach is optional as of v5.7.** The Edit Agent now writes its own `edit-agent-lessons-v[N].md` at project close, so the feedback loop no longer depends on the tweak-log → Coach → Review chain firing. Run Coach when you want the deeper at-close conversation and SKILL-edit.md diffs; skip it when the Edit Agent's lessons doc already captures what the session taught. Skill Review (Step 5b) reads the lessons doc directly when Coach didn't run.
 
 ---
 
@@ -463,10 +473,14 @@ git pull
 
 **Multi-speaker output FCPXML has missing or wrong-speaker clips:** Each speaker's captioned FCPXML has its own resources block, and they typically all start at `r2`. `build_fcpxml.py` resolves the collision automatically by merging per-speaker resources with dynamic ID remap (first speaker alphabetical keeps its IDs; subsequent speakers shift above the high-water mark). If you see a warning like "speaker 'X' source has no `<resources>`; skipping in merge", that speaker's source FCPXML is malformed — re-export from FCP. If clips reference the wrong speaker after import, check the FCPXML Params handoff for matching `Media Ref IDs` / `Asset Ref IDs` against the speaker filenames in `XML/exports/`.
 
+**Output FCPXML has very few clips, or zero (v5.7):** The most common cause is a speaker-name mismatch between `fcpxml-params-v[N].md` and the timeline. `build_spine()` does an exact dict lookup on speaker name and **silently skips** any speaker whose params key doesn't match the timeline's `speaker` value — so wrong/short/legacy names (e.g. params `Isiah` / `Mike & Janna Stern` vs. timeline `Isaiah Allen` / `Jana Stern` / `Mike Stern`) drop those speakers' clips entirely. Fix: the Params Agent must use the canonical `speaker` values from `tagged-quotes-v[N].json`, not FCPXML `<media name=...>` metadata (SKILL-fcpxml-params.md, v5.7). Re-run FCPXML Params with corrected keys, or normalize names before generating.
+
+**`build_fcpxml.py` won't run / "no reference FCPXML" (v5.7):** The `## Reference FCPXML` field in `fcpxml-params-v[N].md` is blank or says "no single_clip interviews." The reference (`Project Sample.fcpxmld` in `XML/`) is required for *every* project — it supplies the project skeleton regardless of clip type. Re-run the Params Agent so it sets the field, or fill it in by hand from the sample XML in `XML/`.
+
 **FCPXML won't import into FCP:** `library_location`, `event_name`, and `event_uid` in `fcpxml-params-v[N].md` must match the destination FCP library — the FCPXML Params Agent extracts these from each speaker's source FCPXML, so a mismatch usually means the source FCPXMLs were exported from a different library than the one you're importing into. Re-export the captioned interviews from the destination library and re-run the FCPXML Params Agent. Multicam recognition on re-import relies on the `<media uid=...>` attribute being stable across exports (FCP keeps these stable on the source multicams).
 
 **`git fetch` fails on the SSD with `bad object refs/Icon?`:** Finder icon artifacts in `.git/`. See the cleanup snippet in [After Session Review](#after-session-review-commit-skill-updates-back-to-github).
 
 ---
 
-*v5.2 — May 2026 — see CHANGELOG.md for detailed version history.*
+*v5.7 — May 2026 — see CHANGELOG.md for detailed version history.*

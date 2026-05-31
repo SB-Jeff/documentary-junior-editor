@@ -58,10 +58,14 @@ requires close attention to individual words. The temptation to "clean up" or
 "improve" a quote is highest here. Resist it entirely. Your job is to find the
 shortest verbatim version that makes the point — not to write a better version.
 
-**Before saving a handoff, run BOTH Cardinal Rule verifications** described in
-Phase 7. Every kept segment must be verified as a verbatim subset of its source
-quote (Rule 1), AND the assembled timeline must be read top-to-bottom for
-narrative coherence (Rule 2). A cut is not "ready to present" until both pass.
+**Both Cardinal Rule verifications (Phase 7) must pass — at the moments they
+matter.** Rule 2 (narrative coherence) is verified *in-session, every time you
+propose a sequence to Jeff* (Phase 3, step 5) — never hand over a sequence
+that hasn't been read top-to-bottom for coherence first. Rule 1 (verbatim
+integrity) is verified *at emit*, per-entry, before saving any handoff: every
+kept segment must be a verbatim subset of its source quote. A cut is not
+"ready to present" until Rule 2 has passed at proposal time; a round is not
+ready to save until Rule 1 passes at emit.
 
 ### How the rule generalizes to segments and timeline entries
 
@@ -322,7 +326,12 @@ A timeline entry has:
   the viewer derives a character-range trim representation on top of this.
 - `_editCuts` — character-range cuts on the entry's concatenated full-quote
   text, populated by the viewer's character-range trim editor. Used by the
-  viewer for the editing UI; the FCPXML Agent reads `segments[]`.
+  viewer for the editing UI; the FCPXML Agent reads `segments[]`. When an
+  entry carries `_editCuts`, they are **authoritative** for the viewer's
+  display (the build script honors them rather than recomputing from
+  `segments[]` + trims). For mid-segment cuts, `_editCuts` can be finer than
+  `segments[]` + word trims can represent — see "Known limitation —
+  mid-segment cuts" under Per-segment trims.
 - `_subLabel` — `"a"`, `"b"`, etc. when this entry is one of a split set
   from a single source quote; `null` otherwise.
 - `runtime_recommendation` — `must-keep` or `probable-keep` (two-tier
@@ -395,8 +404,24 @@ Each segment reference inside a timeline entry can carry optional trims:
 
 The kept span of a trimmed segment must always be a **contiguous** substring
 of the segment's verbatim text. You cannot skip words in the middle of a
-segment via trims — for that, drop the segment and rely on adjacent segments,
-or request finer source segmentation.
+segment via `head_trim_words` / `tail_trim_words` — for that, drop the
+segment and rely on adjacent segments, or request finer source segmentation.
+
+**Known limitation — mid-segment cuts (documented, accepted as of v5.7).**
+The viewer's character-range trim editor *does* let the editor cut words from
+the middle of a segment, and editors use it freely (Hammer NER 2026 Round 1:
+14 entries had mid-segment cuts). Those cuts are stored as authoritative
+`_editCuts` on the entry; the build script honors them for the viewer. But
+the FCPXML Agent generates clips from `segments[]` + word trims, which can
+only approximate a mid-segment cut with the nearest contiguous span — so at
+those specific points the exported FCPXML may **play slightly wider than the
+viewer shows**, and the editor refines the in/out in Final Cut Pro. This is
+the accepted behavior, not a bug. A cleaner long-term fix — extending the
+schema to allow multiple disjoint kept ranges per segment (e.g.
+`kept_ranges: [[start_word, end_word], ...]`), or segmenting more finely
+upstream so cut points fall on segment boundaries — is parked as a
+forward-looking item for a dedicated schema pass; it touches the Transcript,
+Synthesis, and FCPXML Agents and is out of scope for an in-session edit.
 
 ### Worked example: sentence-level reorder
 
@@ -727,6 +752,36 @@ established.
 One speaker per story. When multiple speakers describe the same experience,
 pick the strongest version and present alternatives to Jeff.
 
+**Segment selection is structural, not additive.** Choosing which segments
+of a quote to keep is a story-construction decision, not a "could this
+plausibly serve the narrative?" filter. The right test for every segment is:
+*"Does this segment belong to this beat in this act, and advance the story
+progression right now?"* — not *"Could this segment plausibly fit somewhere?"*
+Three failure modes to cut firmly:
+
+- **Forward-references.** Segments that telegraph material the audience
+  hasn't earned yet — a payoff, an outcome, or a destination named before
+  the story has arrived there. (Hammer NER: a quote's later segments praising
+  "thriving in the Hammer community" placed in the Act 1 opening, before the
+  community has been introduced.) Cut the forward-reference even if the words
+  are verbatim and the quote is otherwise kept.
+- **Tangents.** Charming texture with no narrative function *at this point in
+  the act* — an anecdote or aside that doesn't advance the beat it sits in.
+  (Hammer NER: an earrings anecdote; a sister-in-Wisconsin tangent.) These
+  can be delightful and still wrong here.
+- **Material covered better elsewhere.** A beat two speakers both deliver, or
+  a segment mistagged into the wrong act — keep the stronger instance, drop
+  the duplicate.
+
+**This does not contradict "the rough cut is broad."** Broad applies at the
+*entry* level — include every plausible quote, err on keeping. Light hand
+applies to *fat-trimming for tightness* — stutters, ums, mild redundancy,
+which wait for Reduction. But **story-progression violations get cut firmly
+even in the Rough Cut.** Keeping verbatim words that jump the timeline isn't
+being broad; it's being structurally wrong. Breadth is about *which quotes*
+you include, not about leaving forward-references and tangents inside the
+segments you keep.
+
 **Limited-entry supporting voice pattern.** When a project has a primary
 protagonist plus a close-relation second voice (spouse, adult child,
 colleague), don't distribute the supporting voice evenly. Pick 2–4
@@ -742,6 +797,17 @@ creative brief for awareness, but do not trim toward it in the first pass.
 The rough cut should err long — including every entry that plausibly earns
 its place across the full narrative arc. Runtime becomes the constraint only
 at Reduction, after the Discussion with Jeff.
+
+**Reference examples are not runtime templates.** The projects in
+`reference-examples/` exist to teach *content organization and story arc* —
+how meaningful content is structured and delivered — not to set a length
+target. Runtime varies tremendously from story to story and project to
+project; it is a *downstream property* of a well-organized story, not an
+input. Do not size a section by extrapolating from a reference example's
+length (e.g., "Nathan ran ~3 minutes, so this Intro should be ~27 seconds").
+Do not let the brief's "~X% of runtime" planning hints gate the Rough Cut —
+they are advisory. A reference example's section lengths are a sanity check
+at most, applied *after* a Rough Cut exists, never a budget you cut toward.
 
 **Watch for outcome / visual-result material in the source pool that isn't
 shining at first pass.** Patient testimonials, customer-story projects, and
@@ -778,6 +844,29 @@ the solution.
 
 Strong opening, strong closing. The first entry hooks the viewer. The last
 entry is forward-looking and leaves the viewer with confidence.
+
+**The wrapper-body-wrapper pattern (nonprofit fundraising, single
+protagonist + institutional thesis).** When a project pairs one protagonist's
+story with an institutional "why this program exists" thesis, the canonical
+five-point shape is a wrapper around a body:
+
+1. The institution saw a need and built an innovative program *(wrapper open)*
+2. The program lets people like the subject live independently *(transition
+   into body)*
+3. The subject's story, then to now *(body — typically Acts 1–2)*
+4. Modern-day realities make this work difficult *(wrapper close, part 1)*
+5. We need support so more people like the subject can thrive *(wrapper
+   close, part 2 — usually the implicit ask)*
+
+The Intro and closing act are the wrapper; the middle acts are the body. The
+closing act structurally mirrors the Intro (a pull-back to the institutional
+wide shot), which is why a closing beat that belongs to the *body* — joy
+texture, an in-the-moment scene — usually reads as a misfire in the wrapper
+close. Recognizing this shape early shapes Rough Cuts faster. Validated
+across Pacer Center, International Institute, and Hammer NER 2026 (and the
+Nathan / A Place for Barb house references). Name it when you see the
+single-protagonist-plus-institutional-thesis setup; don't force it onto
+projects without an institutional wrapper.
 
 **Lead with vulnerability, close with authority.** When a subject has both
 personal vulnerability and earned present-day authority — a board seat, a
@@ -983,9 +1072,16 @@ For each act:
 4. Flag any gaps — moments the act needs but no strong material covers
    (with title-card / interstitial / context-beat suggestions where they
    apply)
-5. **Read the proposed sequence aloud (in chat) to verify narrative
-   coherence.** Do the entries flow? Does each one set up the next? If not,
-   fix it before presenting.
+5. **Cardinal Rule 2 gate — verify narrative coherence here, at proposal
+   time, before Jeff sees the sequence.** This is the primary moment Rule 2
+   is enforced. Read the proposed sequence top-to-bottom as if hearing it for
+   the first time and check for orphan pronouns, back-reference openers
+   without setup, missing subject anchoring, logical jumps, redundancy, and
+   emotional/tonal whiplash (the full checklist is in Phase 7). Fix every
+   issue — reorder, re-trim, bridge, or pull setup material — *before*
+   presenting. Jeff should never be handed a sequence that hasn't already
+   passed Rule 2. Coherence is the editor's to confirm in the viewer; it is
+   the agent's to get right before the proposal lands.
 6. Apply the proposed selections, ordering, segments, trims, and
    recommendations to the live viewer via `update_artifact`
 7. Inline the full text of any newly-introduced source quote on first
@@ -1273,8 +1369,26 @@ finalize on round 1; others loop four or five times.
 
 ## Phase 7: Cardinal Rules Verification + Handoff Documents
 
-Before saving any round's outputs, run BOTH Cardinal Rule verifications.
-A cut is not "ready to present" until both pass.
+**When each Cardinal Rule is verified:**
+
+- **Cardinal Rule 2 (narrative coherence) is verified in-session, at proposal
+  time** — every time you propose a sequence to Jeff (Phase 3, step 5), before
+  he sees it. That is the gate that matters: it catches coherence problems
+  while there's still a conversation to fix them in, and by the time a round
+  is ready to emit the editor has already done the coherence work in the
+  viewer. Re-reading the whole timeline at emit time is redundant. At emit,
+  do only a **confirmation pass**: if entries were reordered, re-trimmed, or
+  added *since the last proposal Jeff saw*, re-run the Rule 2 checklist over
+  the changed region; otherwise Rule 2 is already satisfied. The Rule 2
+  checklist below is the reference for both the proposal-time gate and the
+  emit-time confirmation — it has not moved or weakened, only relocated to
+  the moment it does the most good.
+- **Cardinal Rule 1 (verbatim integrity) is verified at emit**, per-entry,
+  every round — this is mechanical and cheap and must run before any save.
+
+Run the Rule 1 verification (below) before saving any round's outputs. A cut
+is not "ready to present" until Rule 2 has passed at proposal time and Rule 1
+passes at emit.
 
 ### Cardinal Rule 1 verification — verbatim integrity (per-entry)
 
@@ -1297,12 +1411,16 @@ For each timeline entry:
 If any entry fails Rule 1 verification, fix it before saving. Do not
 proceed with unverified entries.
 
-### Cardinal Rule 2 verification — narrative coherence (whole-timeline)
+### Cardinal Rule 2 verification — narrative coherence (the checklist)
 
-Assemble the timeline's verbatim text in playback order — concatenating
-each entry's kept segments in source order, with any interstitials and
-title cards inserted at their timeline positions. Read it through as if
-hearing it for the first time. Check for:
+This is the coherence checklist referenced by the proposal-time gate (Phase
+3, step 5) and the emit-time confirmation pass (above). At proposal time,
+apply it to the sequence you are about to present. At emit, apply it only to
+any region changed since the last proposal Jeff saw. To run it, assemble the
+relevant verbatim text in playback order — concatenating each entry's kept
+segments in source order, with any interstitials and title cards inserted at
+their timeline positions — and read it through as if hearing it for the first
+time. Check for:
 
 1. **Orphan pronouns** — "they / it / that / this / those" without a
    clear antecedent established earlier in the cut.
@@ -1334,10 +1452,10 @@ If any check fails, the cut is not ready. Options to fix:
   setup
 - Drop the problematic entry if no fix preserves narrative flow
 
-Repeat Rule 2 verification after every fix until the timeline reads
-cleanly top-to-bottom. **Do not present the cut to Jeff until both Rule
-1 and Rule 2 verifications pass.** Document any unresolved coherence
-risks in the round's handoff (Phase 7 below) with proposed
+Repeat after every fix until the sequence reads cleanly top-to-bottom.
+**Do not present a sequence to Jeff until it passes this Rule 2 checklist**
+(and confirm Rule 1 verbatim integrity at emit). Document any unresolved
+coherence risks in the round's handoff (Phase 7 below) with proposed
 interstitials Jeff can approve.
 
 Applies equally to rough cuts and tight cuts. "Rough" does not mean
@@ -1542,6 +1660,33 @@ Increment Edit Agent's `current_version` to N, set `based_on` to the
 upstream versions consumed for this round, set `last_run` to the ISO
 timestamp.
 
+#### 5. `handoffs/[project-slug]/edit-agent-lessons-v[N].md` (at project close)
+
+**This is the Edit Agent's own feedback-capture handoff.** Write it once, at
+the close of the project (after Jeff approves the final cut), not every round.
+It is the primary, reliable path for getting editorial lessons from the Edit
+session into the skill — more dependable than relying on viewer tweak-log
+persistence plus a separate downstream agent. The Editing Coach and Skill
+Review Agents read it as a first-class input; if neither runs, it still
+stands on its own as the record of what this session taught.
+
+Capture, in your own structure, whatever the session surfaced:
+
+- **Editorial-philosophy lessons** — corrections Jeff made to your defaults,
+  with the reasoning, and a suggested destination (which `SKILL-*.md` section,
+  or "memory only / reference example only" if it's a first occurrence).
+  Honor the three-occurrence discipline: name whether each is a 1st / 2nd /
+  3rd+ sighting so a reviewer knows whether it's ready to promote.
+- **Structural patterns worth naming** for cross-project reuse, with the
+  prior projects they also appear in.
+- **Schema / tooling gaps** you hit, with options and a recommendation, for
+  Jeff's call.
+- **Per-project notes** for the eventual reference example.
+
+There is no required template — a clear, sectioned markdown doc that a
+reviewer (or Jeff) can act on is the whole requirement. The uploaded
+`edit-agent-lessons-v1.md` from Hammer NER 2026 is the working model.
+
 ---
 
 ## Loop-Back Sessions (re-entry from review notes)
@@ -1560,11 +1705,13 @@ When Jeff returns after watching the round-N FCPXML cut:
 - The full source pool remains available in the artifact
 
 Re-enter the loop at Phase 1, run Phases 2–7 with round N+1 as the next
-emit version. Re-running BOTH Cardinal Rules verifications on every round
-is required even if you only touched a small subset of entries — a single
-entry's trim or reorder can break narrative coherence across the whole
-timeline (Rule 2), and verification is cheap relative to the cost of
-missing a violation.
+emit version. Cardinal Rule 1 (verbatim integrity) re-runs at emit on every
+round, no exceptions. Cardinal Rule 2 (coherence) is verified at proposal
+time as you present the revised sequence — and because a single entry's trim
+or reorder can ripple coherence across the whole timeline, the proposal-time
+read covers the full revised sequence, not just the touched entries, whenever
+a change could affect setup-payoff order. Verification is cheap relative to
+the cost of missing a violation.
 
 All source quotes remain available. Nothing has been removed from the
 source pool. The Cardinal Rule, approved act structure, and verification
@@ -1572,5 +1719,5 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.4*
+*Edit Agent — documentary-junior-editor v5.7*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

@@ -86,25 +86,47 @@ For your role as Skill Review specifically:
 
 ## When You Run
 
-At project close, after Jeff has approved the final FCPXML cut AND after
-Editing Coach has completed its at-close pass. Coach hands off via
-`handoffs/[project-slug]/skill-review-notes.md`; Skill Review reads it as
-one of its inputs.
+At project close, after Jeff has approved the final FCPXML cut.
 
-If Coach hasn't run yet, stop and tell Jeff to run Coach first. Coach is a
-prerequisite, not optional — its findings inform the System section of
-`lessons-learned.md` and prevent Skill Review from re-doing Edit Agent
-analysis.
+**Preferred input chain:** Editing Coach has completed its at-close pass and
+handed off via `handoffs/[project-slug]/skill-review-notes.md` plus the
+Editing / Quote Viewer sections of `lessons-learned.md`. When present, Skill
+Review reads those as primary inputs.
+
+**Fallback when Coach didn't run (added v5.7):** The Editing Coach pass is no
+longer a hard prerequisite. If `skill-review-notes.md` and the Coach-written
+`lessons-learned.md` sections are absent, look for the Edit Agent's own
+`handoffs/[project-slug]/edit-agent-lessons-v[N].md` — the lightweight
+capture handoff the Edit Agent writes at project close (SKILL-edit.md Phase 7,
+item 5). It carries the editorial lessons, structural patterns, and
+schema/tooling gaps directly, in a reviewer-actionable form, and is the more
+reliable path in practice. Read it and proceed: fold its editorial-philosophy
+items toward `SKILL-edit.md` (flagged "→ Coach should fold into SKILL-edit.md"
+if you are respecting the territory split, or apply directly if Jeff directs
+it), and use its System-level and reference-example material in your own
+sections.
+
+Only stop and ask Jeff if *neither* Coach's handoffs *nor* an
+`edit-agent-lessons` doc exists *nor* Jeff is supplying the lessons directly
+in-session — in that case there is no captured feedback to review.
 
 ---
 
 ## Required Inputs
 
-**Coach's handoff (read first).**
+**Coach's handoff (read first, if present).**
 - `handoffs/[project-slug]/skill-review-notes.md` — Coach's short list of
   findings Skill Review should know about: recurring patterns, project
   type observations, system-level implications of Editing or Viewer
   findings, anything that touches other agents or the pipeline at large.
+
+**Edit Agent's lessons handoff (read when Coach didn't run, or alongside it).**
+- `handoffs/[project-slug]/edit-agent-lessons-v[N].md` — the Edit Agent's
+  own at-close capture of editorial lessons, structural patterns, and
+  schema/tooling gaps (SKILL-edit.md Phase 7, item 5). This is the fallback
+  feedback source when there is no Coach pass, and a useful cross-check when
+  there is one. It already maps each lesson to a suggested destination and
+  notes 1st/2nd/3rd-occurrence status for promotion decisions.
 
 **Project state.**
 - `handoffs/[project-slug]/pipeline-state.json` — the dependency-tracking
@@ -211,18 +233,35 @@ entries). For each, note current status: SHIPPED / IN PROGRESS / OPEN /
 NEW. Surface to Jeff the highest-priority next code work based on this
 project's friction.
 
-Current as of v5.4:
+Current as of v5.7:
 - `scripts/transcribe.py` legacy key paths — SHIPPED in v5.1 (prune
   unused paths on next touch)
 - `scripts/build_fcpxml.py` — per-interview clip_type branching,
   parser format update, per-segment clip generation, multi-speaker
   resource-ID remap, library-multicam UID references, parse_params_md
   basename fix — OPEN, high priority
+- `scripts/build_fcpxml.py` / `scripts/generate_fcpxml.py` — NEW in v5.7
+  from Hammer NER 2026 FCPXML review (OPEN, high priority):
+  (a) act-boundary title cards stack at the sequence-start offset instead
+  of their act positions — section-divider offset must track cumulative
+  spine duration; (b) `parse_act_structure` regex misses "Intro" and other
+  non-Act-prefixed headings; (c) slug `part` fields don't canonicalize to
+  display labels in `_canonicalize_section`. (b) and (c) share a root cause
+  with the speaker-name mismatch — cross-agent shared-vocabulary drift;
+  consider whether the Edit Agent should emit display labels in `part`.
+  A fuzzy speaker-name resolver in `build_fcpxml.py` is also parked here.
 - `scripts/quotes_viewer_template.jsx` — viewer rewrite SHIPPED in v5.3
   (parked for separate viewer review task; Coach now files specific
-  change requests to `quotes-viewer-roadmap.md`)
+  change requests to `quotes-viewer-roadmap.md`). NOTE: uncommitted
+  Hammer NER 2026 patches to `quotes_viewer_template.jsx` +
+  `build_quotes_viewer.py` (act-chip labels, data-shape normalization,
+  authoritative `_editCuts` round-trip) pending commit with v5.7.
 - `scripts/generate_fcpxml.py` — `find_quote_range` TC-window narrowing
   — verify on each pass
+- SKILL-doc fixes from the same FCPXML review — SHIPPED in v5.7:
+  reference-FCPXML-required (SKILL-fcpxml-params.md), speaker-name authority
+  (SKILL-fcpxml-params.md), cut-selection confirmation (SKILL-fcpxml.md
+  Phase 1).
 
 ---
 
@@ -626,7 +665,7 @@ Update `pipeline-state.json` to record Skill Review's run:
 
 ---
 
-*Skill Review Agent — documentary-junior-editor v5.4*
+*Skill Review Agent — documentary-junior-editor v5.7*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *Read Coach's `skill-review-notes.md` before reading anything else from
 the project — it tells you what pipeline-level implications Coach

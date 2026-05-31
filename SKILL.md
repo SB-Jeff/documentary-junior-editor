@@ -13,7 +13,7 @@ description: |
 ---
 
 # Documentary Junior Editor — Master Skill Index
-### Version 5.0 | April 2026
+### Version 5.7 | May 2026
 
 This is the master index for the documentary-junior-editor skill. Read this file first at
 the start of every session. It describes the pipeline, the folder structure, how agents
@@ -233,14 +233,18 @@ runs the most current version of the skill.
 ```
 documentary-junior-editor/
 ├── SKILL.md                        ← this file — master index
-├── SKILL-transcription.md          ← Transcription Agent instructions (v5.0, new)
+├── SKILL-transcription.md          ← Transcription Agent instructions
 ├── SKILL-creative-context.md       ← Creative Context Agent instructions
 ├── SKILL-transcript.md             ← Transcript Agent instructions
+├── SKILL-orchestrator.md           ← Orchestrator Agent instructions (v5.5, Step 2 fan-out)
 ├── SKILL-fcpxml-params.md          ← FCPXML Params Agent instructions
 ├── SKILL-synthesis.md              ← Synthesis Agent instructions
 ├── SKILL-edit.md                   ← Edit Agent instructions (selection + trimming + splitting)
 ├── SKILL-fcpxml.md                 ← FCPXML Agent instructions
+├── SKILL-editing-coach.md          ← Editing Coach Agent instructions (v5.4; optional as of v5.7)
 ├── SKILL-review.md                 ← Skill Review Agent instructions
+├── cowork-session-guide.md         ← step-by-step Cowork run guide (all agents)
+├── quotes-viewer-roadmap.md        ← viewer change queue (Coach writes; viewer dev consumes)
 ├── CHANGELOG.md                    ← version history
 ├── .env                            ← ASSEMBLYAI_API_KEY=... (gitignored, per-Mac)
 ├── start-editing                   ← one-command host-side launcher (no extension)
@@ -286,11 +290,15 @@ documentary-junior-editor/
 │       ├── lessons-learned.md
 │       └── transcripts/
 └── scripts/
+    ├── transcribe.py
     ├── extract_fcpxml.py
     ├── generate_fcpxml.py
+    ├── build_fcpxml.py
     ├── generate_quotes.py
+    ├── build_quotes_viewer.py
     ├── add_edit_tab.py
-    └── quotes_viewer_template.jsx
+    ├── quotes_viewer_template.jsx
+    └── test-fixtures/             ← viewer manual-test fixtures (v5.6)
 ```
 
 ### Project Folder
@@ -320,7 +328,9 @@ reads from and writes to this folder.
 │   ├── edit-handoff-v[N].md                    ← Edit Agent (structured handoff summary)
 │   ├── trimmed-quotes-v[N].json                ← Edit Agent (timeline of entries with segments[])
 │   ├── [project-slug]_quotes_view.html         ← Edit Agent (live artifact, final state on session end)
-│   └── review-notes.md                         ← Jeff's notes after watching FCPXML cut (unversioned)
+│   ├── edit-agent-lessons-v[N].md              ← Edit Agent (at-close feedback capture; read by Coach + Skill Review)
+│   ├── review-notes.md                         ← Jeff's notes after watching FCPXML cut (unversioned)
+│   └── lessons-learned.md                      ← Coach + Skill Review (moved to reference-examples/ at close)
 └── [FCP Library].fcpbundle         ← Final Cut Pro library
 ```
 
@@ -476,7 +486,9 @@ Before starting a new editing session:
 
 This skill is designed to work in both environments:
 
-**Cowork (current):** Each of the eight agents is a separate Cowork session. The
+**Cowork (current):** Each agent in the pipeline is a separate Cowork session (the
+Orchestrator at Step 2 is the exception — it launches the Transcript and FCPXML Params
+Agents as parallel sub-agents within one session). The
 Transcription Agent runs first when audio is present. The Creative Context Agent then
 runs Discovery + brief construction. After Creative Context, the FCPXML Params Agent and
 each Transcript Agent (one per interview) run in parallel — these can be run in any
@@ -505,7 +517,52 @@ fallback if n8n has issues.
 
 See `CHANGELOG.md` for full version history.
 
-Current version: 5.6 — May 2026
+Current version: 5.7 — May 2026
+
+### v5.7 highlights (feedback capture + Edit Agent lessons from Hammer NER 2026)
+
+- **Lightweight feedback capture.** The Edit Agent now writes its own
+  `edit-agent-lessons-v[N].md` at project close (SKILL-edit.md Phase 7, item 5).
+  This becomes the primary, reliable path for editorial lessons to reach the
+  skill — more dependable than the viewer tweak-log → Coach → Review chain,
+  which silently no-ops when tweak-log persistence is absent. The Editing
+  Coach is now **optional**: Skill Review reads the lessons doc directly when
+  Coach didn't run (SKILL-review.md), and `cowork-session-guide.md` reflects
+  the optional Coach step.
+- **SKILL-edit.md editorial promotions (Hammer NER 2026 Round 1).**
+  *Reference examples are not runtime templates* — runtime is a downstream
+  property of a well-organized story, not a budget to cut toward (Phase 3).
+  *Segment selection is structural* — a new subsection names three failure
+  modes to cut firmly even in the Rough Cut: forward-references, tangents,
+  and material-covered-better-elsewhere, with the broad-vs-light-hand
+  reconciliation (Phase 3). *Wrapper-body-wrapper* — the five-point
+  single-protagonist + institutional-thesis structure named as an ordering
+  pattern (Phase 3).
+- **Cardinal Rule 2 relocated to proposal time.** Narrative-coherence
+  verification now runs in-session, the moment the Edit Agent proposes a
+  sequence to Jeff (Phase 3, step 5), not as an emit-time re-read. Rule 1
+  (verbatim integrity) stays at emit. The rule is unchanged and un-weakened —
+  only the verification moment moved, to where it does the most good.
+- **Mid-segment cuts documented (accepted limitation).** The viewer's
+  character-range trim editor produces mid-segment cuts the `segments[]` +
+  word-trim model can only approximate; FCPXML may play slightly wider at
+  those points and the editor refines in FCP. `_editCuts` is authoritative
+  for the viewer. A disjoint-`kept_ranges` schema extension is parked as a
+  forward-looking item.
+- **FCPXML doc fixes (from the FCPXML Agent's Round 1 review).** Reference
+  FCPXML is required for all projects, not single-clip only (SKILL-fcpxml-
+  params.md). Params speaker keys must match the Synthesis `speaker` field,
+  not media metadata — exact-match lookup silently drops mismatches
+  (SKILL-fcpxml-params.md). New Phase 1 cut-selection confirmation step —
+  state must-keep/probable-keep counts and ask rough/tight/both before
+  generating (SKILL-fcpxml.md). Three `build_fcpxml.py` / `generate_fcpxml.py`
+  script bugs (title-card offset stacking, `parse_act_structure` missing
+  "Intro", slug→label canonicalization) logged as OPEN high-priority code
+  follow-ups in CHANGELOG.
+- **SKILL.md drift cleanup.** Version header, agent-count wording, folder-tree
+  listing (added SKILL-orchestrator.md, SKILL-editing-coach.md,
+  cowork-session-guide.md, quotes-viewer-roadmap.md, current scripts), and
+  the handoffs listing (added edit-agent-lessons + lessons-learned).
 
 ### v5.6 highlights (quote viewer batch)
 

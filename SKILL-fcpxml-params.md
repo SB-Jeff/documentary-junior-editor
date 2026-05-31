@@ -232,6 +232,23 @@ Save the extracted parameters to `handoffs/fcpxml-params-v[N].md` (or
 N is the next unused version (read `pipeline-state.json` to determine — first
 run is v1; later runs increment). Never overwrite an existing version.
 
+> **Speaker-name authority — names must match the timeline, not the media
+> metadata (added v5.7).** Every speaker key you emit (the per-interview row
+> label and any `### [Speaker Name]` section) MUST exactly match the `speaker`
+> value the Synthesis Agent wrote in `tagged-quotes-v[N].json`. That field is
+> authoritative. Do NOT derive speaker names from the FCPXML `<media name=...>`
+> metadata — it often uses short names, legacy spellings, or joint-interview
+> groupings that differ from the canonical transcript names (Hammer NER 2026:
+> media metadata `Isiah` / `Mike & Janna Stern` vs. timeline `Isaiah Allen` /
+> `Jana Stern` / `Mike Stern`). `build_fcpxml.py`'s `build_spine()` does an
+> exact dict lookup against these keys and **silently skips any speaker that
+> doesn't match** — a mismatch can yield a 0-clip FCPXML. Read the distinct
+> `speaker` values from `tagged-quotes-v[N].json` first, then map each to its
+> source FCPXML; if a transcript speaker has no matching source file, flag it
+> explicitly rather than emitting a name the spine builder can't resolve.
+> *(A fuzzy-resolution fallback in `build_fcpxml.py` is a parked Phase 3 code
+> follow-up; until it lands, exact-match is the contract.)*
+
 > **OPEN ISSUE — Parser format mismatch (v4.0 carry-over).**
 > The human-readable per-speaker format below (`### [Speaker Name]` sections
 > with bullets) is NOT the format that `scripts/build_fcpxml.py`'s
@@ -294,7 +311,16 @@ run is v1; later runs increment). Never overwrite an existing version.
 
 ## Reference FCPXML
 
-[Sample Narrative XML filename, if applicable].fcpxml
+[Sample Narrative XML filename].fcpxml
+
+> **Required for every project — multicam included.** `build_fcpxml.py` reads
+> the reference FCPXML for the project skeleton (library / event / sequence
+> structure), independent of clip type. It is NOT a single-clip-only field.
+> Always identify and set it — typically the `Project Sample.fcpxmld` (or
+> equivalent sample narrative XML) in the project's `XML/` folder. Do not
+> write "no single_clip interviews in this project" or leave it blank: the
+> script fails to run without it. (Hammer NER 2026: this field was left blank
+> on an all-multicam project and stalled generation until corrected by hand.)
 
 ## Library Location
 
@@ -500,5 +526,5 @@ Cowork; the agent completes in a few minutes for typical projects.
 
 ---
 
-*FCPXML Params Agent — documentary-junior-editor v5.5*
+*FCPXML Params Agent — documentary-junior-editor v5.7*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

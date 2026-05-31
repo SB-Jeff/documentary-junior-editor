@@ -1,5 +1,94 @@
 # Documentary Junior Editor — Changelog
 
+## v5.7 — 2026-05-31 (feedback capture + Hammer NER 2026 review pass)
+
+Skill Review pass on the Hammer NER 2026 project. The headline change is to
+**how editorial feedback is captured**: the tweak-log → Editing Coach → Skill
+Review chain proved brittle (it silently no-ops when viewer tweak-log
+persistence is absent, and hard-stopped Skill Review when Coach hadn't run).
+On Hammer NER 2026 it didn't fire at all — the Edit Agent instead wrote a
+self-authored lessons doc, which worked better. That pattern is now the
+documented default.
+
+Source: `edit-agent-lessons-v1.md` (Hammer NER 2026 Round 1, Edit Agent on
+opus-4.7) plus the system-level review of the pipeline state.
+
+### Feedback capture (SKILL-edit.md, SKILL-review.md, cowork-session-guide.md)
+
+- **Edit Agent emits `edit-agent-lessons-v[N].md` at project close**
+  (SKILL-edit.md Phase 7, item 5). Primary capture path; reviewer-actionable;
+  honors three-occurrence promotion discipline.
+- **Editing Coach is now optional.** SKILL-review.md drops the hard Coach
+  prerequisite — when Coach didn't run, Skill Review reads the Edit Agent's
+  lessons doc directly. `cowork-session-guide.md` reflects the optional step.
+
+### SKILL-edit.md editorial promotions (from Hammer NER 2026)
+
+- **Reference examples are not runtime templates** (Phase 3). Runtime is a
+  downstream property of story organization, not a budget; brief "~X% of
+  runtime" hints are advisory and do not gate the Rough Cut.
+- **Segment selection is structural** (Phase 3). New subsection naming three
+  failure modes cut firmly even in the Rough Cut — forward-references,
+  tangents, material-covered-better-elsewhere — plus the broad-at-entry-level
+  vs. light-hand-at-fat-trim reconciliation.
+- **Wrapper-body-wrapper ordering pattern** (Phase 3). The five-point
+  single-protagonist + institutional-thesis structure, validated across Pacer
+  Center, International Institute, Hammer NER 2026.
+- **Cardinal Rule 2 relocated to proposal time** (Phase 3 step 5 / Phase 7).
+  Coherence is verified in-session before Jeff sees a sequence; emit does a
+  confirmation pass over changed regions only. Rule 1 stays at emit. Rule text
+  unchanged — only the verification moment moved.
+- **Mid-segment cuts documented as an accepted limitation** (data model).
+  `_editCuts` is authoritative for the viewer; FCPXML approximates and the
+  editor refines in FCP. Disjoint-`kept_ranges` schema extension parked as
+  forward-looking.
+
+### FCPXML doc fixes (from the FCPXML Agent's Round 1 review notes)
+
+- **#4 Reference FCPXML required for all projects** (SKILL-fcpxml-params.md).
+  The reference file (`Project Sample.fcpxmld`) drives the project skeleton
+  regardless of clip type; it is not single-clip-only. Params Agent must
+  always set it. (Left blank on Hammer NER's all-multicam project; stalled
+  `build_fcpxml.py`.)
+- **#5 Speaker-name authority** (SKILL-fcpxml-params.md). Params speaker keys
+  must exactly match the Synthesis `speaker` field in `tagged-quotes-v[N].json`,
+  not the FCPXML `<media name=...>` metadata. `build_spine()` does an exact
+  dict lookup and silently skips non-matches — a mismatch can yield a 0-clip
+  FCPXML. (Hammer NER: `Isiah` / `Mike & Janna Stern` metadata vs. canonical
+  transcript names.) Root cause shared with the slug-vs-display-label issues
+  below — a cross-agent shared-vocabulary problem.
+- **#6 Cut-selection confirmation** (SKILL-fcpxml.md Phase 1, new step 1.6).
+  Before generating, state must-keep vs. probable-keep counts and ask which
+  cut(s) to emit — rough, tight, or both. (Agent emitted rough when Jeff
+  wanted tight; had to regenerate.)
+
+### SKILL.md drift cleanup
+
+- Version header (was "5.0"), "Current version" → 5.7, "eight agents"
+  wording, folder tree (added SKILL-orchestrator.md, SKILL-editing-coach.md,
+  cowork-session-guide.md, quotes-viewer-roadmap.md, and the current script
+  set), handoffs listing (added edit-agent-lessons + lessons-learned).
+
+### Still open / parked
+
+- **FCPXML script bugs (code follow-ups, `build_fcpxml.py` / `generate_fcpxml.py`
+  — OPEN, high priority):**
+  - #1 Act-boundary title cards all stack at the sequence-start offset
+    (~3600.01s) instead of their actual act positions — section-divider offset
+    must track cumulative spine duration.
+  - #2 `parse_act_structure` regex `(?:Act|Part|Section)` misses "Intro" and
+    other non-Act-prefixed headings — extend to Intro/Epilogue/Prologue, or
+    match all `##` headings under `## Structure`.
+  - #3 Slug `part` fields (`act-1-addie`) don't canonicalize to display labels
+    ("Act 1 — Addie") in `_canonicalize_section` — add slug↔label
+    normalization, or have the Edit Agent emit display labels in `part`.
+- Disjoint `kept_ranges` schema extension for mid-segment cuts (forward-looking).
+- `scripts/build_quotes_viewer.py` and `scripts/quotes_viewer_template.jsx`
+  carry uncommitted Hammer NER 2026 patches (act-chip labels, data-shape
+  normalization, authoritative `_editCuts` round-trip) — commit with this pass.
+- Hammer NER 2026 reference-example folder (Final_Edit.txt + lessons-learned.md
+  + transcripts) not yet built — next step.
+
 ## v5.6 — 2026-05-21 (quote viewer batch)
 
 Viewer release. Clears the open `quotes-viewer-roadmap.md` queue — three P0 items

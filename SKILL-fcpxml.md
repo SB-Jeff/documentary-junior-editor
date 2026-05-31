@@ -310,6 +310,30 @@ suffix on the rough-cut filename when there is only one version. Read
 `edit-handoff-v[N].md`'s "Key Files" or "Version history" section to see the
 naming Jeff has been using; match it rather than forcing the canonical form.
 
+### 1.6 — Confirm which cut to generate before running (REQUIRED, added v5.7)
+
+The timeline carries two cuts via `runtime_recommendation`: the **rough cut**
+(all entries — must-keep + probable-keep) and the **tight cut** (must-keep
+only). The Edit Agent's handoff designates a primary emit, but Jeff may want
+the other, or both. Do not assume — confirm.
+
+Before calling `build_fcpxml.py`:
+
+1. Count the timeline entries by recommendation: how many `must-keep`, how
+   many `probable-keep`.
+2. State both cuts to Jeff with their entry counts and, if estimable, their
+   approximate runtimes — e.g. "Rough cut = 54 entries (~18:48); tight cut =
+   28 must-keep entries (~10:30). The handoff designates the rough cut as
+   primary."
+3. Ask which to generate: **rough** (all entries), **tight** (must-keep
+   only), or **both**.
+4. Do not proceed to Phase 2 generation until the cut selection is confirmed.
+
+When generating both, emit distinct filenames (`..._rough_cut_v[N].fcpxml`
+and `..._tight_cut_v[N].fcpxml`). (Hammer NER 2026: the agent generated the
+rough cut per the handoff and had to regenerate when Jeff wanted the tight
+cut — this step removes that round-trip.)
+
 ---
 
 ## Phase 2: Generate the Rough Cut
@@ -631,7 +655,7 @@ If Jeff approves the project, launch the Skill Review Agent:
 
 ---
 
-*FCPXML Agent — documentary-junior-editor v5.4.1*
+*FCPXML Agent — documentary-junior-editor v5.7*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *FCPXML generation delegated to `scripts/build_fcpxml.py`. Phase 3 code
 follow-ups currently OPEN (highest priority next code work): (1) v5 schema
