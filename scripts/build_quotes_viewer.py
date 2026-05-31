@@ -180,26 +180,36 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
         "speaker": entry.get("speaker"),
         "part": entry.get("part"),
         "runtime_recommendation": entry.get("runtime_recommendation", "probable-keep"),
+        "membership": entry.get("membership"),
         "_editCuts": cuts,
         "notes": entry.get("notes", ""),
     }
 
 
-def migrate_recommendations_two_tier(entries):
-    """Normalize the recommendation field to the viewer's supported states.
+def migrate_membership(entries):
+    """Assign each timeline entry a membership stratum: "tight" or "loose".
 
-    Supported: must-keep, tight-candidate (borderline-essential; shows in the
-    Tight cut), probable-keep. Legacy probable-cut / optional collapse to
-    probable-keep.
+    New data carries `membership` directly. Legacy data carries the retired
+    conviction tiers — must-keep / tight-candidate map to tight, everything else
+    to loose; non-spoken structural entries (title cards, interstitials, context
+    beats) are always tight. The retired `runtime_recommendation` field is dropped
+    from the emitted entry.
     """
-    allowed = ("must-keep", "tight-candidate", "probable-keep")
     out = []
     for e in entries:
-        rec = e.get("runtime_recommendation", "probable-keep")
-        if rec not in allowed:
-            note = e.get("notes", "") or ""
-            note = (note + " ").strip() + f"[migrated: was '{rec}' → probable-keep]"
-            e = {**e, "runtime_recommendation": "probable-keep", "notes": note}
+        e = dict(e)
+        mship = e.get("membership")
+        if mship not in ("tight", "loose"):
+            is_spoken = e.get("type") == "spoken" or e.get("source_quote_id") is not None
+            rec = e.get("runtime_recommendation", "probable-keep")
+            if not is_spoken:
+                mship = "tight"
+            elif rec in ("must-keep", "tight-candidate"):
+                mship = "tight"
+            else:
+                mship = "loose"
+        e["membership"] = mship
+        e.pop("runtime_recommendation", None)
         out.append(e)
     return out
 
@@ -309,7 +319,7 @@ def assemble_data_block(data: dict) -> dict:
     """Convert auto-discovered data into the shape the template's data block expects.
 
     Migrates timeline entries from segment-based v5.0 shape to character-range
-    shape, and collapses four-tier recommendations to two-tier.
+    shape, and assigns each entry a tight/loose membership stratum.
     """
     by_num = {q["num"]: q for q in data["source_quotes"]}
     migrated_rounds = []
@@ -325,6 +335,7 @@ def assemble_data_block(data: dict) -> dict:
                     "type": e.get("type", "spoken"),
                     "part": e.get("part", ""),
                     "runtime_recommendation": e.get("runtime_recommendation", "probable-keep"),
+                    "membership": e.get("membership"),
                     "_editCuts": [],
                     "notes": e.get("notes", ""),
                     "text": e.get("text", ""),
@@ -333,7 +344,7 @@ def assemble_data_block(data: dict) -> dict:
             mig = migrate_entry_trims(e, by_num)
             if mig:
                 migrated_entries.append(mig)
-        migrated_entries = migrate_recommendations_two_tier(migrated_entries)
+        migrated_entries = migrate_membership(migrated_entries)
         migrated_rounds.append({
             "round_number": r["round_number"],
             "round_label": r["round_label"],
@@ -578,8 +589,8 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .chip:hover { background: var(--surface-2); color: var(--text); }
 .chip.active { background: var(--text); color: white; border-color: var(--text); }
 
-/* Cut block */
-.cut-block {
+/* Window block */
+.win-block {
   display: inline-flex; align-items: center; gap: 10px;
   padding: 3px 4px 3px 10px;
   margin-left: auto;
@@ -587,19 +598,19 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
   border-radius: 8px;
   background: transparent;
 }
-.cut-toggle { display: inline-flex; gap: 2px; }
-.cut-toggle button {
+.win-toggle { display: inline-flex; gap: 2px; }
+.win-toggle button {
   background: transparent; border: 0;
   padding: 4px 12px; border-radius: 4px;
   font-size: 12px; color: var(--text-muted); font-weight: 500;
 }
-.cut-toggle button:hover:not(.active) { background: var(--surface-2); }
-.cut-toggle button.active.rough { background: var(--probable-soft); color: var(--probable); }
-.cut-toggle button.active.tight { background: var(--must-soft); color: var(--must); }
-.cut-metric { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; padding-left: 10px; border-left: 1px solid var(--border); }
-.cut-metric .val { font-weight: 600; }
-.cut-metric-rough .val { color: var(--probable); }
-.cut-metric-tight .val { color: var(--must); }
+.win-toggle button:hover:not(.active) { background: var(--surface-2); }
+.win-toggle button.active.tight { background: var(--must-soft); color: var(--must); }
+.win-toggle button.active.loose { background: var(--probable-soft); color: var(--probable); }
+.win-metric { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; padding-left: 10px; border-left: 1px solid var(--border); }
+.win-metric .val { font-weight: 600; }
+.win-metric.tight .val { color: var(--must); }
+.win-metric.loose .val { color: var(--probable); }
 .cut-export {
   background: var(--accent); color: white; border: 1px solid var(--accent);
   border-radius: 6px; padding: 5px 14px; font-size: 12px; font-weight: 500;
@@ -710,9 +721,8 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
    via the button rule; text editors get a text caret so they read as editable). */
 .trim-text, .ins-text, .ins-add-text, .tl-card input, .tl-card textarea { cursor: text; }
 .tl-card button, .tl-quote-hint, .split-marker { cursor: pointer; }
-.tl-card.is-must-keep { border-left: 4px solid var(--must); }
-.tl-card.is-tight-candidate { border-left: 4px solid var(--tight); }
-.tl-card.is-probable-keep { border-left: 4px solid var(--probable); }
+.tl-card.is-tight { border-left: 4px solid var(--must); }
+.tl-card.is-loose { border-left: 4px solid var(--probable); }
 .tl-card.focus-flash { animation: focusHL 1.6s ease-out; }
 @keyframes focusHL {
   0% { background: var(--highlight); }
@@ -764,17 +774,20 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .reassign-pop button:hover { background: var(--surface-2); }
 
-.rec-badge {
-  font-size: 11px; padding: 2px 9px; border-radius: 4px; font-weight: 700; cursor: pointer;
-  text-transform: uppercase; letter-spacing: 0.04em; border: 0;
-  transition: all 0.15s;
+.mship-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 3px 9px; border-radius: 4px; border: none;
 }
-.rec-badge.must-keep { background: var(--must-soft); color: var(--must); }
-.rec-badge.must-keep:hover { background: var(--must); color: white; }
-.rec-badge.tight-candidate { background: var(--tight-soft); color: var(--tight); }
-.rec-badge.tight-candidate:hover { background: var(--tight); color: white; }
-.rec-badge.probable-keep { background: var(--probable-soft); color: var(--probable); }
-.rec-badge.probable-keep:hover { background: var(--probable); color: white; }
+.mship-badge.tight { background: var(--must-soft); color: var(--must); }
+.mship-badge.loose { background: var(--probable-soft); color: var(--probable); }
+/* Membership verb buttons: Cut → Loose (blue) · Add Back → Tight (green) · Drop → Library (red) */
+.btn-cut { color: var(--probable); border-color: var(--probable-soft); background: var(--probable-soft); }
+.btn-cut:hover { background: var(--probable); color: white; border-color: var(--probable); }
+.btn-add { color: var(--must); border-color: var(--must-soft); background: var(--must-soft); }
+.btn-add:hover { background: var(--must); color: white; border-color: var(--must); }
+.btn-drop { color: var(--danger); }
+.btn-drop:hover { background: var(--danger-soft); border-color: var(--danger); }
+.verb-dest { font-size: 11px; font-weight: 600; opacity: 0.75; margin-left: 1px; }
 
 .tl-quote { color: var(--text); line-height: 1.55; font-size: 14px; margin: 6px 0 0; }
 .tl-quote-cut { color: var(--danger); text-decoration: line-through; opacity: 0.65; }

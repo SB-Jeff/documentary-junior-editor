@@ -280,7 +280,16 @@ entries between strata (see "Three persistent strata" below). Retire
 entirely. This supersedes and obviates the earlier `tight-candidate` work and its
 cross-scope dependency (Edit Agent populating `tight-candidate`) — flag for Coach.
 **Priority:** P0 — foundational; everything else builds on it.
-**Status:** Filed.
+**Status:** Shipped (with "Three persistent strata" below — one commit). Every timeline
+entry now carries `membership: "tight" | "loose"`; `membershipOf(entry)` migrates legacy
+data on load (must-keep + tight-candidate → tight; probable-keep → loose; non-spoken
+structural entries → tight). Retired `runtime_recommendation`, `REC_CYCLE`, the clickable
+rec badge, `cutFilter`, and `inTightCut` from the JSX; the build script's
+`migrate_recommendations_two_tier` became `migrate_membership` (assigns membership, drops
+`runtime_recommendation` from emitted entries). Verified in a browser build: migration
+maps legacy recs, no console errors, build-script migration unit-tested.
+⚑ Cross-scope flag for Coach (NOT edited here): the `tight-candidate` SKILL-edit.md
+dependency is now obsolete — see the existing cross-scope section below.
 
 ### Three persistent strata an editor dances between
 **Source project:** hammer-ner-2026 (May 2026)
@@ -299,7 +308,18 @@ into Loose is by cutting from Tight. Naming: strata Tight / Loose / Library (avo
 "archive" — collides with version history); verbs Cut / Add / Drop. Dropping from tight
 demotes to **Library**, not Loose (resolves the brief's internal contradiction).
 **Priority:** P0 — the data/containment detail behind the membership model.
-**Status:** Filed.
+**Status:** Shipped (with the membership model above — one commit). Verbs implemented in
+each card's action row: **Cut → Loose** (tight cards, blue `btn-cut`), **Add Back → Tight**
+(loose cards, green `btn-add`), **Drop → Library** (red `btn-drop`, relabeled from the old
+"Drop entry"). Quote Library **Add** lands a quote straight in Tight (`membership:"tight"`).
+Each membership move records a `set_membership` tweak-log op (before/after). Per Jeff
+(2026-05-31), interstitials/title-cards/context-beats get the Cut/Add Back verbs too (not
+pinned to Tight). Window toggle replaces Rough/Tight: **Tight** (default, green) shows
+`membership==tight`; **Loose** (blue) shows tight ∪ loose; metric + Export sit in this
+block; `inActiveWindow(e)` rewired through sourceIdsInCut, passesTimelineFilters, runtime
+totals, the header toggle, export, and renderReview. Verified in a browser build: Tight
+shows 6 / Loose shows 9 on the fixture, Cut/Add Back/Add move membership and log ops,
+palette matches the approved mockup (green=Tight, blue=Loose, red=destructive).
 
 ### Unify Edit + Review into one page with per-card reveal
 **Source project:** hammer-ner-2026 (May 2026)

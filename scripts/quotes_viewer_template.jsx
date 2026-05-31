@@ -18,9 +18,9 @@ import { useState, useCallback, useRef, useEffect } from "react";
 //   - Three top-level views: Quote Library / Timeline / Review
 //   - Quote Library shows every source quote + orphans; segments backend-only
 //   - Timeline uses v4.0.1-style quote-block cards with character-range trim,
-//     scissors split, drag, ↑/↓, two-tier recommendation toggle
-//   - Rough/Tight sub-toggle filters Timeline by must-keep+probable-keep vs
-//     must-keep only; Export button is contextual to the active cut
+//     scissors split, drag, ↑/↓, and per-entry Cut/Add Back membership verbs
+//   - Tight/Loose Window toggle filters Timeline by membership (Tight shows
+//     tight only; Loose shows tight ∪ loose); Export is contextual to the window
 //   - Round dropdown loads from baked-in rounds; "Save as new round" writes
 //     directly to disk via window.cowork.callMcpTool (graceful no-op outside
 //     Cowork)
@@ -80,7 +80,7 @@ const SOURCE_QUOTES = [];
 //         type: "spoken" | "title_card" | "interstitial" | "context_beat",
 //         speaker: "Name",
 //         part: "Act 1",
-//         runtime_recommendation: "must-keep" | "probable-keep",
+//         membership: "tight" | "loose",
 //         _editCuts: [[startChar, endChar], ...],    // character-range trims
 //         _subLabel: "a" | "b" | null,
 //         notes: "Editorial note.",
@@ -117,14 +117,19 @@ const COLORS = {
   textSubtle: "#78716c",
 };
 
-// Recommendation cycle order for the clickable rec badge. Three states:
-// must-keep (in both cuts) → tight-candidate (borderline-essential; in Tight) →
-// probable-keep (Rough only) → back to must-keep.
-const REC_CYCLE = {
-  "must-keep": "tight-candidate",
-  "tight-candidate": "probable-keep",
-  "probable-keep": "must-keep",
-};
+// Membership model — every timeline entry belongs to exactly one stratum:
+// "tight" (the active working cut) or "loose" (cut from Tight but not dropped).
+// Library = source quotes with no active entry. Containment Library ⊇ Loose ⊇ Tight.
+// membershipOf reads the explicit field; for legacy data it derives membership
+// from the retired conviction tiers (must-keep / tight-candidate → tight, the
+// rest → loose) and treats non-spoken structural entries as tight.
+function membershipOf(entry) {
+  if (entry.membership === "tight" || entry.membership === "loose") return entry.membership;
+  const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
+  if (!isSpoken) return "tight";
+  const rec = entry.runtime_recommendation;
+  return rec === "must-keep" || rec === "tight-candidate" ? "tight" : "loose";
+}
 
 // Speaker color palette — assigned in order of appearance.
 const SPEAKER_PALETTE = [
@@ -517,7 +522,7 @@ export default function QuotesView() {
   // === Round + view state ===
   const [roundIndex, setRoundIndex] = useState(INITIAL_ROUND_INDEX);
   const [view, setView] = useState("timeline");
-  const [cutFilter, setCutFilter] = useState("rough");
+  const [windowMode, setWindowMode] = useState("tight");
   const [speakerFilter, setSpeakerFilter] = useState("all");
   const [actFilter, setActFilter] = useState("all");
   const [reviewScope, setReviewScope] = useState("All");
@@ -774,12 +779,16 @@ export default function QuotesView() {
 
   async function exportToFCPXML() {
     const tl = getTimeline();
-    const filtered = cutFilter === "tight"
-      ? tl.filter((e) => inTightCut(e))
+    const filtered = windowMode === "tight"
+      ? tl.filter((e) => membershipOf(e) === "tight")
       : tl;
+    // The in-viewer direct build still speaks the legacy rough/tight modes; the
+    // Loose window maps to the old full ("rough") build. (The whole export is
+    // replaced by the FCPXML-Agent handoff in a later roadmap entry.)
+    const buildMode = windowMode === "tight" ? "tight" : "rough";
     const totalSec = filtered.reduce((a, e) => a + entrySeconds(e), 0);
     if (!hasCallMcpTool()) {
-      alert(`Export to FCPXML (${cutFilter} cut, ${filtered.length} clips, ${fmtSec(totalSec)}) is only available when the viewer is running inside Cowork.`);
+      alert(`Export to FCPXML (${windowMode} cut, ${filtered.length} clips, ${fmtSec(totalSec)}) is only available when the viewer is running inside Cowork.`);
       return;
     }
     // Self-contained: write current working state, then invoke build_fcpxml.py.
@@ -805,13 +814,13 @@ export default function QuotesView() {
     const buildCmd =
       `cd "${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}" && ` +
       `python3 "${PROJECT_META.ssd_root}/documentary-junior-editor/scripts/build_fcpxml.py" ` +
-      `--mode=${cutFilter} --input="${handoffPath}" 2>&1`;
+      `--mode=${buildMode} --input="${handoffPath}" 2>&1`;
     const { ok: buildOk, result: buildResult, reason: buildReason } = await callBash(buildCmd);
     if (buildOk) {
       await writeTweakLog();  // best-effort: persist override log alongside the export
       const head = typeof buildResult === "string" ? buildResult.slice(0, 800) : "Build succeeded.";
-      alert(`Export complete (${cutFilter} cut, ${filtered.length} clips):\n\n${head}`);
-      setSendStatus({ text: `Exported ${cutFilter} cut`, cls: "ok" });
+      alert(`Export complete (${windowMode} cut, ${filtered.length} clips):\n\n${head}`);
+      setSendStatus({ text: `Exported ${windowMode} cut`, cls: "ok" });
       setTimeout(() => setSendStatus({ text: "", cls: "" }), 4000);
     } else {
       alert(`Export build failed: ${buildReason}`);
@@ -915,7 +924,7 @@ export default function QuotesView() {
       source_quote_id: null,
       type: fields.type,
       part: act,
-      runtime_recommendation: "probable-keep",
+      membership: "tight",
       _editCuts: [],
       notes: "",
       estimated_seconds: fields.seconds,
@@ -947,6 +956,40 @@ export default function QuotesView() {
       }
     );
     setAddingAfterId(null);
+  }
+
+  // ====== Membership verbs (Cut / Add Back) ======
+
+  // Move an entry between strata and log a set_membership tweak. Cut = tight→loose
+  // (stays in play, just out of the Tight cut); Add Back = loose→tight.
+  function setMembership(entry, m) {
+    const before = membershipOf(entry);
+    if (before === m) return;
+    applyLocalEdit("set_membership",
+      (tl) => { const e2 = tl.find((x) => x.entry_id === entry.entry_id); if (e2) e2.membership = m; },
+      `${entry.entry_id}: ${before} → ${m}`,
+      { change_type: "set_membership", entry_id: entry.entry_id, before: { membership: before }, after: { membership: m } }
+    );
+  }
+
+  // The single membership-changing button in a card's action row. Tight entries
+  // get Cut → Loose; Loose entries get Add Back → Tight.
+  function membershipVerb(entry) {
+    return membershipOf(entry) === "tight"
+      ? (
+        <button
+          className="btn btn-cut"
+          onClick={() => setMembership(entry, "loose")}
+          title="Cut to the Loose window — stays in play, not dropped"
+        >Cut <span className="verb-dest">→ Loose</span></button>
+      )
+      : (
+        <button
+          className="btn btn-add"
+          onClick={() => setMembership(entry, "tight")}
+          title="Add back to the Tight cut"
+        >Add Back <span className="verb-dest">→ Tight</span></button>
+      );
   }
 
   // ====== Send-to-agent panel ======
@@ -1050,19 +1093,19 @@ export default function QuotesView() {
     if (actFilter !== "all" && quoteActOf(q) !== actFilter) return false;
     return true;
   }
-  // Single source of truth for "is this entry in the Tight cut" — must-keep plus
-  // tight-candidate. Reused by the Tight view filter, export, runtime totals, and
-  // the Library hide-in-cut filter.
-  function inTightCut(e) {
-    return e.runtime_recommendation === "must-keep" || e.runtime_recommendation === "tight-candidate";
+  // Single source of truth for "is this entry in the active window" — Tight shows
+  // only tight-membership entries; Loose shows everything (tight ∪ loose). Reused
+  // by the timeline filter, export, runtime totals, and Library hide-in-cut.
+  function inActiveWindow(e) {
+    return windowMode === "loose" ? true : membershipOf(e) === "tight";
   }
-  // source_quote_ids present in the current cut (active round, respecting
-  // Rough/Tight). Used by the Library "Hide quotes in current cut" filter.
+  // source_quote_ids present in the current cut (active round, respecting the
+  // active window). Used by the Library "Hide quotes in current cut" filter.
   function sourceIdsInCut() {
     const ids = new Set();
     for (const e of getTimeline()) {
       if (e.source_quote_id == null) continue;
-      if (cutFilter === "tight" && !inTightCut(e)) continue;
+      if (!inActiveWindow(e)) continue;
       ids.add(e.source_quote_id);
     }
     return ids;
@@ -1073,17 +1116,17 @@ export default function QuotesView() {
       if (!src || src.speakerSlug !== speakerFilter) return false;
     }
     if (actFilter !== "all" && entryActOf(e) !== actFilter) return false;
-    if (cutFilter === "tight" && !inTightCut(e)) return false;
+    if (!inActiveWindow(e)) return false;
     return true;
   }
 
   // ====== Runtime totals ======
   const allEntries = getTimeline();
-  const tightEntries = allEntries.filter((e) => inTightCut(e));
-  const roughSec = allEntries.reduce((a, e) => a + entrySeconds(e), 0);
+  const tightEntries = allEntries.filter((e) => membershipOf(e) === "tight");
+  const looseSec = allEntries.reduce((a, e) => a + entrySeconds(e), 0);
   const tightSec = tightEntries.reduce((a, e) => a + entrySeconds(e), 0);
-  const activeEntries = cutFilter === "tight" ? tightEntries.length : allEntries.length;
-  const activeSec = cutFilter === "tight" ? tightSec : roughSec;
+  const activeEntries = windowMode === "tight" ? tightEntries.length : allEntries.length;
+  const activeSec = windowMode === "tight" ? tightSec : looseSec;
 
   // ============================================================================
   // Header
@@ -1157,21 +1200,21 @@ export default function QuotesView() {
                 </button>
               ))}
             </div>
-            {/* Cut block (Edit view only) — shares the Act line, right-aligned */}
+            {/* Window block (Edit view only) — shares the Act line, right-aligned */}
             {view === "timeline" && (
-              <div className="cut-block">
-                <span className="group-label">Cut</span>
-                <div className="cut-toggle">
+              <div className="win-block">
+                <span className="group-label">Window</span>
+                <div className="win-toggle">
                   <button
-                    className={cutFilter === "rough" ? "active rough" : ""}
-                    onClick={() => setCutFilter("rough")}
-                  >Rough</button>
-                  <button
-                    className={cutFilter === "tight" ? "active tight" : ""}
-                    onClick={() => setCutFilter("tight")}
+                    className={windowMode === "tight" ? "active tight" : "tight"}
+                    onClick={() => setWindowMode("tight")}
                   >Tight</button>
+                  <button
+                    className={windowMode === "loose" ? "active loose" : "loose"}
+                    onClick={() => setWindowMode("loose")}
+                  >Loose</button>
                 </div>
-                <span className={`cut-metric cut-metric-${cutFilter}`}>
+                <span className={`win-metric ${windowMode}`}>
                   <span className="val">{activeEntries}</span> entries · <span className="val">{fmtSec(activeSec)}</span>
                 </span>
                 <button className="cut-export" onClick={exportToFCPXML}>Export XML</button>
@@ -1287,7 +1330,7 @@ export default function QuotesView() {
                       type: "spoken",
                       speaker: q.speaker,
                       part: addedPart,
-                      runtime_recommendation: "probable-keep",
+                      membership: "tight",
                       _editCuts: [],
                       notes: q.is_orphan ? "Pulled in from orphans by Jeff." : "Added by Jeff in viewer.",
                     });
@@ -1400,7 +1443,7 @@ export default function QuotesView() {
   // dedicated card: editable text + duration, no trim/split, no source quote.
   const renderInterstitialCard = (entry) => {
     const mb = canMoveEntry(entry);
-    const rec = entry.runtime_recommendation || "probable-keep";
+    const mship = membershipOf(entry);
     const typeLabel = { title_card: "Title card", interstitial: "Interstitial", context_beat: "Context beat" }[entry.type] || "Interstitial";
     const isContext = entry.type === "context_beat";
     const fieldVal = isContext ? (entry.intent || "") : (entry.text || "");
@@ -1408,7 +1451,7 @@ export default function QuotesView() {
       <div
         key={entry.entry_id}
         id={entry.entry_id}
-        className={`tl-card tl-interstitial ins-${entry.type} is-${rec}${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`}
+        className={`tl-card tl-interstitial ins-${entry.type} is-${mship}${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`}
         {...cardDragHandlers(entry)}
       >
         {renderDragHandle()}
@@ -1449,18 +1492,7 @@ export default function QuotesView() {
                 </div>
               )}
             </span>
-            <button
-              className={`rec-badge ${rec}`}
-              onClick={() => {
-                const next = REC_CYCLE[rec] || "must-keep";
-                applyLocalEdit("set_rec",
-                  (tl) => { const e2 = tl.find((x) => x.entry_id === entry.entry_id); if (e2) e2.runtime_recommendation = next; },
-                  `${entry.entry_id} (${typeLabel}): ${rec} → ${next}`,
-                  { change_type: "status_flip", entry_id: entry.entry_id, before: { runtime_recommendation: rec }, after: { runtime_recommendation: next } }
-                );
-              }}
-              title="Click to cycle: must-keep → tight-candidate → probable-keep"
-            >{rec.replace("-", " ")}</button>
+            <span className={`mship-badge ${mship}`}>{mship}</span>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
           </div>
           <div className="ins-edit-row">
@@ -1505,21 +1537,22 @@ export default function QuotesView() {
             <div className="tl-notes"><span className="tl-notes-label">Notes:</span> {entry.notes}</div>
           )}
           <div className="tl-actions">
+            {membershipVerb(entry)}
             <button
               className="btn btn-comment"
               onClick={() => focusCommentary(`About ${entry.entry_id} (${typeLabel}, ${entryActOf(entry)}): `)}
             >💬 Comment on this</button>
             <button
-              className="btn btn-danger"
+              className="btn btn-drop"
               onClick={() => {
-                if (!confirm(`Drop ${typeLabel} ${entry.entry_id}?`)) return;
+                if (!confirm(`Drop ${typeLabel} ${entry.entry_id} back to the Library?`)) return;
                 applyLocalEdit("drop_entry",
                   (tl) => { const i = tl.findIndex((x) => x.entry_id === entry.entry_id); if (i >= 0) tl.splice(i, 1); },
                   `Dropped ${typeLabel} ${entry.entry_id}`,
                   { change_type: "drop", entry_id: entry.entry_id, before: { entry_id: entry.entry_id, type: entry.type, part: entryActOf(entry) }, after: null }
                 );
               }}
-            >Drop entry</button>
+            >Drop <span className="verb-dest">→ Library</span></button>
           </div>
         </div>
       </div>
@@ -1556,7 +1589,7 @@ export default function QuotesView() {
     const original = fullQuoteText(entry);
     const trimmed = isTrimmed(entry);
     const speakerC = src ? speakerColors[src.speakerSlug] : { bg: COLORS.surface2, fg: COLORS.textMuted };
-    const rec = entry.runtime_recommendation || "probable-keep";
+    const mship = membershipOf(entry);
 
     // Drag is only initiated from the .tl-drag handle on the left edge of the
     // card — otherwise text selection inside the card (especially in the trim
@@ -1566,7 +1599,7 @@ export default function QuotesView() {
       <div
         key={entry.entry_id}
         id={entry.entry_id}
-        className={`tl-card is-${rec}${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`}
+        className={`tl-card is-${mship}${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`}
         {...cardDragHandlers(entry)}
       >
         {renderDragHandle()}
@@ -1618,26 +1651,7 @@ export default function QuotesView() {
                 </div>
               )}
             </span>
-            <button
-              className={`rec-badge ${rec}`}
-              onClick={() => {
-                const next = REC_CYCLE[rec] || "must-keep";
-                applyLocalEdit("set_rec",
-                  (tl) => {
-                    const e2 = tl.find((x) => x.entry_id === entry.entry_id);
-                    if (e2) e2.runtime_recommendation = next;
-                  },
-                  `${entry.entry_id} (#${entry.source_quote_id}): ${rec} → ${next}`,
-                  {
-                    change_type: "status_flip",
-                    entry_id: entry.entry_id,
-                    before: { runtime_recommendation: rec },
-                    after: { runtime_recommendation: next },
-                  }
-                );
-              }}
-              title="Click to cycle: must-keep → tight-candidate → probable-keep"
-            >{rec.replace("-", " ")}</button>
+            <span className={`mship-badge ${mship}`}>{mship}</span>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             <button
               className="tl-scissors"
@@ -1720,14 +1734,15 @@ export default function QuotesView() {
             </div>
           )}
           <div className="tl-actions">
+            {membershipVerb(entry)}
             <button
               className="btn btn-comment"
               onClick={() => focusCommentary(`About ${entry.entry_id} (#${entry.source_quote_id}, ${entryActOf(entry)}): `)}
             >💬 Comment on this</button>
             <button
-              className="btn btn-danger"
+              className="btn btn-drop"
               onClick={() => {
-                if (!confirm(`Drop entry ${entry.entry_id} (#${entry.source_quote_id})? Source quote stays in the Library and can be re-added.`)) return;
+                if (!confirm(`Drop entry ${entry.entry_id} (#${entry.source_quote_id}) back to the Library? The source quote stays in the Library and can be re-added.`)) return;
                 applyLocalEdit("drop_entry",
                   (tl) => {
                     const i = tl.findIndex((x) => x.entry_id === entry.entry_id);
@@ -1741,13 +1756,13 @@ export default function QuotesView() {
                       entry_id: entry.entry_id,
                       source_quote_id: entry.source_quote_id,
                       part: entryActOf(entry),
-                      runtime_recommendation: entry.runtime_recommendation,
+                      membership: membershipOf(entry),
                     },
                     after: null,
                   }
                 );
               }}
-            >Drop entry</button>
+            >Drop <span className="verb-dest">→ Library</span></button>
           </div>
         </div>
       </div>
@@ -1807,9 +1822,7 @@ export default function QuotesView() {
   // ============================================================================
 
   const renderReview = () => {
-    const tl = getTimeline().filter((e) =>
-      cutFilter === "tight" ? inTightCut(e) : true
-    );
+    const tl = getTimeline().filter((e) => inActiveWindow(e));
     if (tl.length === 0) {
       return <div className="empty"><h3>Nothing to review yet.</h3></div>;
     }
