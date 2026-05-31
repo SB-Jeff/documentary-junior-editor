@@ -393,6 +393,30 @@ integrity holds (Cardinal Rule 1). Verified with a node unit test against the re
 `buildKeptText`: a 2-way split yields the head and tail, a 3-way split yields three
 non-overlapping pieces whose join reconstructs the original, and no half equals the whole.
 
+### Export → "Send to FCPXML Agent" (handoff, not in-viewer build)
+**Source project:** hammer-ner-2026 (May 2026) — design tie-in to the membership rework.
+**Problem:** The viewer built the FCPXML itself (writing `trimmed-quotes-v[N].json` then
+shelling `build_fcpxml.py`). That in-viewer build is failure-prone without the FCPXML
+Agent's caption-matching, clip-type branching, and FCP-import handling around it; it also
+spoke the retired rough/tight vocabulary.
+**Proposed change:** Rename the "Export XML" button to **"→ Send to FCPXML Agent"** and turn
+export into a handoff. On click the viewer writes `trimmed-quotes-v[N].json` for **whichever
+window is selected** (Tight or Loose) and opens a modal with a pre-filled FCPXML Agent launch
+prompt to paste into a new Cowork task.
+**Priority:** P1 (ships with the batch).
+**Status:** Shipped. `exportToFCPXML` now branches on `hasCallMcpTool()`: in Cowork it writes
+the cut file to disk (and best-effort persists the tweak log); in a plain browser it degrades
+to a file **download**. Either way the modal shows step 1 (what was written, with the live
+entry/▸time count for the selected window) and step 2 (the ready-to-paste agent prompt with a
+Copy button). The prompt references `SKILL-fcpxml-params.md` / `SKILL-fcpxml.md`, names the
+selected window + output path, and sets the model to Sonnet 4.6. The payload carries
+`window` + the window-filtered `entries`. Verified in a browser build (node transpile OK;
+button renamed, modal CSS present, download-degrade path present, no `build_fcpxml.py` /
+"Export XML" remnants).
+⚑ Cross-scope flag (NOT edited here): `cowork-session-guide.md` documents the old direct-build
+export and the stale rough/tight viewer vocabulary — both are superseded (Tight/Loose windows
++ the FCPXML-Agent handoff). Surface to that guide's owner.
+
 ### [SUPERSEDED] Replace rough/tight toggle + conviction tiers with subtractive refinement in place
 **Source project:** earlier entry, pre-2026-05-29 (original text not recovered)
 **Status:** Superseded in terminology by the AUTHORITATIVE membership model above

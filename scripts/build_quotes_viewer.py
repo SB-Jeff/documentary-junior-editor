@@ -618,6 +618,25 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .cut-export:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
 
+/* Export → FCPXML Agent handoff modal */
+.export-overlay { position: fixed; inset: 0; background: rgba(28,25,23,.45); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.export-modal { background: var(--surface); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,.25); max-width: 620px; width: 100%; padding: 22px 24px; }
+.export-modal h3 { margin: 0 0 4px; font-size: 16px; }
+.export-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }
+.export-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+.export-num { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.export-step-body { font-size: 13px; line-height: 1.5; }
+.export-step-body code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+.export-ok { font-size: 11px; font-weight: 600; color: var(--must); }
+.export-warn { font-size: 12px; font-weight: 600; color: var(--danger); }
+.export-promptbox { position: relative; margin: 6px 0 0; }
+.export-prompt { width: 100%; min-height: 150px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--text); background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 8px; padding: 12px; resize: vertical; }
+.export-copy { position: absolute; top: 8px; right: 8px; background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.export-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.export-win { font-weight: 700; }
+.export-win.tight { color: var(--must); }
+.export-win.loose { color: var(--probable); }
+
 /* === Main pane === */
 .main { padding: 20px; max-width: 1100px; margin: 0 auto; }
 .act-section { margin-bottom: 32px; }

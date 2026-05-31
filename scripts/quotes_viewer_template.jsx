@@ -28,8 +28,8 @@ import { useState, useCallback, useRef, useEffect } from "react";
 //     Send copies the batch to chat and appends it to the cumulative tweak log
 //   - "Talk to agent" sends iteratively — each Send is one batch, then the panel
 //     clears for the next while the cumulative log keeps every batch
-//   - Export writes current working state to the round file then invokes
-//     build_fcpxml.py — self-contained, no Sync required first
+//   - Export hands the selected window's cut to the FCPXML Agent: writes
+//     trimmed-quotes-v[N].json + a ready-to-paste agent launch prompt
 //
 // ============================================================================
 // DATA BLOCK — Replaced per-project by build_quotes_viewer.py at build time.
@@ -641,6 +641,10 @@ export default function QuotesView() {
   // The intent note for the batch currently being assembled (cleared on Send).
   const [batchNote, setBatchNote] = useState("");
   const [sendStatus, setSendStatus] = useState({ text: "", cls: "" });
+  // Export → FCPXML Agent handoff modal. null when closed; otherwise carries the
+  // written-file info + the ready-to-paste agent prompt.
+  const [exportInfo, setExportInfo] = useState(null);
+  const [exportCopied, setExportCopied] = useState(false);
 
   // === Drag-to-reorder state (pointer-events based) ===
   // Native HTML5 drag-and-drop is unreliable inside Cowork's sandboxed artifact
@@ -782,55 +786,57 @@ export default function QuotesView() {
 
   // ====== Export ======
 
+  // Hand the selected window's cut to the FCPXML Agent. Writes
+  // trimmed-quotes-v[N].json (reliable) and hands a ready-to-paste FCPXML Agent
+  // launch prompt — the viewer does NOT build the XML itself (failure-prone
+  // without the agent around it). In Cowork the file is written to disk; in a
+  // plain browser it degrades to a download. The prompt copy always works.
   async function exportToFCPXML() {
     const tl = getTimeline();
-    const filtered = windowMode === "tight"
-      ? tl.filter((e) => membershipOf(e) === "tight")
-      : tl;
-    // The in-viewer direct build still speaks the legacy rough/tight modes; the
-    // Loose window maps to the old full ("rough") build. (The whole export is
-    // replaced by the FCPXML-Agent handoff in a later roadmap entry.)
-    const buildMode = windowMode === "tight" ? "tight" : "rough";
+    const win = windowMode;
+    const label = win === "tight" ? "Tight" : "Loose";
+    const filtered = win === "tight" ? tl.filter((e) => membershipOf(e) === "tight") : tl;
     const totalSec = filtered.reduce((a, e) => a + entrySeconds(e), 0);
-    if (!hasCallMcpTool()) {
-      alert(`Export to FCPXML (${windowMode} cut, ${filtered.length} clips, ${fmtSec(totalSec)}) is only available when the viewer is running inside Cowork.`);
-      return;
-    }
-    // Self-contained: write current working state, then invoke build_fcpxml.py.
     const round = ROUNDS[roundIndex];
+    const filename = `trimmed-quotes-v${round.round_number}.json`;
+    const relPath = `handoffs/${PROJECT_META.slug}/${filename}`;
     const payload = {
       schema_version: 5,
       round: round.round_number,
       project_slug: PROJECT_META.slug,
+      window: win,
       target_runtime_seconds: PROJECT_META.target_seconds,
-      entries: tl,
+      entries: filtered,
     };
-    const filename = `trimmed-quotes-v${round.round_number}.json`;
-    const handoffPath = `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}/${filename}`;
-    const writeCmd = `cat > "${handoffPath}" <<'__JSON_EOF__'\n${JSON.stringify(payload, null, 2)}\n__JSON_EOF__`;
-    setSendStatus({ text: "Writing state…", cls: "" });
-    const { ok: writeOk, reason: writeReason } = await callBash(writeCmd);
-    if (!writeOk) {
-      alert(`Export failed at write step: ${writeReason}`);
-      setSendStatus({ text: "", cls: "" });
-      return;
-    }
-    setSendStatus({ text: "Running build_fcpxml.py…", cls: "" });
-    const buildCmd =
-      `cd "${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}" && ` +
-      `python3 "${PROJECT_META.ssd_root}/documentary-junior-editor/scripts/build_fcpxml.py" ` +
-      `--mode=${buildMode} --input="${handoffPath}" 2>&1`;
-    const { ok: buildOk, result: buildResult, reason: buildReason } = await callBash(buildCmd);
-    if (buildOk) {
-      await writeTweakLog();  // best-effort: persist override log alongside the export
-      const head = typeof buildResult === "string" ? buildResult.slice(0, 800) : "Build succeeded.";
-      alert(`Export complete (${windowMode} cut, ${filtered.length} clips):\n\n${head}`);
-      setSendStatus({ text: `Exported ${windowMode} cut`, cls: "ok" });
-      setTimeout(() => setSendStatus({ text: "", cls: "" }), 4000);
+    const json = JSON.stringify(payload, null, 2);
+    const prompt =
+`You are the FCPXML Agent. Read documentary-junior-editor/SKILL-fcpxml-params.md and documentary-junior-editor/SKILL-fcpxml.md and follow them exactly. The project folder is mounted.
+
+Build the ${label.toUpperCase()} cut for ${PROJECT_META.slug}. Read ${relPath} (just written from the viewer — ${win} window, ${filtered.length} entries) plus the project's handoff context (fcpxml-params, edit-handoff, act-structure) per handoffs/pipeline-state.json.
+
+Cross-reference timecodes against the captioned FCPXMLs in XML/exports/, branch generation by per-interview clip_type, and emit one clip per source segment per timeline entry. Save to XML/imports/${PROJECT_META.slug}_${win}_cut_v${round.round_number}.fcpxml. Update handoffs/${PROJECT_META.slug}/pipeline-state.json.
+
+Set model to Sonnet 4.6.`;
+    setExportCopied(false);
+    let wrote = "none";
+    if (hasCallMcpTool()) {
+      const dir = `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}`;
+      const handoffPath = `${dir}/${filename}`;
+      const cmd = `mkdir -p "${dir}" && cat > "${handoffPath}" <<'__JSON_EOF__'\n${json}\n__JSON_EOF__`;
+      const { ok } = await callBash(cmd);
+      wrote = ok ? "disk" : "fail";
+      if (ok) await writeTweakLog();  // best-effort: persist the override log alongside the cut
     } else {
-      alert(`Export build failed: ${buildReason}`);
-      setSendStatus({ text: "Export failed", cls: "warn" });
+      try {
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+        wrote = "download";
+      } catch (_) { wrote = "fail"; }
     }
+    setExportInfo({ win, label, count: filtered.length, time: fmtSec(totalSec), file: relPath, filename, prompt, wrote });
   }
 
   // ====== Move + reorder helpers ======
@@ -1251,7 +1257,7 @@ export default function QuotesView() {
                 <span className={`win-metric ${windowMode}`}>
                   <span className="val">{activeEntries}</span> entries · <span className="val">{fmtSec(activeSec)}</span>
                 </span>
-                <button className="cut-export" onClick={exportToFCPXML}>Export XML</button>
+                <button className="cut-export" onClick={exportToFCPXML}>→ Send to FCPXML Agent</button>
               </div>
             )}
           </div>
@@ -1900,6 +1906,47 @@ export default function QuotesView() {
   // Send-to-agent panel
   // ============================================================================
 
+  const renderExportModal = () => {
+    if (!exportInfo) return null;
+    const { win, label, count, time, file, filename, prompt, wrote } = exportInfo;
+    const step1 = wrote === "disk"
+      ? <><span className="export-ok">✓ Done</span> — wrote <code>{file}</code> (the {label} cut: {count} entries · {time}).</>
+      : wrote === "download"
+      ? <><span className="export-ok">✓ Downloaded</span> <code>{filename}</code> (the {label} cut: {count} entries · {time}). Drop it in at <code>{file}</code> in the project.</>
+      : <span className="export-warn">⚠ Could not write the cut file automatically — paste the prompt and have the agent re-derive, or write {file} by hand.</span>;
+    const copyPrompt = () => {
+      const ta = document.getElementById("export-prompt-ta");
+      if (ta) ta.select();
+      try { navigator.clipboard.writeText(prompt); } catch (_) {}
+      setExportCopied(true);
+    };
+    return (
+      <div className="export-overlay" onClick={() => setExportInfo(null)}>
+        <div className="export-modal" onClick={(e) => e.stopPropagation()}>
+          <h3>Send the <span className={`export-win ${win}`}>{label}</span> cut to the FCPXML Agent</h3>
+          <p className="export-sub">The viewer writes the cut to disk, then hands the build to the FCPXML Agent — the tool built to caption-match, branch by clip type, and handle FCP import issues. (The viewer doesn't build the XML itself; that step is failure-prone without the agent around it.)</p>
+          <div className="export-step">
+            <span className="export-num">1</span>
+            <div className="export-step-body">{step1}</div>
+          </div>
+          <div className="export-step">
+            <span className="export-num">2</span>
+            <div className="export-step-body">
+              Open a new Cowork task and paste this FCPXML Agent prompt:
+              <div className="export-promptbox">
+                <textarea className="export-prompt" id="export-prompt-ta" readOnly value={prompt} />
+                <button className="export-copy" onClick={copyPrompt}>{exportCopied ? "Copied ✓" : "Copy"}</button>
+              </div>
+            </div>
+          </div>
+          <div className="export-actions">
+            <button className="btn" onClick={() => setExportInfo(null)}>Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderSendPanel = () => {
     const ops = currentBatchOps();
     const round = ROUNDS[roundIndex];
@@ -1991,6 +2038,7 @@ export default function QuotesView() {
         {view === "timeline" && renderTimeline()}
       </main>
       {renderSendPanel()}
+      {renderExportModal()}
     </div>
   );
 }
