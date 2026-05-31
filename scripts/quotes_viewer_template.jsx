@@ -24,9 +24,10 @@ import { useState, useCallback, useRef, useEffect } from "react";
 //   - Round dropdown loads from baked-in rounds; "Save as new round" writes
 //     directly to disk via window.cowork.callMcpTool (graceful no-op outside
 //     Cowork)
-//   - Send-to-agent panel: pending tweaks + editorial commentary in one
-//     surface; clipboard-based send (paste into chat)
-//   - Per-card Comment-on-this routes to the panel's commentary textarea
+//   - Send-to-agent panel: per-batch pending tweaks + a per-batch intent note;
+//     Send copies the batch to chat and appends it to the cumulative tweak log
+//   - "Talk to agent" sends iteratively — each Send is one batch, then the panel
+//     clears for the next while the cumulative log keeps every batch
 //   - Export writes current working state to the round file then invokes
 //     build_fcpxml.py — self-contained, no Sync required first
 //
@@ -575,6 +576,13 @@ export default function QuotesView() {
 
   const getTimeline = () => workingByRound[roundIndex] || [];
   const getPendingOps = () => pendingOpsByRound[roundIndex] || [];
+  // Per-round Talk-to-agent batch counter. Each op is tagged with the batch it
+  // was made in; Send advances the counter so the panel clears for the next
+  // batch while the cumulative log keeps every batch.
+  const [batchByRound, setBatchByRound] = useState(() => {
+    const init = {}; ROUNDS.forEach((_, i) => { init[i] = 1; }); return init;
+  });
+  const getBatch = () => batchByRound[roundIndex] || 1;
 
   // applyLocalEdit records a structured op alongside the human-readable
   // description. `meta` carries the fields the Editing Coach Agent reads from
@@ -590,6 +598,7 @@ export default function QuotesView() {
       const list = prev[roundIndex] || [];
       const op = {
         seq: list.length + 1,
+        batch: batchByRound[roundIndex] || 1,
         op: opTag,
         description,
         change_type: (meta && meta.change_type) || opTag,
@@ -602,7 +611,7 @@ export default function QuotesView() {
       };
       return { ...prev, [roundIndex]: [...list, op] };
     });
-  }, [roundIndex]);
+  }, [roundIndex, batchByRound]);
 
   // Within-act position of an entry — used to record reorder before/after.
   function actLocalIndex(tl, entryId) {
@@ -610,16 +619,6 @@ export default function QuotesView() {
     if (!e) return -1;
     const act = entryActOf(e);
     return tl.filter((x) => entryActOf(x) === act).findIndex((x) => x.entry_id === entryId);
-  }
-
-  function discardAllTweaks() {
-    if (getPendingOps().length === 0) return;
-    if (!confirm(`Discard ${getPendingOps().length} pending tweak(s) and restore canonical state?`)) return;
-    setWorkingByRound((prev) => ({
-      ...prev,
-      [roundIndex]: JSON.parse(JSON.stringify(ROUNDS[roundIndex].timeline || [])),
-    }));
-    setPendingOpsByRound((prev) => ({ ...prev, [roundIndex]: [] }));
   }
 
   // === Edit / split / reassign UI state ===
@@ -634,7 +633,13 @@ export default function QuotesView() {
 
   // === Send-to-agent panel state ===
   const [sendPanelOpen, setSendPanelOpen] = useState(false);
-  const [commentary, setCommentary] = useState("");
+  // Per-round record of sent batches: { batch, note, sent_at }. Travels into the
+  // cumulative tweak log so each batch's reasoning stays with its ops.
+  const [batchNotesByRound, setBatchNotesByRound] = useState(() => {
+    const init = {}; ROUNDS.forEach((_, i) => { init[i] = []; }); return init;
+  });
+  // The intent note for the batch currently being assembled (cleared on Send).
+  const [batchNote, setBatchNote] = useState("");
   const [sendStatus, setSendStatus] = useState({ text: "", cls: "" });
 
   // === Drag-to-reorder state (pointer-events based) ===
@@ -1002,34 +1007,24 @@ export default function QuotesView() {
 
   // ====== Send-to-agent panel ======
 
-  function focusCommentary(prefix) {
-    setSendPanelOpen(true);
-    setCommentary((cur) => {
-      if (cur.includes(prefix)) return cur;
-      return (cur && !cur.endsWith("\n") ? cur + "\n\n" : cur) + prefix;
-    });
-    requestAnimationFrame(() => {
-      const ta = document.getElementById("send-textarea");
-      if (ta) {
-        ta.focus();
-        ta.setSelectionRange(ta.value.length, ta.value.length);
-      }
-    });
+  // Current-batch ops only — the panel and each Send are scoped to one batch.
+  function currentBatchOps() {
+    return getPendingOps().filter((o) => o.batch === getBatch());
   }
 
   function composeSendMessage() {
-    const ops = getPendingOps();
+    const ops = currentBatchOps();
     const tl = getTimeline();
     const round = ROUNDS[roundIndex];
     const lines = [];
     if (ops.length > 0) {
-      lines.push("I made these tweaks in the viewer:", "");
+      lines.push(`I made these tweaks in the viewer (batch ${getBatch()}):`, "");
       ops.forEach((o, i) => lines.push(`${i + 1}. ${o.description}`));
       lines.push("");
     }
-    if (commentary.trim()) {
-      lines.push(ops.length > 0 ? "Editorial commentary:" : "Editorial feedback from viewer:", "");
-      lines.push(commentary.trim(), "");
+    if (batchNote.trim()) {
+      lines.push("Why this batch:", "");
+      lines.push(batchNote.trim(), "");
     }
     if (ops.length > 0) {
       lines.push(`Resulting timeline state (${tl.length} entries) — apply canonically and push update_artifact:`, "");
@@ -1046,21 +1041,28 @@ export default function QuotesView() {
   // outside Cowork. Called on Send and Export — the points where the session's
   // tweaks leave the viewer. pendingOps is cumulative (never auto-cleared), so
   // each write captures the full ordered history, reversal pairs included.
-  async function writeTweakLog() {
+  // Writes ONE cumulative handoffs/[slug]/tweak-log-v[N].json. Every op carries
+  // its batch number; a top-level `batches` array records each sent batch's
+  // intent note + send time, so Coach reads the whole iteration history from a
+  // single file. `batchesOverride` lets Send include the batch it is sending
+  // right now (React state updates are async).
+  async function writeTweakLog(batchesOverride) {
     const ops = getPendingOps();
-    if (ops.length === 0 && !commentary.trim()) return { ok: false, reason: "nothing to log" };
+    const batches = batchesOverride || batchNotesByRound[roundIndex] || [];
+    if (ops.length === 0 && batches.length === 0) return { ok: false, reason: "nothing to log" };
     if (!hasCallMcpTool()) return { ok: false, reason: "not in Cowork" };
     const round = ROUNDS[roundIndex];
     const payload = {
-      schema_version: 1,
+      schema_version: 2,
       project_slug: PROJECT_META.slug,
       round: round.round_number,
       round_version: round.version,
       generated_at: new Date().toISOString(),
       baseline: `round ${round.round_number} (${round.version})`,
-      commentary: commentary.trim(),
+      batches: batches.map((b) => ({ batch: b.batch, note: b.note, sent_at: b.sent_at })),
       tweaks: ops.map((o) => ({
         seq: o.seq,
+        batch: o.batch,
         entry_id: o.entry_id,
         change_type: o.change_type,
         before: o.before,
@@ -1077,7 +1079,11 @@ export default function QuotesView() {
     return await callBash(cmd);
   }
 
+  // Send the current batch: copy the message, append this batch to the cumulative
+  // log, then advance the batch counter so the panel clears for the next one.
+  // Send-and-keep-working — no viewer rebuild.
   async function sendToAgent() {
+    if (currentBatchOps().length === 0 && !batchNote.trim()) return;
     const text = composeSendMessage();
     let copied = false;
     try {
@@ -1086,10 +1092,15 @@ export default function QuotesView() {
     } catch {
       setSendStatus({ text: "Auto-copy blocked — copy manually", cls: "warn" });
     }
-    const logResult = await writeTweakLog();
+    const b = getBatch();
+    const allBatches = [...(batchNotesByRound[roundIndex] || []), { batch: b, note: batchNote.trim(), sent_at: new Date().toISOString() }];
+    const logResult = await writeTweakLog(allBatches);
+    setBatchNotesByRound((prev) => ({ ...prev, [roundIndex]: allBatches }));
+    setBatchByRound((prev) => ({ ...prev, [roundIndex]: b + 1 }));
+    setBatchNote("");
     if (copied) {
-      const suffix = logResult && logResult.ok ? " · tweak log saved" : "";
-      setSendStatus({ text: "Copied ✓ — paste into chat" + suffix, cls: "ok" });
+      const suffix = logResult && logResult.ok ? " · log updated" : "";
+      setSendStatus({ text: `Sent batch ${b} ✓ — paste into chat` + suffix, cls: "ok" });
       setTimeout(() => setSendStatus({ text: "", cls: "" }), 3500);
     }
   }
@@ -1378,10 +1389,6 @@ export default function QuotesView() {
             >
               {inTimeline ? "✓ In timeline" : `Add #${q.num} to timeline`}
             </button>
-            <button
-              className="btn btn-comment"
-              onClick={() => focusCommentary(`About #${q.num} (${q.speaker} — ${q.part}): `)}
-            >💬 Comment on this</button>
             {inTimeline && (
               <button
                 className="btn"
@@ -1569,10 +1576,6 @@ export default function QuotesView() {
           )}
           <div className="tl-actions">
             {membershipVerb(entry)}
-            <button
-              className="btn btn-comment"
-              onClick={() => focusCommentary(`About ${entry.entry_id} (${typeLabel}, ${entryActOf(entry)}): `)}
-            >💬 Comment on this</button>
             <button
               className="btn btn-drop"
               onClick={() => {
@@ -1768,10 +1771,6 @@ export default function QuotesView() {
           <div className="tl-actions">
             {membershipVerb(entry)}
             <button
-              className="btn btn-comment"
-              onClick={() => focusCommentary(`About ${entry.entry_id} (#${entry.source_quote_id}, ${entryActOf(entry)}): `)}
-            >💬 Comment on this</button>
-            <button
               className="btn btn-drop"
               onClick={() => {
                 if (!confirm(`Drop entry ${entry.entry_id} (#${entry.source_quote_id}) back to the Library? The source quote stays in the Library and can be re-added.`)) return;
@@ -1902,14 +1901,15 @@ export default function QuotesView() {
   // ============================================================================
 
   const renderSendPanel = () => {
-    const ops = getPendingOps();
+    const ops = currentBatchOps();
     const round = ROUNDS[roundIndex];
-    const hasContent = ops.length > 0 || commentary.trim().length > 0;
+    const hasContent = ops.length > 0 || batchNote.trim().length > 0;
+    const sentCount = (batchNotesByRound[roundIndex] || []).length;
     return (
       <div className={`send-panel${sendPanelOpen ? "" : " collapsed"}${ops.length > 0 ? " has-pending" : ""}`}>
         <div className="sp-head" onClick={() => setSendPanelOpen(!sendPanelOpen)}>
           <span className="sp-title">Talk to agent</span>
-          <span className={`sp-count${ops.length === 0 ? " zero" : ""}`}>{ops.length}</span>
+          <span className={`sp-count${ops.length === 0 ? " zero" : ""}`}>{ops.length}</span>{"" /* current batch */}
           <span className="sp-toggle">{sendPanelOpen ? "▼" : "▲"}</span>
         </div>
         {sendPanelOpen && (
@@ -1917,16 +1917,12 @@ export default function QuotesView() {
             <div className="sp-body">
               <div className="sp-section">
                 <div className="sp-section-head">
-                  <span className="sp-section-title">Pending tweaks</span>
-                  <button
-                    className="sp-discard"
-                    onClick={(e) => { e.stopPropagation(); discardAllTweaks(); }}
-                    disabled={ops.length === 0}
-                  >Discard all</button>
+                  <span className="sp-section-title">This batch — pending tweaks</span>
+                  {sentCount > 0 && <span className="sp-optional">{sentCount} batch{sentCount === 1 ? "" : "es"} sent</span>}
                 </div>
                 <ul className="sp-ops">
                   {ops.length === 0 ? (
-                    <li className="empty">No tweaks yet. Edit in the timeline to start.</li>
+                    <li className="empty">No tweaks in this batch yet. Edit in the timeline to start.</li>
                   ) : (
                     ops.map((o, i) => <li key={i}>{o.description}</li>)
                   )}
@@ -1934,25 +1930,22 @@ export default function QuotesView() {
               </div>
               <div className="sp-section">
                 <div className="sp-section-head">
-                  <span className="sp-section-title">Editorial commentary</span>
-                  <span className="sp-optional">optional</span>
+                  <span className="sp-section-title">Why this batch?</span>
+                  <span className="sp-optional">per-batch intent note</span>
                 </div>
                 <textarea
                   id="send-textarea"
                   className="sp-textarea"
-                  placeholder="Why these changes? Or: what's your editorial read on a specific entry? The agent learns from this — it's the 'why,' not just the 'what.'"
-                  value={commentary}
-                  onChange={(e) => setCommentary(e.target.value)}
+                  placeholder="e.g. Tightening the Act 1 open — these felt redundant once #3 landed."
+                  value={batchNote}
+                  onChange={(e) => setBatchNote(e.target.value)}
                 />
-                <div className="sp-hint">
-                  Tip: click <strong>💬 Comment</strong> on any card to focus here with that entry pre-filled.
-                </div>
               </div>
             </div>
             <div className="sp-foot">
-              <button className="sp-send" disabled={!hasContent} onClick={sendToAgent}>Send</button>
+              <button className="sp-send" disabled={!hasContent} onClick={sendToAgent}>Send batch</button>
               {sendStatus.text && <span className={`sp-status ${sendStatus.cls}`}>{sendStatus.text}</span>}
-              <span className="sp-version">Round {round.round_number} · {round.version}</span>
+              <span className="sp-batchnote">Sends &amp; keeps working · clears for next batch</span>
             </div>
           </>
         )}

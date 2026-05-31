@@ -360,7 +360,20 @@ settled with Jeff 2026-05-29:
   pattern category — Coach's documented input changes. Not editing the Coach skill file
   from the viewer project.
 **Priority:** P1.
-**Status:** Filed.
+**Status:** Shipped. The panel is now per-batch: a per-round `batchByRound` counter tags
+every op with the batch it was made in (`currentBatchOps()` scopes the panel + each Send to
+the current batch). **Send batch** copies that batch's message to the clipboard, appends the
+batch to the cumulative `handoffs/[slug]/tweak-log-v[N].json` (schema_version 2: per-op
+`batch` field + a top-level `batches[]` of `{batch, note, sent_at}`), advances the counter,
+and clears the panel for the next batch — no viewer rebuild, Jeff keeps working. The
+"Editorial commentary" textarea is replaced by a per-batch **"Why this batch?"** intent note
+stored on the batch. Discard-all was dropped (not in the approved mockup). Verified in a
+browser build (node transpile OK; schema-v2 + batches[] + per-op batch tag + Send-batch flow
+all present; zero `commentary`/`Comment on this` remnants).
+⚑ Cross-scope flag for Coach (NOT edited here): `SKILL-editing-coach.md` lists per-entry
+"Comment on this" annotations as a named pattern category and documents the tweak-log
+schema — both change (button retired; log is now schema_version 2 with batch markers +
+per-batch intent notes). Surface to the Coach skill owner.
 
 ### BUG: split function duplicates the quote instead of splitting it
 **Source project:** hammer-ner-2026 (May 2026)

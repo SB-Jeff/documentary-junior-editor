@@ -970,12 +970,7 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .sp-section-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
 .sp-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-subtle); font-weight: 600; }
 .sp-optional { color: var(--text-subtle); font-size: 10px; }
-.sp-discard {
-  margin-left: auto; background: none; border: 0; padding: 0;
-  color: var(--text-subtle); font-size: 11px; cursor: pointer;
-}
-.sp-discard:hover:not(:disabled) { color: var(--danger); text-decoration: underline; }
-.sp-discard:disabled { opacity: 0.35; cursor: not-allowed; }
+.sp-batchnote { font-size: 11px; color: var(--text-subtle); margin-left: auto; }
 .sp-ops { list-style: none; padding: 0; margin: 0; font-size: 12px; }
 .sp-ops li { padding: 6px 0; border-bottom: 1px solid var(--border); line-height: 1.45; color: var(--text); }
 .sp-ops li:last-child { border-bottom: 0; }
