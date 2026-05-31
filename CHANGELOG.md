@@ -1,5 +1,61 @@
 # Documentary Junior Editor — Changelog
 
+## v5.8 — 2026-05-31 (quote viewer — Tight/Loose/Library rework)
+
+Viewer release. Implements the approved hammer-ner-2026 membership redesign (see the
+`hammer-ner-2026` batch in `quotes-viewer-roadmap.md` and the approved mockup
+`scripts/mockups/approved-membership-design-v4.html`). Replaces the conviction-tier +
+Rough/Tight-view model with an authoritative two-window membership model, unifies the
+Edit + Review surfaces, makes the agent handoff iterative, fixes the split bug, and turns
+Export into an FCPXML-Agent handoff. All changes are in `scripts/quotes_viewer_template.jsx`
+and `scripts/build_quotes_viewer.py`. Verified per entry with a node transpile of the built
+component + unit tests of the pure helpers (browser preview was unavailable this session).
+
+### Quote viewer (`scripts/quotes_viewer_template.jsx`, `scripts/build_quotes_viewer.py`)
+
+- **Membership model + verbs + Window toggle (P0).** Every timeline entry now carries
+  `membership: "tight" | "loose"`. `membershipOf(entry)` migrates legacy data on load
+  (must-keep + tight-candidate → tight; probable-keep → loose; non-spoken structural
+  entries → tight) and the build script's `migrate_membership` does the same for the
+  raw-handoffs path, dropping `runtime_recommendation`. A **Window** toggle (Tight default
+  / Loose) replaces Rough/Tight via `inActiveWindow`, rewired through the timeline filter,
+  Library hide-in-cut, runtime totals, and export. Per-card verbs: **Cut → Loose**,
+  **Add Back → Tight**, **Drop → Library**; Library **Add** lands straight in Tight; each
+  move logs a `set_membership` tweak. Interstitials get the verbs too. Retired
+  `runtime_recommendation`, `REC_CYCLE`, the clickable rec badge, `cutFilter`, `inTightCut`,
+  and the must-keep/tight-candidate/probable-keep tiers.
+- **Unified Edit + Review page with per-card reveal (P1).** The Edit and Review tabs collapse
+  into one **Edit** surface (Quote Library stays separate). Default is a clean read
+  (`renderCleanCard`); each card exposes only ✎ Edit, which flips it to edit-in-place
+  (Cut/Add Back/Drop/Trim/Split live inside), with ✕ Done to collapse. Neighbors stay clean,
+  multiple open at once, and a global **Reveal all / Collapse all** acts on the active window.
+  Membership chip + colored edge show only in the Loose window. Retired `renderReview`.
+- **Iterative "Talk to agent" (P1).** The panel is now per-batch: each op is tagged with its
+  batch; **Send batch** copies that batch to the clipboard, appends it to the cumulative
+  `handoffs/[slug]/tweak-log-v[N].json` (**schema_version 2**: per-op `batch` field + a
+  top-level `batches[]` of `{batch, note, sent_at}`), advances the counter, and clears the
+  panel — send-and-keep-working, no rebuild. A per-batch **"Why this batch?"** intent note
+  replaces the old free-text commentary. Retired the per-op "Comment on this" button.
+- **Split bugfix (P1).** `executeSplit` cloned the full quote onto both halves
+  (`_editCuts: []`). It now keeps each half's character span by setting `_editCuts` to the
+  complement of `[boundaries[i], boundaries[i+1]]` — verbatim text untouched, only per-half
+  trim ranges differ (Cardinal Rule 1). Unit-tested 2-way and 3-way against `buildKeptText`.
+- **Export → "Send to FCPXML Agent" (design tie-in).** The button is renamed and export is now
+  a handoff: it writes `trimmed-quotes-v[N].json` for the selected window (degrades to a
+  browser download outside Cowork via `hasCallMcpTool()`) and shows a modal with a
+  ready-to-paste FCPXML Agent launch prompt. The viewer no longer builds the XML itself
+  (`build_fcpxml.py` call removed).
+
+### Cross-scope flags (route to the editorial side — not edited from the viewer project)
+
+- `SKILL-editing-coach.md` — the per-op "Comment on this" annotation category is retired, and
+  the tweak log is now schema_version 2 (batch markers + per-batch intent notes). Coach's
+  documented input changes.
+- `cowork-session-guide.md` — stale rough/tight vocabulary and the old direct-build export are
+  superseded by the Tight/Loose windows + the FCPXML-Agent handoff.
+- `SKILL-edit.md` — the earlier `tight-candidate` dependency is obsolete; the membership model
+  supersedes it.
+
 ## v5.7 — 2026-05-31 (feedback capture + Hammer NER 2026 review pass)
 
 Skill Review pass on the Hammer NER 2026 project. The headline change is to
@@ -88,6 +144,7 @@ opus-4.7) plus the system-level review of the pipeline state.
   normalization, authoritative `_editCuts` round-trip) — commit with this pass.
 - Hammer NER 2026 reference-example folder (Final_Edit.txt + lessons-learned.md
   + transcripts) not yet built — next step.
+
 
 ## v5.6 — 2026-05-21 (quote viewer batch)
 
