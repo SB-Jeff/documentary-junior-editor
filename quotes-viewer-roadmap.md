@@ -371,7 +371,14 @@ tail.
 (head → A, tail → B) with the boundary trims set on each side, preserving verbatim
 integrity. Self-contained; can ship independently of the membership rework.
 **Priority:** P1.
-**Status:** Filed.
+**Status:** Shipped. `executeSplit` previously gave every sub-entry `_editCuts: []`, so
+each half rendered the full quote (the clone). Now each sub-entry keeps only its character
+span `[boundaries[i], boundaries[i+1]]` of `fullQuoteText(entry)` by setting `_editCuts`
+to the complement of that span (`[0, keepStart]` when not the head, `[keepEnd, len]` when
+not the tail). No quote text is altered — only the per-half trim ranges differ, so verbatim
+integrity holds (Cardinal Rule 1). Verified with a node unit test against the real
+`buildKeptText`: a 2-way split yields the head and tail, a 3-way split yields three
+non-overlapping pieces whose join reconstructs the original, and no half equals the whole.
 
 ### [SUPERSEDED] Replace rough/tight toggle + conviction tiers with subtractive refinement in place
 **Source project:** earlier entry, pre-2026-05-29 (original text not recovered)

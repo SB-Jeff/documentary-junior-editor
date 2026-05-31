@@ -883,15 +883,23 @@ export default function QuotesView() {
     const letters = "abcdefghijklmnopqrstuvwxyz";
     const subEntries = [];
     for (let i = 0; i < boundaries.length - 1; i++) {
-      const subText = original.slice(boundaries[i], boundaries[i + 1]).trim();
+      const keepStart = boundaries[i];
+      const keepEnd = boundaries[i + 1];
+      const subText = original.slice(keepStart, keepEnd).trim();
       if (!subText) continue;
       const sub = letters[i];
       const newId = `${entry.source_quote_id}${sub}`;
+      // Partition, don't clone: keep only this sub-quote's character span by
+      // cutting everything before keepStart and everything after keepEnd. The
+      // verbatim text is untouched — only trim ranges differ per half.
+      const subCuts = [];
+      if (keepStart > 0) subCuts.push([0, keepStart]);
+      if (keepEnd < original.length) subCuts.push([keepEnd, original.length]);
       subEntries.push({
         ...entry,
         entry_id: newId,
         _subLabel: sub,
-        _editCuts: [],
+        _editCuts: subCuts,
         notes: (entry.notes ? entry.notes + " " : "") + `(split ${sub} of ${boundaries.length - 1})`,
       });
     }
