@@ -522,10 +522,10 @@ export default function QuotesView() {
   // === Round + view state ===
   const [roundIndex, setRoundIndex] = useState(INITIAL_ROUND_INDEX);
   const [view, setView] = useState("timeline");
+  const [revealedIds, setRevealedIds] = useState(() => new Set());
   const [windowMode, setWindowMode] = useState("tight");
   const [speakerFilter, setSpeakerFilter] = useState("all");
   const [actFilter, setActFilter] = useState("all");
-  const [reviewScope, setReviewScope] = useState("All");
   // Quote Library: "Hide quotes already in the current cut" — persisted per project.
   const [hideInCut, setHideInCut] = useState(() => {
     try { return localStorage.getItem("odv-hideInCut-" + PROJECT_META.slug) === "1"; }
@@ -1128,6 +1128,22 @@ export default function QuotesView() {
   const activeEntries = windowMode === "tight" ? tightEntries.length : allEntries.length;
   const activeSec = windowMode === "tight" ? tightSec : looseSec;
 
+  // ====== Per-card reveal (unified Edit page) ======
+  // Default is a clean read; each card flips to edit-in-place independently.
+  // Multiple may be open at once; Reveal all / Collapse all flip every card in
+  // the active window.
+  function toggleReveal(id) {
+    setRevealedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function revealAll(v) {
+    if (!v) { setRevealedIds(new Set()); return; }
+    setRevealedIds(new Set(getTimeline().filter((e) => inActiveWindow(e)).map((e) => e.entry_id)));
+  }
+
   // ============================================================================
   // Header
   // ============================================================================
@@ -1164,7 +1180,6 @@ export default function QuotesView() {
         <div className="mode-toggle">
           {[
             { mode: "timeline", label: "Edit" },
-            { mode: "review", label: "Review" },
             { mode: "library", label: "Quote Library" },
           ].map((m) => (
             <button
@@ -1178,7 +1193,7 @@ export default function QuotesView() {
         </div>
        </div>
       </div>
-      {view !== "review" && (
+      {(
         <div className="hdr-row2">
          <div className="hdr-row2-inner">
           {/* Line 1: Act filter + Cut block */}
@@ -1239,6 +1254,13 @@ export default function QuotesView() {
                 </button>
               ))}
             </div>
+            {view === "timeline" && (
+              <div className="reveal-block">
+                <span className="group-label">Reveal</span>
+                <button onClick={() => revealAll(true)}>Reveal all</button>
+                <button onClick={() => revealAll(false)}>Collapse all</button>
+              </div>
+            )}
           </div>
          </div>
         </div>
@@ -1494,6 +1516,7 @@ export default function QuotesView() {
             </span>
             <span className={`mship-badge ${mship}`}>{mship}</span>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
+            <button className="rc-collapse" onClick={() => toggleReveal(entry.entry_id)} title="Collapse to clean read">✕ Done</button>
           </div>
           <div className="ins-edit-row">
             <textarea
@@ -1672,6 +1695,7 @@ export default function QuotesView() {
               </svg>
               split
             </button>
+            <button className="rc-collapse" onClick={() => toggleReveal(entry.entry_id)} title="Collapse to clean read">✕ Done</button>
           </div>
           {!isEditing && (
             <p className="tl-quote">
@@ -1769,6 +1793,52 @@ export default function QuotesView() {
     );
   };
 
+  // Clean read card (the unified Edit page's default state). Shows ONLY ✎ Edit;
+  // Cut / Add Back / Drop live inside the revealed edit card. The membership chip
+  // and colored edge appear only in the Loose window (where Tight/Loose mixing
+  // matters), matching the approved mockup.
+  const renderCleanCard = (entry) => {
+    const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
+    const mship = membershipOf(entry);
+    const showChip = windowMode === "loose";
+    const markCls = showChip ? (mship === "loose" ? " loose-mark" : " tight-mark") : "";
+    const chip = showChip ? <span className={`mship-chip ${mship}`}>{mship}</span> : null;
+    const editBtn = (
+      <span className="rc-tools">
+        <button className="rc-tool edit" onClick={() => toggleReveal(entry.entry_id)}>✎ Edit</button>
+      </span>
+    );
+    if (!isSpoken) {
+      const typeLabel = { title_card: "Title card", interstitial: "Interstitial", context_beat: "Context beat" }[entry.type] || "Interstitial";
+      const insText = entry.type === "context_beat" ? `[${entry.intent || "context needed"}]` : (entry.text || "");
+      return (
+        <div className={`read-card${markCls}`} id={entry.entry_id} key={entry.entry_id}>
+          <div className="rc-head">
+            <span className="ins-type-badge">{typeLabel}</span>
+            <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
+            {chip}
+            {editBtn}
+          </div>
+          <p className="rc-quote rc-interstitial">{insText}</p>
+        </div>
+      );
+    }
+    const src = findSourceQuote(entry.source_quote_id);
+    const speakerC = src ? speakerColors[src.speakerSlug] : { bg: COLORS.surface2, fg: COLORS.textMuted };
+    const speakerLabel = src?.speaker || entry.speaker || "?";
+    return (
+      <div className={`read-card${markCls}`} id={entry.entry_id} key={entry.entry_id}>
+        <div className="rc-head">
+          <span className="speaker-tag" style={{ background: speakerC.bg, color: speakerC.fg }}>{speakerLabel}</span>
+          <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
+          {chip}
+          {editBtn}
+        </div>
+        <p className="rc-quote">"{trimmedQuoteText(entry)}"</p>
+      </div>
+    );
+  };
+
   const renderTimeline = () => {
     const tl = getTimeline();
     if (tl.length === 0) {
@@ -1803,7 +1873,9 @@ export default function QuotesView() {
               </div>
               {entries.flatMap((entry, idx) => {
                 const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
-                const card = isSpoken ? renderTimelineCard(entry) : renderInterstitialCard(entry);
+                const card = revealedIds.has(entry.entry_id)
+                  ? (isSpoken ? renderTimelineCard(entry) : renderInterstitialCard(entry))
+                  : renderCleanCard(entry);
                 const els = [];
                 if (idx === 0) els.push(renderInsertControl(null, act, `ins-start-${act}`));
                 els.push(card);
@@ -1813,74 +1885,6 @@ export default function QuotesView() {
             </section>
           );
         })}
-      </div>
-    );
-  };
-
-  // ============================================================================
-  // Review view
-  // ============================================================================
-
-  const renderReview = () => {
-    const tl = getTimeline().filter((e) => inActiveWindow(e));
-    if (tl.length === 0) {
-      return <div className="empty"><h3>Nothing to review yet.</h3></div>;
-    }
-    const realActs = PROJECT_META.act_labels.filter((a) => a !== "Orphan");
-    const tabs = [...realActs, "All"];
-    const inScope = tl.filter((e) => reviewScope === "All" || entryActOf(e) === reviewScope);
-    return (
-      <div className="review-view">
-        <div className="review-tabs">
-          {tabs.map((name) => {
-            const count = name === "All" ? tl.length : tl.filter((e) => entryActOf(e) === name).length;
-            return (
-              <button
-                key={name}
-                className={`review-tab${reviewScope === name ? " active" : ""}`}
-                onClick={() => setReviewScope(name)}
-              >{name}<span className="count">({count})</span></button>
-            );
-          })}
-        </div>
-        {(() => {
-          const actsToShow = reviewScope === "All" ? realActs : [reviewScope];
-          return actsToShow.map((act) => {
-            const entries = inScope.filter((e) => entryActOf(e) === act);
-            if (entries.length === 0) return null;
-            const secs = entries.reduce((a, e) => a + entrySeconds(e), 0);
-            let lastSp = null;
-            return (
-              <div key={act} className="review-act">
-                <h2>{act}<span className="meta">~{fmtSec(secs)} · {entries.length} beat{entries.length === 1 ? "" : "s"}</span></h2>
-                {entries.map((e) => {
-                  const isSpoken = e.type === "spoken" || e.source_quote_id != null;
-                  if (!isSpoken) {
-                    lastSp = null;  // attribution differs; re-show the next speaker
-                    const insLabel = { title_card: "TITLE CARD", interstitial: "INTERSTITIAL", context_beat: "CONTEXT BEAT" }[e.type] || "INTERSTITIAL";
-                    const insText = e.type === "context_beat" ? `[${e.intent || "context needed"}]` : (e.text || "");
-                    return (
-                      <div key={e.entry_id} className="review-block">
-                        <div className="speaker">— {insLabel}</div>
-                        <div className="review-text review-interstitial-text">{insText}</div>
-                      </div>
-                    );
-                  }
-                  const src = findSourceQuote(e.source_quote_id);
-                  const speakerLabel = src?.speaker || e.speaker || "?";
-                  const showSpeaker = speakerLabel !== lastSp;
-                  lastSp = speakerLabel;
-                  return (
-                    <div key={e.entry_id} className="review-block">
-                      {showSpeaker && <div className="speaker">— {speakerLabel}</div>}
-                      <div className="review-text">"{trimmedQuoteText(e)}"</div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          });
-        })()}
       </div>
     );
   };
@@ -1984,7 +1988,6 @@ export default function QuotesView() {
       <main className="main">
         {view === "library" && renderLibrary()}
         {view === "timeline" && renderTimeline()}
-        {view === "review" && renderReview()}
       </main>
       {renderSendPanel()}
     </div>

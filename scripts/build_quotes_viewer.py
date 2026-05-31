@@ -789,6 +789,28 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .btn-drop:hover { background: var(--danger-soft); border-color: var(--danger); }
 .verb-dest { font-size: 11px; font-weight: 600; opacity: 0.75; margin-left: 1px; }
 
+/* Unified Edit page — clean read cards (default) flip to edit-in-place */
+.read-card { padding: 10px 14px 14px 16px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; position: relative; }
+.read-card.tight-mark { border-left-color: var(--must); }
+.read-card.loose-mark { border-left-color: var(--probable); background: rgba(37,99,235,0.035); }
+.rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+.rc-quote { font-size: 15px; line-height: 1.6; margin: 2px 0 0; color: var(--text); }
+.rc-quote.rc-interstitial { font-style: italic; color: var(--text-muted); }
+.mship-chip { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px; border-radius: 999px; }
+.mship-chip.tight { color: var(--must); background: var(--must-soft); }
+.mship-chip.loose { color: var(--probable); background: var(--probable-soft); }
+.rc-tools { margin-left: auto; display: inline-flex; gap: 4px; align-items: center; }
+.rc-tool { background: transparent; border: 1px solid var(--border); color: var(--text-subtle); font-size: 12px; padding: 3px 9px; border-radius: 6px; cursor: pointer; opacity: .6; transition: opacity .12s, background .12s, color .12s, border-color .12s; }
+.read-card:hover .rc-tool, .read-card:focus-within .rc-tool { opacity: 1; }
+.rc-tool:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+.rc-tool.edit:hover { background: var(--surface-2); color: var(--accent); border-color: var(--accent); }
+.rc-collapse { margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--text-subtle); font-size: 12px; padding: 3px 9px; border-radius: 6px; cursor: pointer; }
+.rc-collapse:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+.reveal-block { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--border-strong); border-radius: 8px; margin-left: auto; }
+.reveal-block .group-label { margin-right: 2px; }
+.reveal-block button { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--text); cursor: pointer; }
+.reveal-block button:hover { background: var(--surface); border-color: var(--border-strong); }
+
 .tl-quote { color: var(--text); line-height: 1.55; font-size: 14px; margin: 6px 0 0; }
 .tl-quote-cut { color: var(--danger); text-decoration: line-through; opacity: 0.65; }
 .tl-quote-hint {

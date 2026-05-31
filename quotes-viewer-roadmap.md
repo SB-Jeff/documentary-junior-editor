@@ -330,7 +330,16 @@ one quote in place without tab-switching and losing your place.
 quote") while surrounding cards stay clean; multiple cards open at once; a global
 all-on / all-off control.
 **Priority:** P1.
-**Status:** Filed.
+**Status:** Shipped. Collapsed the Edit and Review tabs into one "Edit" surface (Quote
+Library stays separate). Default per-card state is a clean read (`renderCleanCard` —
+Review-style speaker/type + timecode + quote, membership chip and colored edge shown only
+in the Loose window). Each clean card exposes ONLY a ✎ Edit button (`.rc-tool.edit`);
+Cut / Add Back / Drop / Trim / Split all live inside the revealed edit card, per the
+settled decision. ✎ Edit flips that one card to edit-in-place (`revealedIds` Set), a ✕ Done
+button collapses it back, neighbors stay clean, and multiple can be open at once. Header
+gains a global **Reveal all / Collapse all** block (acts on the active window). Retired
+`renderReview` and `reviewScope`. Verified in a browser build (node transpile OK; clean↔
+revealed toggle, reveal-all/collapse-all, Loose-only chips all present).
 
 ### "Talk to agent" should send iteratively (send-and-keep-working)
 **Source project:** hammer-ner-2026 (May 2026)
