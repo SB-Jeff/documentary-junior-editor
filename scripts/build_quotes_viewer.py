@@ -61,6 +61,155 @@ def find_substring_with_offset(haystack: str, needle: str, start_hint: int = 0):
     return (idx, idx + len(needle))
 
 
+def lookup_source_quote(by_num: dict, sid):
+    """Resolve a source quote by num, tolerating int/str id coupling (Bug 6).
+
+    `by_num` is keyed on the integer `num`; upstream `source_quote_id` may be a
+    string ("23") or int (23). Return the quote or None.
+    """
+    if sid is None:
+        return None
+    if sid in by_num:
+        return by_num[sid]
+    try:
+        return by_num.get(int(sid))
+    except (ValueError, TypeError):
+        return None
+
+
+def slugify(name: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
+    return s or "speaker"
+
+
+def latest_versioned(paths):
+    """Return the highest-v[N] Path from an iterable, or None."""
+    best, best_n = None, -1
+    for p in paths:
+        m = re.search(r"v(\d+)", p.name)
+        n = int(m.group(1)) if m else 0
+        if n >= best_n:
+            best_n, best = n, p
+    return best
+
+
+def parse_act_structure_md(text: str):
+    """Parse project name, act labels, and speakers from act-structure-v*.md.
+
+    Format is defined by the Creative Context Agent (SKILL-creative-context.md):
+        # Approved Act Structure
+        ## Project: [Project Name]
+        ### Speakers
+        - [Name] — [Role] — [description]
+        ### Act Labels (...)
+        - [Label]
+        - Orphan
+
+    Returns (project_name | None, act_labels [list], speakers [list of dicts]).
+    Any field that can't be located comes back empty/None.
+    """
+    project_name = None
+    m = re.search(r"^##\s*Project:\s*(.+?)\s*$", text, re.MULTILINE)
+    if m:
+        project_name = m.group(1).strip()
+
+    def section_body(heading_re):
+        m = re.search(
+            r"^###\s*" + heading_re + r".*?$(.*?)(?=^###\s|\Z)",
+            text, re.MULTILINE | re.DOTALL,
+        )
+        return m.group(1) if m else ""
+
+    act_labels = []
+    for line in section_body(r"Act Labels").splitlines():
+        lm = re.match(r"\s*[-*]\s+(.+?)\s*$", line)
+        if lm:
+            label = re.sub(r"^\[|\]$", "", lm.group(1).strip()).strip()
+            # Drop the "Orphan (...)" bookkeeping bullet and unfilled template
+            # placeholders like "[Label 1]". Orphan is a quote flag, not an act.
+            if label and not re.match(r"^(Label \d|Orphan\b)", label, re.I):
+                act_labels.append(label)
+
+    speakers = []
+    for line in section_body(r"Speakers").splitlines():
+        lm = re.match(r"\s*[-*]\s+(.+?)\s*$", line)
+        if lm:
+            # "Name — Role — description"; split on em/en dash only so hyphenated
+            # names survive.
+            parts = re.split(r"\s+[—–]\s+", lm.group(1).strip())
+            name = re.sub(r"^\[|\]$", "", parts[0]).strip()
+            role = parts[1].strip() if len(parts) > 1 else ""
+            if name and not name.startswith("Speaker Name"):
+                speakers.append({"name": name, "slug": slugify(name), "role": role})
+
+    return project_name, act_labels, speakers
+
+
+def derive_speakers_from_quotes(quotes):
+    """Distinct {name, slug, role} from the source quote pool (Bug 3).
+
+    Keys on speakerSlug so the slugs are guaranteed to match the values the
+    viewer's Speaker filter and color map look up. Preserves first-seen order.
+    """
+    seen, order = {}, []
+    for q in quotes:
+        # Skip unattributed quotes (e.g. orphans parsed from markdown with no
+        # speaker) — they'd otherwise mint a junk "speaker" chip.
+        if not (q.get("speakerSlug") or q.get("speaker")):
+            continue
+        slug = q.get("speakerSlug") or slugify(q.get("speaker", ""))
+        if not slug or slug in seen:
+            continue
+        seen[slug] = {
+            "name": q.get("speaker") or slug,
+            "slug": slug,
+            "role": q.get("role", ""),
+        }
+        order.append(slug)
+    return [seen[s] for s in order]
+
+
+def parse_orphans_md(text: str, start_num: int):
+    """Best-effort extraction of orphan quotes from a free-form *-orphans-v*.md.
+
+    The orphan markdown has no strict schema (SKILL-transcript.md Output 2 is
+    prose), so this is heuristic: it lifts verbatim quotes from markdown
+    blockquote lines (`> ...`) and from lines that are wholly wrapped in double
+    quotes. Each becomes a minimal orphan quote object. The durable fix is
+    upstream (Synthesis emitting is_orphan entries inside tagged-quotes-v*.json,
+    which this build already consumes) — see the scope flag in the build output.
+    """
+    orphans = []
+    num = start_num
+    for raw in text.splitlines():
+        line = raw.strip()
+        quote_text = None
+        bq = re.match(r">\s*(.+)$", line)
+        if bq:
+            quote_text = bq.group(1).strip().strip('"“”')
+        else:
+            qm = re.match(r'^[-*]?\s*["“](.+?)["”]\s*$', line)
+            if qm:
+                quote_text = qm.group(1).strip()
+        if quote_text and len(quote_text) > 1:
+            orphans.append({
+                "num": num,
+                "originalNum": num,
+                "speaker": "",
+                "speakerSlug": "",
+                "role": "",
+                "quote": quote_text,
+                "startTC": "",
+                "endTC": "",
+                "part": "Orphan",
+                "rationale": "",
+                "is_orphan": True,
+                "segments": [{"idx": 0, "text": quote_text, "startTC": "", "endTC": ""}],
+            })
+            num += 1
+    return orphans
+
+
 def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
     """Convert v5.0 segment-based entry → new viewer's character-range entry.
 
@@ -91,7 +240,7 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
             "notes": "..."
         }
     """
-    src = source_quotes_by_num.get(entry["source_quote_id"])
+    src = lookup_source_quote(source_quotes_by_num, entry.get("source_quote_id"))
     if not src:
         return None
 
@@ -182,7 +331,10 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
     return {
         "entry_id": new_id,
         "_subLabel": None,
-        "source_quote_id": entry["source_quote_id"],
+        # Emit the canonical source num (int) so the viewer's strict-equality
+        # findSourceQuote(q.num === id) resolves it even when upstream wrote a
+        # string id like "23" (Bug 6).
+        "source_quote_id": src["num"],
         "type": entry.get("type", "spoken"),
         "speaker": entry.get("speaker"),
         "part": entry.get("part"),
@@ -221,8 +373,15 @@ def migrate_membership(entries):
     return out
 
 
-def load_project_data_from_handoffs(slug: str, ssd_root: Path) -> dict:
+def load_project_data_from_handoffs(slug: str, ssd_root: Path,
+                                     title_override: str = None,
+                                     act_labels_override=None) -> dict:
     """Auto-discover project data files in the handoffs folder.
+
+    Project metadata (title, act labels, speakers) is derived from files that
+    always exist on a clean run rather than from optional pipeline-state fields
+    (Bug 3): act labels + project name from act-structure-v*.md, speakers from
+    the tagged-quotes pool. pipeline-state.json is consulted only as a fallback.
 
     Returns the assembled project data dict in the shape the new template expects.
     """
@@ -230,15 +389,21 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path) -> dict:
     if not handoffs.is_dir():
         raise SystemExit(f"Handoffs folder not found: {handoffs}")
 
-    # Project metadata from pipeline-state.json
+    # pipeline-state.json is a fallback source only — not required, and not
+    # depended on for title/act_labels/speakers (those frequently aren't written
+    # into it; see Bug 3).
+    ps = {}
     ps_path = handoffs / "pipeline-state.json"
-    if not ps_path.exists():
-        raise SystemExit(f"pipeline-state.json missing at {ps_path}")
-    ps = json.loads(ps_path.read_text())
-    project_name = ps.get("project_name", slug)
+    if ps_path.exists():
+        try:
+            ps = json.loads(ps_path.read_text())
+        except Exception as e:
+            print(f"Warning: could not parse {ps_path.name}: {e}", file=sys.stderr)
+    else:
+        print(f"Warning: {ps_path.name} not found; deriving metadata from handoffs.",
+              file=sys.stderr)
     cc = ps.get("agents", {}).get("creative-context", {})
-    act_labels_full = cc.get("act_labels", ["Act 1", "Act 2", "Act 3"])
-    speakers = cc.get("speakers", [])
+
     target_seconds = 120
     # Best-effort: look for target_runtime_seconds in any trimmed-quotes file
     for f in handoffs.glob("trimmed-quotes-v*.json"):
@@ -250,22 +415,40 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path) -> dict:
         except Exception:
             pass
 
-    # Source quotes: tagged-quotes-v[latest].json + orphans aggregated from speaker files
+    # Source quotes: tagged-quotes-v[latest].json + any embedded orphans.
     source_quotes = []
     orphans = []
-    tagged_files = sorted(handoffs.glob("tagged-quotes-v*.json"))
-    if tagged_files:
-        tq = json.loads(tagged_files[-1].read_text())
-        if isinstance(tq, list):
-            source_quotes = [q for q in tq if not q.get("is_orphan")]
-            orphans = [q for q in tq if q.get("is_orphan")]
-        elif isinstance(tq, dict) and "quotes" in tq:
-            source_quotes = [q for q in tq["quotes"] if not q.get("is_orphan")]
-            orphans = [q for q in tq["quotes"] if q.get("is_orphan")]
+    tagged_latest = latest_versioned(handoffs.glob("tagged-quotes-v*.json"))
+    if tagged_latest:
+        tq = json.loads(tagged_latest.read_text())
+        quotes = tq if isinstance(tq, list) else tq.get("quotes", []) if isinstance(tq, dict) else []
+        source_quotes = [q for q in quotes if not q.get("is_orphan")]
+        orphans = [q for q in quotes if q.get("is_orphan")]
 
-    # If orphans aren't in tagged-quotes, try to pull from per-speaker orphan
-    # files (lynette-tagged-quotes-v1.json structure varies). Fallback: extract
-    # from existing viewer HTML data block if present.
+    # Orphans (Bug 4): the Synthesis/Transcript agents emit orphans as standalone
+    # markdown (*-orphans-v*.md / orphan-quotes-v*.md), not inside tagged-quotes.
+    # If none were embedded, parse the markdown. Last resort: a prior viewer HTML.
+    if not orphans:
+        next_num = (max((q.get("num", 0) for q in source_quotes), default=0)) + 1
+        # Latest version of each distinct orphan-md stem.
+        orphan_md = {}
+        for p in list(handoffs.glob("*orphans-v*.md")) + list(handoffs.glob("orphan-quotes-v*.md")):
+            stem = re.sub(r"-v\d+", "", p.stem)
+            cur = orphan_md.get(stem)
+            if cur is None or latest_versioned([cur, p]) == p:
+                orphan_md[stem] = p
+        for p in orphan_md.values():
+            try:
+                parsed = parse_orphans_md(p.read_text(errors="ignore"), next_num)
+            except Exception as e:
+                print(f"Warning: could not parse {p.name}: {e}", file=sys.stderr)
+                continue
+            orphans.extend(parsed)
+            next_num += len(parsed)
+        if orphans:
+            print(f"Loaded {len(orphans)} orphan(s) from markdown (best-effort parse).",
+                  file=sys.stderr)
+
     if not orphans:
         viewer_html = handoffs / f"{slug}_quotes_view.html"
         if viewer_html.exists():
@@ -284,6 +467,32 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path) -> dict:
     for o in orphans:
         o["is_orphan"] = True
     combined_quotes = list(source_quotes) + list(orphans)
+
+    # --- Metadata: derive from always-present files, args win (Bug 3) ---
+    as_path = latest_versioned(handoffs.glob("act-structure-v*.md"))
+    as_name, as_labels, as_speakers = None, [], []
+    if as_path:
+        as_name, as_labels, as_speakers = parse_act_structure_md(as_path.read_text(errors="ignore"))
+
+    # project name: --title > act-structure Project > pipeline-state > slug
+    project_name = (
+        title_override
+        or as_name
+        or (ps.get("project_name") if ps.get("project_name") not in (None, "", slug) else None)
+        or slug
+    )
+    # act labels: --act-labels > act-structure > pipeline-state > default
+    act_labels_full = (
+        list(act_labels_override) if act_labels_override
+        else as_labels or cc.get("act_labels") or ["Act 1", "Act 2", "Act 3"]
+    )
+    # speakers: derived from the quote pool (slugs guaranteed to match) >
+    # pipeline-state > act-structure (slugified names).
+    speakers = (
+        derive_speakers_from_quotes(combined_quotes)
+        or cc.get("speakers")
+        or as_speakers
+    )
 
     # Rounds: prefer editing-versions/v*.json, fallback to trimmed-quotes-v*.json
     rounds = []
@@ -1168,6 +1377,10 @@ def main():
     p.add_argument("--data", help="Pre-assembled project data JSON (alternative to --slug)")
     p.add_argument("--template", default=None, help="Template .jsx path")
     p.add_argument("--output", help="Output HTML path")
+    p.add_argument("--title", default=None,
+                   help="Override the project title (else derived from act-structure-v*.md)")
+    p.add_argument("--act-labels", default=None,
+                   help="Override act labels, comma-separated (else from act-structure-v*.md)")
     args = p.parse_args()
 
     here = Path(__file__).resolve().parent
@@ -1189,7 +1402,14 @@ def main():
         if not args.slug or not args.ssd_root:
             print("Provide either --data, or both --slug and --ssd-root", file=sys.stderr)
             return 1
-        raw = load_project_data_from_handoffs(args.slug, Path(args.ssd_root))
+        act_labels_override = (
+            [s.strip() for s in args.act_labels.split(",") if s.strip()]
+            if args.act_labels else None
+        )
+        raw = load_project_data_from_handoffs(
+            args.slug, Path(args.ssd_root),
+            title_override=args.title, act_labels_override=act_labels_override,
+        )
         data_block = assemble_data_block(raw)
         slug = raw["slug"]
 
