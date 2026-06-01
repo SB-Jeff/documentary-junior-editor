@@ -1628,7 +1628,7 @@ Set model to Sonnet 4.6.`;
     const isSplitting = splittingEntryId === entry.entry_id;
     const original = fullQuoteText(entry);
     const trimmed = isTrimmed(entry);
-    const speakerC = src ? speakerColors[src.speakerSlug] : { bg: COLORS.surface2, fg: COLORS.textMuted };
+    const speakerC = (src && speakerColors[src.speakerSlug]) || { bg: COLORS.surface2, fg: COLORS.textMuted };
     const mship = membershipOf(entry);
 
     // Drag is only initiated from the .tl-drag handle on the left edge of the
@@ -1837,7 +1837,7 @@ Set model to Sonnet 4.6.`;
       );
     }
     const src = findSourceQuote(entry.source_quote_id);
-    const speakerC = src ? speakerColors[src.speakerSlug] : { bg: COLORS.surface2, fg: COLORS.textMuted };
+    const speakerC = (src && speakerColors[src.speakerSlug]) || { bg: COLORS.surface2, fg: COLORS.textMuted };
     const speakerLabel = src?.speaker || entry.speaker || "?";
     return (
       <div className={`read-card${markCls}`} id={entry.entry_id} key={entry.entry_id}>
