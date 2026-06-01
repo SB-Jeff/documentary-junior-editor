@@ -12,7 +12,9 @@ Reads:
           editing-versions/v*.json, pipeline-state.json)
 
 Writes:
-  - The self-contained HTML viewer (React 18 + Babel-standalone + inline CSS)
+  - A genuinely self-contained HTML viewer: React 18 + ReactDOM UMD bundles
+    and the JSX-compiled-to-JS component are all inlined. No CDN fetch, no
+    runtime Babel — the file renders offline and inside sandboxed webviews.
 
 Architecture:
   - Strips the ES `import` and `export default` from the template
@@ -20,7 +22,11 @@ Architecture:
     SOURCE_QUOTES, ROUNDS, INITIAL_ROUND_INDEX, INITIAL_FOCUS)
   - Migrates timeline entries from the v5.0 segment-based shape to the
     character-range trim shape the new viewer uses
-  - Wraps in <html><head>...</head><body><div id="root"></div><script>...</script></body></html>
+  - Compiles the JSX to plain JS at build time (Node + vendored
+    @babel/standalone in scripts/vendor/), then inlines the vendored React +
+    ReactDOM UMD bundles and the compiled component into a single HTML file
+  - Mounts behind a React error boundary + try/catch that paints any failure
+    into #root, so a thrown render never degrades to a blank page
 
 Usage:
   python3 build_quotes_viewer.py \\
@@ -32,6 +38,7 @@ Usage:
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -1021,28 +1028,129 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 """
 
 
-def wrap_html(component_src: str, project_title: str) -> str:
+def compile_jsx(inner_src: str, here: Path) -> str:
+    """Compile JSX → plain JS at build time via Node + vendored Babel.
+
+    Keeps the runtime artifact free of any Babel/CDN dependency.
+    """
+    compiler = here / "compile_jsx.js"
+    if not compiler.exists():
+        raise SystemExit(f"JSX compiler helper not found: {compiler}")
+    try:
+        proc = subprocess.run(
+            ["node", str(compiler)],
+            input=inner_src,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        raise SystemExit(
+            "Node.js is required to build the viewer (compiles JSX at build "
+            "time). Install Node and re-run."
+        )
+    if proc.returncode != 0:
+        raise SystemExit(f"JSX compile failed:\n{proc.stderr}")
+    return proc.stdout
+
+
+def read_vendor(here: Path, name: str) -> str:
+    path = here / "vendor" / name
+    if not path.exists():
+        raise SystemExit(
+            f"Vendored runtime library missing: {path}\n"
+            "Re-vendor with, e.g.:\n"
+            f"  curl -sL https://unpkg.com/react@18.3.1/umd/{name} -o {path}"
+        )
+    return path.read_text(encoding="utf-8")
+
+
+# Mount harness: an error boundary plus a try/catch around the initial render.
+# Either layer paints the failure into #root with inline styles, so no thrown
+# error can leave the page blank (the bug class this replaces).
+MOUNT_SRC = """
+const { useState, useCallback, useRef, useEffect } = React;
+
+%(component)s
+
+class __ViewerErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err, info) {
+    if (window.console) console.error("Quote viewer render error:", err, info);
+  }
+  render() {
+    if (this.state.err) {
+      const e = this.state.err;
+      return React.createElement("div", { className: "viewer-error" },
+        React.createElement("h2", null, "Quote viewer failed to render"),
+        React.createElement("pre", null, String((e && e.stack) || e))
+      );
+    }
+    return this.props.children;
+  }
+}
+
+(function mountViewer() {
+  const el = document.getElementById("root");
+  try {
+    const root = ReactDOM.createRoot(el);
+    root.render(
+      React.createElement(__ViewerErrorBoundary, null,
+        React.createElement(QuotesView))
+    );
+  } catch (err) {
+    if (window.console) console.error("Quote viewer mount error:", err);
+    el.innerHTML = "";
+    const box = document.createElement("div");
+    box.className = "viewer-error";
+    const h = document.createElement("h2");
+    h.textContent = "Quote viewer failed to mount";
+    const pre = document.createElement("pre");
+    pre.textContent = String((err && err.stack) || err);
+    box.appendChild(h); box.appendChild(pre);
+    el.appendChild(box);
+  }
+})();
+"""
+
+ERROR_CSS = """
+.viewer-error { max-width: 900px; margin: 40px auto; padding: 20px 24px;
+  background: #fee2e2; border: 1px solid #dc2626; border-radius: 8px;
+  color: #7f1d1d; font: 13px/1.5 ui-monospace, Menlo, monospace; }
+.viewer-error h2 { margin: 0 0 10px; font-size: 15px; font-family: -apple-system, sans-serif; }
+.viewer-error pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+"""
+
+
+def wrap_html(component_src: str, project_title: str, here: Path) -> str:
+    react_js = read_vendor(here, "react.production.min.js")
+    react_dom_js = read_vendor(here, "react-dom.production.min.js")
+    inner_jsx = MOUNT_SRC % {"component": component_src}
+    compiled = compile_jsx(inner_jsx, here)
+    # Escape any "</script>" that could appear inside compiled string literals
+    # so it cannot prematurely close the inline <script> element.
+    compiled = compiled.replace("</script>", "<\\/script>")
+    title = (project_title or "Quote Viewer").replace("<", "&lt;").replace(">", "&gt;")
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>{project_title} — Quote Viewer</title>
+<title>{title} — Quote Viewer</title>
 <style>
 {VIEWER_CSS}
+{ERROR_CSS}
 </style>
-<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel" data-presets="react">
-const {{ useState, useCallback, useRef, useEffect }} = React;
-
-{component_src}
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(QuotesView));
+<script>
+{react_js}
+</script>
+<script>
+{react_dom_js}
+</script>
+<script>
+{compiled}
 </script>
 </body>
 </html>
@@ -1096,7 +1204,7 @@ def main():
     # Substitute data, strip module syntax, wrap
     substituted = substitute_data_block(template_src, data_block)
     component_src = strip_module_syntax(substituted)
-    html = wrap_html(component_src, data_block["PROJECT_TITLE"])
+    html = wrap_html(component_src, data_block["PROJECT_TITLE"], here)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(html, encoding="utf-8")
