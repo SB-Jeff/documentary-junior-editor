@@ -1281,8 +1281,8 @@ Set model to Sonnet 4.6.`;
             </div>
             {view === "timeline" && (
               <div className="reveal-block">
-                <span className="group-label">Reveal</span>
-                <button onClick={() => revealAll(true)}>Reveal all</button>
+                <span className="group-label">Quotes</span>
+                <button onClick={() => revealAll(true)}>Open all</button>
                 <button onClick={() => revealAll(false)}>Collapse all</button>
               </div>
             )}
