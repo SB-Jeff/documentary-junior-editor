@@ -1,14 +1,20 @@
 # Documentary Junior Editor — Changelog
 
-## v5.9 — 2026-06-09 (quote viewer — kickoff-brief P1–P5 batch)
+## v5.9 — 2026-06-09 (quote viewer kickoff-brief P1–P5 batch + Skill Review pass)
 
-Viewer release. Works the 2026-06-09 kickoff brief (`Downloads/quote-viewer-kickoff-brief.md`,
-from the TC Pain Clinic 2026 organic session + Skill Review) — the data-contract hardening and
-browser-first persistence punch list. See the `2026-06-09 kickoff brief` section in
-`quotes-viewer-roadmap.md`. Five commits, one per item; P1 + P5 verified in a real browser via
-the Claude Preview MCP, P2/P4 via the new committed QA gate. Commits local — **not pushed**.
+Two threads from 2026-06-09, consolidated into one release: the quote-viewer kickoff-brief
+batch (data-contract hardening + browser-first persistence) and a Skill Review pass over the
+`tc-pain-clinic-2026-organic` variant (no skill *semantics* changed).
 
-### Quote viewer (`scripts/quotes_viewer_template.jsx`, `scripts/build_quotes_viewer.py`, `scripts/viewer_save_server.py`)
+### Viewer batch
+
+Works the 2026-06-09 kickoff brief (`Downloads/quote-viewer-kickoff-brief.md`, from the TC Pain
+Clinic 2026 organic session + Skill Review) — the data-contract hardening and browser-first
+persistence punch list. See the `2026-06-09 kickoff brief` section in `quotes-viewer-roadmap.md`.
+Five commits, one per item; P1 + P5 verified in a real browser via the Claude Preview MCP,
+P2/P4 via the new committed QA gate.
+
+#### Quote viewer (`scripts/quotes_viewer_template.jsx`, `scripts/build_quotes_viewer.py`, `scripts/viewer_save_server.py`)
 
 - **Browser-first persistence (P1, `622e95b`).** New `scripts/viewer_save_server.py` — a tiny
   localhost helper (sandboxed to `<root>/handoffs/**.json`, 127.0.0.1-only, CORS) the viewer
@@ -30,7 +36,7 @@ the Claude Preview MCP, P2/P4 via the new committed QA gate. Commits local — *
   `speakerSlug` can't throw. P2 now also blocks string-form speakers at build. (Brief's optional
   "visible warning on degrade" left out per simplicity bias — flagged in the roadmap.)
 
-### QA / build tooling (`scripts/test_viewer_build.py`, `scripts/test-fixtures/`)
+#### QA / build tooling (`scripts/test_viewer_build.py`, `scripts/test-fixtures/`)
 
 - **Pre-handoff QA gate (P4, `08dbb19`).** Committed `scripts/test_viewer_build.py` — a runnable
   gate (6 checks, exits non-zero on any regression) plus one fixture per historical failure mode
@@ -39,17 +45,17 @@ the Claude Preview MCP, P2/P4 via the new committed QA gate. Commits local — *
   zero-dependency build-level gate (this repo is deliberately npm-install-free); runtime render
   smoke-tests run via the Claude Preview MCP.
 
-### Cross-scope flags (not edited here — see `quotes-viewer-roadmap.md`)
+#### Cross-scope flags (not edited here — see `quotes-viewer-roadmap.md`)
 
 - `SKILL-editing-coach.md` should point at `quotes-viewer-roadmap.md` as the single feedback sink (§4).
 - Synthesis should emit orphans as `is_orphan:true` inside `tagged-quotes-v*.json` (durable fix for P5).
 - Standardize `source_quote_id` as an integer in the documented schema (the build coerces; now regression-tested).
 
-## v5.8 — 2026-06-09 (Skill Review pass — TC Pain Clinic 2026 organic variant)
+### Skill Review pass
 
-Skill Review pass (no skill *semantics* changed; reference-example + documentation +
-follow-up-tracking update). Project under review: `tc-pain-clinic-2026-organic`, a
-shared-upstream variant cut of the TC Pain Clinic OTT/CTV ad campaign.
+Reference-example + documentation + follow-up-tracking update (no skill *semantics* changed).
+Project under review: `tc-pain-clinic-2026-organic`, a shared-upstream variant cut of the TC
+Pain Clinic OTT/CTV ad campaign.
 
 - **New reference example: `reference-examples/tc-pain-clinic-2026-organic/`** —
   transcripts, `Final_Edit.txt` (15-entry organic-only :30 cut, verbatim-verified), and
@@ -62,8 +68,8 @@ shared-upstream variant cut of the TC Pain Clinic OTT/CTV ad campaign.
   reproduced on all three TC Pain Clinic FCPXMLs (second confirmed project after Hammer
   NER 2026). Moved OPEN → IN PROGRESS, highest-priority code work, in SKILL-review.md
   Phase 3 follow-ups.
-- **SKILL.md version + reference-tree drift fixed.** Header/footer bumped 5.7 → 5.8 to
-  match the already-shipped v5.8 CHANGELOG; reference-examples tree updated to include
+- **SKILL.md version + reference-tree drift fixed.** Header/footer bumped 5.7 → 5.9
+  (cleared the prior 5.7 lag); reference-examples tree updated to include
   `international-institute`, `tccs-dr-pan-testimonials`, and `tc-pain-clinic-2026-organic`.
 - **Capability Audit findings (candidates, not adopted):** Opus 4.8 / Sonnet 4.6 1M-context
   + the June 15 2026 Opus-4/Sonnet-4 API retirement (audit/bump `model:` frontmatter —
@@ -100,8 +106,8 @@ shared-upstream variant cut of the TC Pain Clinic OTT/CTV ad campaign.
   beneath, with no quotes**. The deliverable was running too long and pasting in verbatim
   quotes (which belong downstream in the Edit Agent's pool); the six roadmap dimensions are
   reframed as an internal menu the bullets may draw on, not a fill-in-full template. Footer
-  bumped to v5.8.
-- SKILL-review.md footer bumped to v5.8.
+  bumped to v5.9.
+- SKILL-review.md footer bumped to v5.9.
 
 ## v5.8 — 2026-05-31 (quote viewer — Tight/Loose/Library rework)
 

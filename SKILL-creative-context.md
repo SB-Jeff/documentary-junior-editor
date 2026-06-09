@@ -459,7 +459,7 @@ For each approved act section, write a roadmap covering:
    to the next section?
 
 **The review deliverable is a one-line act summary with supporting points beneath
-(Jeff feedback, v5.8).** What Jeff reviews and approves, for each act, is:
+(Jeff feedback, v5.9).** What Jeff reviews and approves, for each act, is:
 
 - **One line** summarizing the act (its essence, in a single sentence).
 - **A few main supporting points underneath** (brief bullets — the beats or ideas that act
@@ -613,7 +613,7 @@ provides the launch prompt for the Synthesis Agent (sonnet-4.6) per
 
 ---
 
-*Creative Context Agent — documentary-junior-editor v5.8*
+*Creative Context Agent — documentary-junior-editor v5.9*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
-*v5.8: review deliverable is a one-line act summary with main supporting points beneath, no
+*v5.9: review deliverable is a one-line act summary with main supporting points beneath, no
 quotes — concise and approvable at a glance (Jeff feedback, TC Pain Clinic organic variant).*

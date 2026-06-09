@@ -13,7 +13,7 @@ description: |
 ---
 
 # Documentary Junior Editor — Master Skill Index
-### Version 5.8 | June 2026
+### Version 5.9 | June 2026
 
 This is the master index for the documentary-junior-editor skill. Read this file first at
 the start of every session. It describes the pipeline, the folder structure, how agents
@@ -529,9 +529,9 @@ fallback if n8n has issues.
 
 See `CHANGELOG.md` for full version history.
 
-Current version: 5.8 — June 2026
+Current version: 5.9 — June 2026
 
-### v5.8 highlights (quote viewer Tight/Loose/Library rework + TC Pain Clinic reference examples)
+### v5.9 highlights (quote viewer Tight/Loose/Library rework + TC Pain Clinic reference examples)
 
 - **Quote viewer membership model.** Replaced the conviction-tier + Rough/Tight-view model
   with an authoritative two-window membership model (`membership: "tight" | "loose"`),
@@ -548,8 +548,8 @@ Current version: 5.8 — June 2026
   instead of their act positions) reproduced on all three TC Pain Clinic FCPXMLs after
   Hammer NER 2026. Escalated from OPEN to high-priority IN PROGRESS in SKILL-review.md
   Phase 3 follow-ups.
-- **SKILL.md version + reference-tree drift cleanup.** Header/footer version bumped to
-  match the already-shipped v5.8 CHANGELOG; reference-examples tree updated to list
+- **SKILL.md version + reference-tree drift cleanup.** Header/footer version bumped to 5.9
+  (cleared the prior 5.7 lag); reference-examples tree updated to list
   `international-institute`, `tccs-dr-pan-testimonials`, and `tc-pain-clinic-2026-organic`
   (previously missing from the tree).
 

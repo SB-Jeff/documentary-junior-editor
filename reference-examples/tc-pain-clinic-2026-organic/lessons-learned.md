@@ -185,7 +185,7 @@ the gap the per-agent `session-issues.md` running log (Forward-Looking) is meant
 - `scripts/generate_fcpxml.py` speaker-name normalization (`_canonical_speaker`) —
   **IMPLEMENTED this session, PENDING COMMIT.** Jeff's punctuation/case-normalizing matcher
   fixes the "Dr. Haas" vs "Dr Haas" silent clip-drop. This is the parked Phase-3 fuzzy
-  speaker-name resolver, now real. Include in the v5.8 commit (it was the "stray uncommitted
+  speaker-name resolver, now real. Include in the v5.9 commit (it was the "stray uncommitted
   change" the autonomous review flagged). Cross-agent shared-vocabulary drift between catalog
   names and params/file naming is the root cause — consider whether speaker names should be
   canonicalized once upstream.
@@ -398,7 +398,7 @@ entries to quotes-viewer-roadmap.md" instruction accordingly.
 Jeff's framing: the Creative Context deliverable is **too long and often includes quotes**.
 What he wants per act is a **one-line summary with the main supporting points listed
 underneath** — fast to review, easy to approve or critique. **Resolution (folded into
-SKILL-creative-context.md this pass, v5.8):** Phase 3 now defines the review deliverable as,
+SKILL-creative-context.md this pass, v5.9):** Phase 3 now defines the review deliverable as,
 for each act, one summary line plus a few brief supporting bullets; explicitly **excludes
 verbatim quotes** (references material by speaker name and topic only — quotes live downstream
 in the Edit Agent's pool); and reframes the six roadmap dimensions as an internal menu the
@@ -416,7 +416,7 @@ make its scope visible — open each review with a short "What I'm reviewing" su
 handoff docs and project files it read, which inputs were present vs. absent, which checks it's
 about to run) and close (in Notifying Jeff) by restating plainly what it looked at and checked.
 Implemented as a new "Review Legibility" section plus step 0 in Notifying Jeff.
-**Priority:** Done this pass (SKILL-review.md v5.8).
+**Priority:** Done this pass (SKILL-review.md v5.9).
 **Related Capability Audit finding:** —
 
 ### [Draft candidate — Jeff to confirm] Variant fan-out via Orchestrator

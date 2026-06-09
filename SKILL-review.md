@@ -48,7 +48,7 @@ the residue.
 
 ---
 
-## Review Legibility (added v5.8)
+## Review Legibility (added v5.9)
 
 Jeff's standing request: the review must not be a black box. Jeff has said
 he often can't tell what the Skill Review Agent actually examines. Fix that
@@ -255,7 +255,7 @@ entries). For each, note current status: SHIPPED / IN PROGRESS / OPEN /
 NEW. Surface to Jeff the highest-priority next code work based on this
 project's friction.
 
-Current as of v5.8:
+Current as of v5.9:
 - `scripts/transcribe.py` legacy key paths — SHIPPED in v5.1 (prune
   unused paths on next touch). NOTE: the deprecated `secrets/assembly_ai.key`
   git-crypt artifact still ships in project copies and breaks `git` in
@@ -269,7 +269,7 @@ Current as of v5.8:
   NER 2026 FCPXML review:
   (a) act-boundary title cards stack at the sequence-start offset instead
   of their act positions — section-divider offset must track cumulative
-  spine duration. **ESCALATED to IN PROGRESS, highest priority (v5.8):
+  spine duration. **ESCALATED to IN PROGRESS, highest priority (v5.9):
   second confirmed reproduction on TC Pain Clinic 2026 — bug fired on all
   three sibling FCPXMLs (-organic, -haas, loose). It ships broken on every
   multi-act cut; Jeff strips dividers by hand each time.** (b)
@@ -701,7 +701,7 @@ Update `pipeline-state.json` to record Skill Review's run:
 
 ---
 
-*Skill Review Agent — documentary-junior-editor v5.8*
+*Skill Review Agent — documentary-junior-editor v5.9*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *Read Coach's `skill-review-notes.md` before reading anything else from
 the project — it tells you what pipeline-level implications Coach
