@@ -481,10 +481,14 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         or (ps.get("project_name") if ps.get("project_name") not in (None, "", slug) else None)
         or slug
     )
-    # act labels: --act-labels > act-structure > pipeline-state > default
+    # act labels: --act-labels > act-structure > pipeline-state.
+    # NO silent ["Act 1","Act 2","Act 3"] default — a missing/empty result is a
+    # hard failure in validate_project_metadata (kickoff brief P2). The old
+    # default produced a blank page because real-act-tagged entries matched no
+    # section.
     act_labels_full = (
         list(act_labels_override) if act_labels_override
-        else as_labels or cc.get("act_labels") or ["Act 1", "Act 2", "Act 3"]
+        else as_labels or cc.get("act_labels") or []
     )
     # speakers: derived from the quote pool (slugs guaranteed to match) >
     # pipeline-state > act-structure (slugified names).
@@ -529,6 +533,73 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         "source_quotes": combined_quotes,
         "rounds": rounds,
     }
+
+
+class BuildContractError(SystemExit):
+    """Raised to fail the build LOUD on an input-contract violation (P2).
+
+    Subclasses SystemExit so an unguarded build aborts with a non-zero exit and
+    a descriptive message instead of shipping a blank viewer.
+    """
+
+
+def validate_project_metadata(project_meta: dict, source: str) -> None:
+    """Hard-check the metadata contract before build (kickoff brief P2).
+
+    Every historical blank-page failure was an input-contract violation that
+    used to fall back silently. Fail loud here instead:
+
+    - ``act_labels`` must be a non-empty list of non-empty strings. (The old
+      ``["Act 1","Act 2","Act 3"]`` default made real-act-tagged entries match
+      no section and rendered the body empty.)
+    - ``speakers`` must be a non-empty list of ``{name, slug}`` objects. Plain
+      strings throw at runtime in the template (it indexes ``s.slug``) and blank
+      the whole page.
+
+    `source` describes where the metadata came from, for the error message.
+    """
+    problems = []
+
+    labels = project_meta.get("act_labels")
+    if not isinstance(labels, list) or not labels:
+        problems.append(
+            "act_labels is missing or empty — expected a non-empty list of act "
+            "names (e.g. derived from act-structure-v*.md, or passed via "
+            "--act-labels). Refusing to fall back to generic 'Act 1/2/3', which "
+            "renders a blank body when entries are tagged with the real names.")
+    elif not all(isinstance(a, str) and a.strip() for a in labels):
+        problems.append(
+            f"act_labels must be non-empty strings; got {labels!r}.")
+
+    speakers = project_meta.get("speakers")
+    if not isinstance(speakers, list) or not speakers:
+        problems.append(
+            "speakers is missing or empty — expected a non-empty list of "
+            "{name, slug, ...} objects (derived from the tagged-quotes pool, "
+            "pipeline-state, or act-structure).")
+    else:
+        bad = [
+            s for s in speakers
+            if not (isinstance(s, dict)
+                    and isinstance(s.get("name"), str) and s.get("name").strip()
+                    and isinstance(s.get("slug"), str) and s.get("slug").strip())
+        ]
+        if bad:
+            sample = bad[0]
+            kind = "string" if isinstance(sample, str) else type(sample).__name__
+            problems.append(
+                f"speakers must be {{name, slug}} objects; {len(bad)} entr"
+                f"{'y' if len(bad) == 1 else 'ies'} are not "
+                f"(first offender is a {kind}: {sample!r}). Plain strings throw "
+                f"at runtime (the template indexes s.slug) and blank the page.")
+
+    if problems:
+        msg = (f"\nBuild aborted — input-contract violation in {source}:\n"
+               + "\n".join(f"  • {p}" for p in problems)
+               + "\n\nFix the upstream data (or the fixture) and rebuild. "
+                 "See the data contract in the kickoff brief / quote-viewer "
+                 "roadmap.\n")
+        raise BuildContractError(msg)
 
 
 def assemble_data_block(data: dict) -> dict:
@@ -1398,6 +1469,8 @@ def main():
             return 1
         data_block = json.loads(data_path.read_text())
         slug = data_block.get("PROJECT_META", {}).get("slug") or "project"
+        validate_project_metadata(data_block.get("PROJECT_META", {}),
+                                  f"data file {data_path}")
     else:
         if not args.slug or not args.ssd_root:
             print("Provide either --data, or both --slug and --ssd-root", file=sys.stderr)
@@ -1412,6 +1485,8 @@ def main():
         )
         data_block = assemble_data_block(raw)
         slug = raw["slug"]
+        validate_project_metadata(data_block.get("PROJECT_META", {}),
+                                  f"handoffs/{slug}")
 
     out_path = Path(args.output) if args.output else None
     if out_path is None:
