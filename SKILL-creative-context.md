@@ -458,6 +458,23 @@ For each approved act section, write a roadmap covering:
 6. **Closing / transition:** How should this section end? What sets up the transition
    to the next section?
 
+**The review deliverable is a one-line act summary with supporting points beneath
+(Jeff feedback, v5.8).** What Jeff reviews and approves, for each act, is:
+
+- **One line** summarizing the act (its essence, in a single sentence).
+- **A few main supporting points underneath** (brief bullets — the beats or ideas that act
+  carries).
+
+That is the whole format. It does **NOT include quotes**, and it is not an exhaustive
+write-up of all six dimensions. Two specific failures to avoid (Jeff, TC Pain Clinic organic
+variant): the deliverable runs **too long**, and it **pastes in verbatim quotes** — both
+belong downstream (the Edit Agent works from the full tagged-quote pool; the roadmap
+references material by speaker name and topic only, never by quoting it). The six points
+above are an internal *menu* of what those supporting bullets may draw on, not a template to
+fill out in full. Keep it to the one-line-plus-bullets format so Jeff can approve or critique
+each act at a glance; reserve any expanded direction for long-form documentary/testimonial
+work, and only when Jeff asks for more.
+
 Present the roadmaps to Jeff for review and iteration. These are collaborative —
 Jeff may adjust emphasis, reorder speakers, or redirect the emotional arc. The
 roadmaps are not final until Jeff approves them.
@@ -596,5 +613,7 @@ provides the launch prompt for the Synthesis Agent (sonnet-4.6) per
 
 ---
 
-*Creative Context Agent — documentary-junior-editor v5.5*
+*Creative Context Agent — documentary-junior-editor v5.8*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
+*v5.8: review deliverable is a one-line act summary with main supporting points beneath, no
+quotes — concise and approvable at a glance (Jeff feedback, TC Pain Clinic organic variant).*

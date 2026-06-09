@@ -45,6 +45,64 @@ the Claude Preview MCP, P2/P4 via the new committed QA gate. Commits local — *
 - Synthesis should emit orphans as `is_orphan:true` inside `tagged-quotes-v*.json` (durable fix for P5).
 - Standardize `source_quote_id` as an integer in the documented schema (the build coerces; now regression-tested).
 
+## v5.8 — 2026-06-09 (Skill Review pass — TC Pain Clinic 2026 organic variant)
+
+Skill Review pass (no skill *semantics* changed; reference-example + documentation +
+follow-up-tracking update). Project under review: `tc-pain-clinic-2026-organic`, a
+shared-upstream variant cut of the TC Pain Clinic OTT/CTV ad campaign.
+
+- **New reference example: `reference-examples/tc-pain-clinic-2026-organic/`** —
+  transcripts, `Final_Edit.txt` (15-entry organic-only :30 cut, verbatim-verified), and
+  `lessons-learned.md` (System / Forward-Looking / Reference Value sections; Editing /
+  Quote Viewer sections absent — no Coach pass ran). Knowledge base now holds 12 reference
+  examples. First reference example to document the **shared-upstream variant pattern**
+  (one shoot → common Creative-Context/Synthesis trunk → multiple Edit/FCPXML branches
+  under sibling slugs).
+- **`build_fcpxml.py` act-divider offset bug escalated.** Title-card offset-stacking bug
+  reproduced on all three TC Pain Clinic FCPXMLs (second confirmed project after Hammer
+  NER 2026). Moved OPEN → IN PROGRESS, highest-priority code work, in SKILL-review.md
+  Phase 3 follow-ups.
+- **SKILL.md version + reference-tree drift fixed.** Header/footer bumped 5.7 → 5.8 to
+  match the already-shipped v5.8 CHANGELOG; reference-examples tree updated to include
+  `international-institute`, `tccs-dr-pan-testimonials`, and `tc-pain-clinic-2026-organic`.
+- **Capability Audit findings (candidates, not adopted):** Opus 4.8 / Sonnet 4.6 1M-context
+  + the June 15 2026 Opus-4/Sonnet-4 API retirement (audit/bump `model:` frontmatter —
+  adopt now); AssemblyAI MCP server (pilot to retire the host-side transcription launcher —
+  try next project); Cowork "Dreaming" memory curation (backstop feedback capture —
+  investigate); Final Cut Pro control MCPs (import-verify loop + possible structural fix for
+  the divider bug — investigate/park).
+- **Standing cleanup re-confirmed:** deprecated `secrets/assembly_ai.key` git-crypt artifact
+  still ships and breaks `git` in git-crypt-less sandboxes; flagged for removal from master
+  on next sync.
+- **Review Legibility (Jeff feedback, this session):** added a "Review Legibility" section to
+  SKILL-review.md and a step 0 to Notifying Jeff. The Skill Review Agent must now open each
+  review with a short "What I'm reviewing" summary (inputs read, present vs. absent, checks to
+  run) and close by restating what it looked at — so the review is no longer a black box.
+  Prompted by Jeff: "I'm not even sure what you look at when you do a review."
+- **Forward-Looking captured (Jeff feedback, this session):** per-agent shared `session-issues.md`
+  running log (each agent summarizes issues to its own section as they surface; Review Agent
+  reads it as a primary input — replaces Jeff's physical notepad and fixes the feedback-capture
+  gap); quote-viewer feedback sink decision pending now that viewer dev moved to Claude Code.
+- **Editing-session technical issues captured (Jeff, this session):** folded Jeff's verbatim
+  Phase 1 issues into the reference example's Technical Issues section — viewer rendering
+  (blank Cowork artifact / CDN whitelist; generic-act-label blank; speaker-color crash + new
+  Babel/jsdom headless render test), data plumbing (runtime-target detection now reads
+  `editing-versions/`; `source_quote_id` string→int; empty orphan pool rebuilt to v2),
+  FCPXML (`.fcpxmld` Phase-0 pre-extraction; Dr. Haas matcher; #38 caption merge), and the
+  artifact/disk-write environment constraint that drove the browser-first + paste-and-reconstruct
+  workflow.
+- **`_canonical_speaker` resolved (was the "stray uncommitted change"):** Jeff's
+  punctuation/case-normalizing speaker matcher in `generate_fcpxml.py` is the intentional fix
+  for the "Dr. Haas"/"Dr Haas" silent clip-drop (the parked Phase-3 fuzzy resolver). **Include
+  it in the commit.** The `build_quotes_viewer.py` change is also Jeff's.
+- **SKILL-creative-context.md — review deliverable format (Jeff feedback):** Phase 3 now
+  defines the per-act review deliverable as **one summary line + a few main supporting points
+  beneath, with no quotes**. The deliverable was running too long and pasting in verbatim
+  quotes (which belong downstream in the Edit Agent's pool); the six roadmap dimensions are
+  reframed as an internal menu the bullets may draw on, not a fill-in-full template. Footer
+  bumped to v5.8.
+- SKILL-review.md footer bumped to v5.8.
+
 ## v5.8 — 2026-05-31 (quote viewer — Tight/Loose/Library rework)
 
 Viewer release. Implements the approved hammer-ner-2026 membership redesign (see the

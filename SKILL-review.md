@@ -48,6 +48,28 @@ the residue.
 
 ---
 
+## Review Legibility (added v5.8)
+
+Jeff's standing request: the review must not be a black box. Jeff has said
+he often can't tell what the Skill Review Agent actually examines. Fix that
+by making the review's inputs and checks visible to him — both at the start
+and at the close.
+
+**At the start of the review**, before diving into findings, post a short
+"What I'm reviewing" summary to Jeff:
+- Which handoff documents and project files you read (name them).
+- Which inputs were present vs. absent (e.g., "no Coach notes and no
+  Edit-Agent lessons doc — running the fallback path").
+- Which checks you're about to run (Phase 1 technical, Phase 2 system,
+  Phase 3 capability audit).
+
+**At the close**, in the Notifying Jeff step, restate plainly what you
+looked at and what you checked, so the scope of the review is legible
+rather than implied. Keep both summaries short — the point is transparency,
+not ceremony.
+
+---
+
 ## The Cardinal Rules
 
 **These rules apply to every agent in the pipeline without exception.**
@@ -233,29 +255,40 @@ entries). For each, note current status: SHIPPED / IN PROGRESS / OPEN /
 NEW. Surface to Jeff the highest-priority next code work based on this
 project's friction.
 
-Current as of v5.7:
+Current as of v5.8:
 - `scripts/transcribe.py` legacy key paths — SHIPPED in v5.1 (prune
-  unused paths on next touch)
+  unused paths on next touch). NOTE: the deprecated `secrets/assembly_ai.key`
+  git-crypt artifact still ships in project copies and breaks `git` in
+  sandboxes without git-crypt; remove `secrets/` from the master on next sync
+  (re-confirmed on TC Pain Clinic 2026).
 - `scripts/build_fcpxml.py` — per-interview clip_type branching,
   parser format update, per-segment clip generation, multi-speaker
   resource-ID remap, library-multicam UID references, parse_params_md
   basename fix — OPEN, high priority
-- `scripts/build_fcpxml.py` / `scripts/generate_fcpxml.py` — NEW in v5.7
-  from Hammer NER 2026 FCPXML review (OPEN, high priority):
+- `scripts/build_fcpxml.py` / `scripts/generate_fcpxml.py` — from Hammer
+  NER 2026 FCPXML review:
   (a) act-boundary title cards stack at the sequence-start offset instead
   of their act positions — section-divider offset must track cumulative
-  spine duration; (b) `parse_act_structure` regex misses "Intro" and other
-  non-Act-prefixed headings; (c) slug `part` fields don't canonicalize to
-  display labels in `_canonicalize_section`. (b) and (c) share a root cause
-  with the speaker-name mismatch — cross-agent shared-vocabulary drift;
-  consider whether the Edit Agent should emit display labels in `part`.
-  A fuzzy speaker-name resolver in `build_fcpxml.py` is also parked here.
-- `scripts/quotes_viewer_template.jsx` — viewer rewrite SHIPPED in v5.3
-  (parked for separate viewer review task; Coach now files specific
-  change requests to `quotes-viewer-roadmap.md`). NOTE: uncommitted
-  Hammer NER 2026 patches to `quotes_viewer_template.jsx` +
-  `build_quotes_viewer.py` (act-chip labels, data-shape normalization,
-  authoritative `_editCuts` round-trip) pending commit with v5.7.
+  spine duration. **ESCALATED to IN PROGRESS, highest priority (v5.8):
+  second confirmed reproduction on TC Pain Clinic 2026 — bug fired on all
+  three sibling FCPXMLs (-organic, -haas, loose). It ships broken on every
+  multi-act cut; Jeff strips dividers by hand each time.** (b)
+  `parse_act_structure` regex misses "Intro" and other non-Act-prefixed
+  headings — OPEN (not exercised on TC Pain Clinic; that project has no
+  Intro label); (c) slug `part` fields don't canonicalize to display labels
+  in `_canonicalize_section` — OPEN (TC Pain Clinic act labels propagated
+  cleanly because they're short human-readable strings used identically as
+  slug and display — weak evidence toward dropping the canonicalization
+  layer where labels are already display-ready). (b) and (c) share a root
+  cause with the speaker-name mismatch — cross-agent shared-vocabulary
+  drift; consider whether the Edit Agent should emit display labels in
+  `part`. A fuzzy speaker-name resolver in `build_fcpxml.py` is also parked
+  here.
+- `scripts/quotes_viewer_template.jsx` — viewer rewrite SHIPPED in v5.3;
+  Hammer NER 2026 Tight/Loose/Library membership rework SHIPPED in v5.8
+  (`membership` field now in service — confirmed on TC Pain Clinic
+  `-organic` trimmed-quotes). Coach now files specific change requests to
+  `quotes-viewer-roadmap.md`.
 - `scripts/generate_fcpxml.py` — `find_quote_range` TC-window narrowing
   — verify on each pass
 - SKILL-doc fixes from the same FCPXML review — SHIPPED in v5.7:
@@ -583,6 +616,9 @@ cause agents on future projects to run outdated instructions.
 
 When all updates are saved:
 
+0. **Restate what you reviewed** (Review Legibility, above) — a short, plain
+   recap of which inputs you read and which checks you ran, so the scope of
+   the review is legible to Jeff rather than implied.
 1. Confirm the project has been added to the knowledge base — name the
    path and count the total reference examples now in the folder
 2. Summarize what changed in the skill files (which files, what
@@ -665,7 +701,7 @@ Update `pipeline-state.json` to record Skill Review's run:
 
 ---
 
-*Skill Review Agent — documentary-junior-editor v5.7*
+*Skill Review Agent — documentary-junior-editor v5.8*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *Read Coach's `skill-review-notes.md` before reading anything else from
 the project — it tells you what pipeline-level implications Coach

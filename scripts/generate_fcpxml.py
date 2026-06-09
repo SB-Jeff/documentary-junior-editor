@@ -797,8 +797,18 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
     padding = FractionTime(2002, 24000)  # ~2 frames padding on each side
     current_section = None
 
+    def _canonical_speaker(name, keys):
+        # Normalize punctuation/case so catalog names ("Dr. Haas") match
+        # params/source names ("Dr Haas").
+        import re as _re
+        norm = lambda s: _re.sub(r'[^a-z0-9]+', '', s.lower())
+        for k in keys:
+            if norm(k) == norm(name):
+                return k
+        return name
+
     for quote_info in paper_cuts:
-        speaker = quote_info['speaker']
+        speaker = _canonical_speaker(quote_info['speaker'], source_fcpxmls.keys())
         quote_text = quote_info['quote']
         section = quote_info.get('section', '')
 
