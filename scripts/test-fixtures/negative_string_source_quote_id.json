@@ -1,0 +1,41 @@
+{
+  "_comment": "Regression fixture for the kickoff-brief 'string source_quote_id' failure mode (Bug 6). This is a RAW handoffs-shape payload (source_quotes + rounds[]._raw_entries), NOT a finished data block — test_viewer_build.py feeds it through assemble_data_block and asserts the string id 'e2's source_quote_id '2' is coerced to the integer 2 and links to its source quote. String ids used to link to nothing and drop the entry.",
+  "act_labels": ["Act 1"],
+  "speakers": [{ "name": "Maria Lopez", "slug": "maria-lopez", "role": "founder", "primary": true }],
+  "source_quotes": [
+    {
+      "num": 2,
+      "originalNum": 2,
+      "speaker": "Maria Lopez",
+      "speakerSlug": "maria-lopez",
+      "role": "founder",
+      "quote": "We ask them what they need next.",
+      "startTC": "00:05:10",
+      "endTC": "00:05:13",
+      "part": "Act 1",
+      "rationale": "test",
+      "is_orphan": false,
+      "segments": [
+        { "idx": 0, "text": "We ask them what they need next.", "startTC": "00:05:10", "endTC": "00:05:13" }
+      ]
+    }
+  ],
+  "rounds": [
+    {
+      "round_number": 1,
+      "round_label": "Round 1",
+      "version": "v1",
+      "_raw_entries": [
+        {
+          "entry_id": "e2",
+          "source_quote_id": "2",
+          "type": "spoken",
+          "speaker": "Maria Lopez",
+          "part": "Act 1",
+          "segments": [{ "source_segment_idx": 0 }],
+          "notes": ""
+        }
+      ]
+    }
+  ]
+}

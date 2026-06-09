@@ -1,0 +1,445 @@
+{
+  "PROJECT_TITLE": "Open Door Shelter — 15 Year Story (TEST FIXTURE)",
+  "PROJECT_META": {
+    "slug": "open-door-test",
+    "ssd_root": "/tmp/open-door-test-ssd",
+    "target_seconds": 120,
+    "act_labels": [
+      "Act 1",
+      "Act 2",
+      "Act 3"
+    ],
+    "speakers": [
+      {
+        "name": "Maria Lopez",
+        "slug": "maria-lopez",
+        "role": "founder",
+        "primary": true
+      },
+      {
+        "name": "David Chen",
+        "slug": "david-chen",
+        "role": "volunteer",
+        "primary": false
+      }
+    ]
+  },
+  "SOURCE_QUOTES": [
+    {
+      "num": 1,
+      "originalNum": 1,
+      "speaker": "Maria Lopez",
+      "speakerSlug": "maria-lopez",
+      "role": "founder",
+      "quote": "When we started in 2009, we had nothing but a church basement and a list of forty families who needed help.",
+      "startTC": "00:02:11",
+      "endTC": "00:02:19",
+      "part": "Act 1",
+      "rationale": "Strong cold open — establishes origin, scale, and stakes in one breath.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "When we started in 2009, we had nothing but a church basement",
+          "startTC": "00:02:11",
+          "endTC": "00:02:15"
+        },
+        {
+          "idx": 1,
+          "text": "and a list of forty families who needed help.",
+          "startTC": "00:02:15",
+          "endTC": "00:02:19"
+        }
+      ]
+    },
+    {
+      "num": 2,
+      "originalNum": 2,
+      "speaker": "Maria Lopez",
+      "speakerSlug": "maria-lopez",
+      "role": "founder",
+      "quote": "I never imagined it would grow into what it is today. Honestly, I thought we'd last a year, maybe two.",
+      "startTC": "00:03:40",
+      "endTC": "00:03:47",
+      "part": "Act 1",
+      "rationale": "Humility beat; pairs with the founding story.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "I never imagined it would grow into what it is today.",
+          "startTC": "00:03:40",
+          "endTC": "00:03:44"
+        },
+        {
+          "idx": 1,
+          "text": "Honestly, I thought we'd last a year, maybe two.",
+          "startTC": "00:03:44",
+          "endTC": "00:03:47"
+        }
+      ]
+    },
+    {
+      "num": 3,
+      "originalNum": 3,
+      "speaker": "David Chen",
+      "speakerSlug": "david-chen",
+      "role": "volunteer",
+      "quote": "I showed up to volunteer for one weekend. That was eight years ago.",
+      "startTC": "00:05:02",
+      "endTC": "00:05:07",
+      "part": "Act 1",
+      "rationale": "Volunteer entry point; candidate but not yet in the cut.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "I showed up to volunteer for one weekend. That was eight years ago.",
+          "startTC": "00:05:02",
+          "endTC": "00:05:07"
+        }
+      ]
+    },
+    {
+      "num": 4,
+      "originalNum": 4,
+      "speaker": "Maria Lopez",
+      "speakerSlug": "maria-lopez",
+      "role": "founder",
+      "quote": "Every family that walks through our doors gets a hot meal, a safe place to sleep, and someone who actually listens.",
+      "startTC": "00:08:20",
+      "endTC": "00:08:28",
+      "part": "Act 2",
+      "rationale": "Mission in one line — the spine of Act 2.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "Every family that walks through our doors gets a hot meal, a safe place to sleep,",
+          "startTC": "00:08:20",
+          "endTC": "00:08:25"
+        },
+        {
+          "idx": 1,
+          "text": "and someone who actually listens.",
+          "startTC": "00:08:25",
+          "endTC": "00:08:28"
+        }
+      ]
+    },
+    {
+      "num": 5,
+      "originalNum": 5,
+      "speaker": "David Chen",
+      "speakerSlug": "david-chen",
+      "role": "volunteer",
+      "quote": "The hardest part isn't the long hours. It's seeing kids who've never had a bed of their own.",
+      "startTC": "00:09:55",
+      "endTC": "00:10:02",
+      "part": "Act 2",
+      "rationale": "Emotional low point; supporting voice.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "The hardest part isn't the long hours.",
+          "startTC": "00:09:55",
+          "endTC": "00:09:58"
+        },
+        {
+          "idx": 1,
+          "text": "It's seeing kids who've never had a bed of their own.",
+          "startTC": "00:09:58",
+          "endTC": "00:10:02"
+        }
+      ]
+    },
+    {
+      "num": 6,
+      "originalNum": 6,
+      "speaker": "Maria Lopez",
+      "speakerSlug": "maria-lopez",
+      "role": "founder",
+      "quote": "We don't ask people how they ended up here. We ask them what they need next.",
+      "startTC": "00:11:30",
+      "endTC": "00:11:36",
+      "part": "Act 2",
+      "rationale": "Values statement; very quotable.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "We don't ask people how they ended up here.",
+          "startTC": "00:11:30",
+          "endTC": "00:11:33"
+        },
+        {
+          "idx": 1,
+          "text": "We ask them what they need next.",
+          "startTC": "00:11:33",
+          "endTC": "00:11:36"
+        }
+      ]
+    },
+    {
+      "num": 7,
+      "originalNum": 7,
+      "speaker": "Maria Lopez",
+      "speakerSlug": "maria-lopez",
+      "role": "founder",
+      "quote": "Last year we served over twelve thousand meals. But the number I care about is the families who never came back, because they didn't need to.",
+      "startTC": "00:15:10",
+      "endTC": "00:15:20",
+      "part": "Act 3",
+      "rationale": "Impact + reframe of success. Act 3 anchor.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "Last year we served over twelve thousand meals.",
+          "startTC": "00:15:10",
+          "endTC": "00:15:14"
+        },
+        {
+          "idx": 1,
+          "text": "But the number I care about is the families who never came back, because they didn't need to.",
+          "startTC": "00:15:14",
+          "endTC": "00:15:20"
+        }
+      ]
+    },
+    {
+      "num": 8,
+      "originalNum": 8,
+      "speaker": "David Chen",
+      "speakerSlug": "david-chen",
+      "role": "volunteer",
+      "quote": "When a kid you helped comes back as a volunteer, that's when you know it worked.",
+      "startTC": "00:16:44",
+      "endTC": "00:16:50",
+      "part": "Act 3",
+      "rationale": "Full-circle payoff; candidate, not yet in cut.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "When a kid you helped comes back as a volunteer, that's when you know it worked.",
+          "startTC": "00:16:44",
+          "endTC": "00:16:50"
+        }
+      ]
+    },
+    {
+      "num": 9,
+      "originalNum": 9,
+      "speaker": "Maria Lopez",
+      "speakerSlug": "maria-lopez",
+      "role": "founder",
+      "quote": "We're not trying to be the biggest. We're trying to be the place that's still here when everyone else has gone home.",
+      "startTC": "00:18:01",
+      "endTC": "00:18:09",
+      "part": "Act 3",
+      "rationale": "Closing line candidate; mission-forward.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "We're not trying to be the biggest.",
+          "startTC": "00:18:01",
+          "endTC": "00:18:04"
+        },
+        {
+          "idx": 1,
+          "text": "We're trying to be the place that's still here when everyone else has gone home.",
+          "startTC": "00:18:04",
+          "endTC": "00:18:09"
+        }
+      ]
+    },
+    {
+      "num": 10,
+      "originalNum": 10,
+      "speaker": "David Chen",
+      "speakerSlug": "david-chen",
+      "role": "volunteer",
+      "quote": "I learned more about my own community in one year here than in the thirty before it.",
+      "startTC": "00:12:50",
+      "endTC": "00:12:56",
+      "part": "Act 2",
+      "rationale": "Personal-growth beat; candidate, not yet in cut.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "I learned more about my own community in one year here than in the thirty before it.",
+          "startTC": "00:12:50",
+          "endTC": "00:12:56"
+        }
+      ]
+    },
+    {
+      "num": 11,
+      "originalNum": 11,
+      "speaker": "Maria Lopez",
+      "speakerSlug": "maria-lopez",
+      "role": "founder",
+      "quote": "My grandmother used to feed anyone who knocked on her door. I guess this is just her kitchen, scaled up.",
+      "startTC": "00:04:12",
+      "endTC": "00:04:19",
+      "part": "Act 1",
+      "rationale": "Warm origin texture; humanizes the founder.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "My grandmother used to feed anyone who knocked on her door.",
+          "startTC": "00:04:12",
+          "endTC": "00:04:16"
+        },
+        {
+          "idx": 1,
+          "text": "I guess this is just her kitchen, scaled up.",
+          "startTC": "00:04:16",
+          "endTC": "00:04:19"
+        }
+      ]
+    },
+    {
+      "num": 12,
+      "originalNum": 12,
+      "speaker": "David Chen",
+      "speakerSlug": "david-chen",
+      "role": "volunteer",
+      "quote": "Um, yeah, so, the parking situation has definitely improved since we repaved the lot last spring.",
+      "startTC": "00:21:33",
+      "endTC": "00:21:40",
+      "part": "Orphan",
+      "rationale": "Off-narrative logistics; agent recommends excluding.",
+      "is_orphan": false,
+      "segments": [
+        {
+          "idx": 0,
+          "text": "Um, yeah, so, the parking situation has definitely improved since we repaved the lot last spring.",
+          "startTC": "00:21:33",
+          "endTC": "00:21:40"
+        }
+      ]
+    }
+  ],
+  "ROUNDS": [
+    {
+      "round_number": 1,
+      "round_label": "Round 1",
+      "version": "v1",
+      "timeline": [
+        {
+          "entry_id": "1",
+          "_subLabel": null,
+          "source_quote_id": 1,
+          "type": "spoken",
+          "speaker": "Maria Lopez",
+          "part": "Act 1",
+          "runtime_recommendation": "must-keep",
+          "_editCuts": [],
+          "notes": "Cold open."
+        },
+        {
+          "entry_id": "ic1",
+          "_subLabel": null,
+          "source_quote_id": null,
+          "type": "title_card",
+          "part": "Act 1",
+          "runtime_recommendation": "probable-keep",
+          "_editCuts": [],
+          "notes": "Sets the year and scale before Maria continues.",
+          "text": "2009 — a church basement, forty families.",
+          "estimated_seconds": 3
+        },
+        {
+          "entry_id": "11",
+          "_subLabel": null,
+          "source_quote_id": 11,
+          "type": "spoken",
+          "speaker": "Maria Lopez",
+          "part": "Act 1",
+          "runtime_recommendation": "probable-keep",
+          "_editCuts": [],
+          "notes": ""
+        },
+        {
+          "entry_id": "2",
+          "_subLabel": null,
+          "source_quote_id": 2,
+          "type": "spoken",
+          "speaker": "Maria Lopez",
+          "part": "Act 1",
+          "runtime_recommendation": "probable-keep",
+          "_editCuts": [
+            [
+              0,
+              53
+            ]
+          ],
+          "notes": "Trimmed the first sentence in a prior pass."
+        },
+        {
+          "entry_id": "4",
+          "_subLabel": null,
+          "source_quote_id": 4,
+          "type": "spoken",
+          "speaker": "Maria Lopez",
+          "part": "Act 2",
+          "runtime_recommendation": "must-keep",
+          "_editCuts": [],
+          "notes": "Mission spine."
+        },
+        {
+          "entry_id": "6",
+          "_subLabel": null,
+          "source_quote_id": 6,
+          "type": "spoken",
+          "speaker": "Maria Lopez",
+          "part": "Act 2",
+          "runtime_recommendation": "tight-candidate",
+          "_editCuts": [],
+          "notes": "Borderline-essential — tight-candidate."
+        },
+        {
+          "entry_id": "5",
+          "_subLabel": null,
+          "source_quote_id": 5,
+          "type": "spoken",
+          "speaker": "David Chen",
+          "part": "Act 2",
+          "runtime_recommendation": "probable-keep",
+          "_editCuts": [],
+          "notes": "Supporting voice — first David entry."
+        },
+        {
+          "entry_id": "7",
+          "_subLabel": null,
+          "source_quote_id": 7,
+          "type": "spoken",
+          "speaker": "Maria Lopez",
+          "part": "Act 3",
+          "runtime_recommendation": "must-keep",
+          "_editCuts": [],
+          "notes": "Impact anchor."
+        },
+        {
+          "entry_id": "9",
+          "_subLabel": null,
+          "source_quote_id": 9,
+          "type": "spoken",
+          "speaker": "Maria Lopez",
+          "part": "Act 3",
+          "runtime_recommendation": "must-keep",
+          "_editCuts": [],
+          "notes": "Closing line."
+        }
+      ]
+    }
+  ],
+  "INITIAL_ROUND_INDEX": 0,
+  "INITIAL_FOCUS": null
+}
