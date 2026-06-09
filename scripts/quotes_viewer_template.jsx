@@ -1385,6 +1385,9 @@ Set model to Sonnet 4.6.`;
     const passLib = (q) => passesSourceFilters(q) && (!inCutIds || !inCutIds.has(q.num)) && matchesSearch(q);
     const inScope = SOURCE_QUOTES.filter((q) => !q.is_orphan && passLib(q));
     const orphans = SOURCE_QUOTES.filter((q) => q.is_orphan && passLib(q));
+    // Whether the pool carries ANY orphans at all, ignoring filters — distinguishes
+    // "filtered out right now" from "none ever merged into the pool" (P5).
+    const poolHasOrphans = SOURCE_QUOTES.some((q) => q.is_orphan);
     const hiddenCount = inCutIds ? inCutIds.size : 0;
     const matchCount = inScope.length + orphans.length;
     const acts = realActs.map((act) => ({
@@ -1516,21 +1519,40 @@ Set model to Sonnet 4.6.`;
             {a.list.map(renderQuoteCard)}
           </section>
         ))}
-        {orphans.length > 0 && (
-          <section className="act-section orphans-section">
-            <div className="act-header">
-              <h2 className="act-title">Orphans</h2>
-              <span className="act-sub">
-                {orphans.length} quote{orphans.length === 1 ? "" : "s"} · agent recommends excluding
-              </span>
-            </div>
-            {orphans.map(renderQuoteCard)}
-          </section>
-        )}
-        {acts.length === 0 && orphans.length === 0 && (
+        {/* Orphans section is ALWAYS rendered (P5) — an empty orphan pool is a
+            silent upstream merge gap, so make it visible rather than absent. */}
+        <section className="act-section orphans-section">
+          <div className="act-header">
+            <h2 className="act-title">Orphans</h2>
+            <span className="act-sub">
+              {orphans.length > 0
+                ? `${orphans.length} quote${orphans.length === 1 ? "" : "s"} · agent recommends excluding`
+                : poolHasOrphans ? "none match the current filters" : "none in this pool"}
+            </span>
+          </div>
+          {orphans.length > 0
+            ? orphans.map(renderQuoteCard)
+            : poolHasOrphans
+              ? (
+                <p className="orphans-empty">
+                  No orphans match the current filters. Loosen the Speaker / Act
+                  filters, clear the search, or turn off “Hide quotes in current cut”.
+                </p>
+              )
+              : (
+                <p className="orphans-empty warn">
+                  No orphans found in this pool. If you expected some, they were
+                  likely not merged upstream — Synthesis should emit them as{" "}
+                  <code>is_orphan: true</code> entries inside{" "}
+                  <code>tagged-quotes-v*.json</code>. Surfaced here instead of
+                  rendering nothing, so the gap is visible at review time.
+                </p>
+              )}
+        </section>
+        {acts.length === 0 && inScope.length === 0 && (
           <div className="empty">
-            <h3>No quotes match the current filters.</h3>
-            <p>Loosen Speaker / Act filters above.</p>
+            <h3>No catalogued quotes match the current filters.</h3>
+            <p>Loosen Speaker / Act filters or clear the search above.</p>
           </div>
         )}
       </div>

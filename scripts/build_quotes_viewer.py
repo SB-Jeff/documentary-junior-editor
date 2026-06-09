@@ -1236,6 +1236,21 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .empty h3 { margin: 0 0 8px; font-size: 16px; color: var(--text); }
 
+/* Orphan-section empty states (kickoff brief P5) — never render nothing. */
+.orphans-empty {
+  padding: 14px 16px; border-radius: 8px; font-size: 13px;
+  color: var(--text-muted); background: var(--surface);
+  border: 1px dashed var(--border);
+}
+.orphans-empty.warn {
+  color: var(--warn); background: var(--warn-soft);
+  border: 1px solid var(--warn);
+}
+.orphans-empty code {
+  font-family: ui-monospace, monospace; font-size: 12px;
+  background: rgba(0,0,0,.06); padding: 1px 4px; border-radius: 3px;
+}
+
 /* === Send-to-agent panel === */
 .send-panel {
   position: fixed; bottom: 16px; right: 16px;
