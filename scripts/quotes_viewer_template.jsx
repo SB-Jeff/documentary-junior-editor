@@ -329,6 +329,93 @@ async function callBash(command) {
 }
 
 // ============================================================================
+// persistFile — robust browser-first persistence (kickoff brief P1).
+//
+// Tries three tiers, most-robust first, and reports which one wrote:
+//   1. "cowork"   — window.cowork.callMcpTool bash (inside Cowork)
+//   2. "helper"   — the local save-server (scripts/viewer_save_server.py) on
+//                   localhost; writes the file to the correct path silently
+//   3. "download" — plain browser download (never-lose-data fallback)
+//
+// `relPath` is project-root-relative (e.g.
+// "handoffs/slug/editing-versions/v3.json"); the helper + download tiers use
+// it, while the Cowork tier prefixes PROJECT_META.ssd_root for the abs path.
+// Pass { allowDownload:false } for best-effort writes (e.g. the tweak log)
+// that should NOT spam a download on every call when no writer is available.
+// ============================================================================
+
+const SAVE_HELPER_URL =
+  (typeof PROJECT_META !== "undefined" && PROJECT_META.save_helper_url) ||
+  "http://127.0.0.1:8765";
+
+async function saveViaHelper(relPath, content) {
+  if (typeof fetch !== "function") return { ok: false, reason: "no fetch" };
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 1500);
+    const res = await fetch(SAVE_HELPER_URL + "/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: relPath, content }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return { ok: false, reason: "helper HTTP " + res.status };
+    const data = await res.json();
+    return { ok: !!data.ok, path: data.path, reason: data.error };
+  } catch (e) {
+    // Helper not running / unreachable → caller falls through to download.
+    return { ok: false, reason: String(e) };
+  }
+}
+
+function downloadFile(content, downloadName) {
+  try {
+    const blob = new Blob([content], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = downloadName;
+    a.click();
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function persistFile(relPath, content, opts) {
+  const allowDownload = !opts || opts.allowDownload !== false;
+  const downloadName = (opts && opts.downloadName) || relPath.split("/").pop();
+
+  // Tier 1: Cowork.
+  if (hasCallMcpTool()) {
+    const absPath = `${PROJECT_META.ssd_root}/${relPath}`;
+    const dir = absPath.slice(0, absPath.lastIndexOf("/"));
+    const cmd = `mkdir -p "${dir}" && cat > "${absPath}" <<'__PERSIST_EOF__'\n${content}\n__PERSIST_EOF__`;
+    const { ok, reason } = await callBash(cmd);
+    if (ok) return { ok: true, method: "cowork", detail: absPath };
+    // fall through to helper/download if the Cowork write failed
+    var coworkReason = reason;
+  }
+
+  // Tier 2: local helper.
+  const helper = await saveViaHelper(relPath, content);
+  if (helper.ok) return { ok: true, method: "helper", detail: helper.path };
+
+  // Tier 3: download.
+  if (allowDownload && downloadFile(content, downloadName)) {
+    return { ok: true, method: "download", detail: downloadName };
+  }
+
+  return {
+    ok: false,
+    method: "fail",
+    detail: helper.reason || coworkReason || "no writer available",
+  };
+}
+
+// ============================================================================
 // EditPanel — character-range trim editor (selection + Delete key)
 // ============================================================================
 
@@ -767,20 +854,23 @@ export default function QuotesView() {
       target_runtime_seconds: PROJECT_META.target_seconds,
       entries: tl,
     };
-    if (!hasCallMcpTool()) {
-      alert("Save new round is only available when the viewer is running inside Cowork.\n\nThe file would have been written to:\n" +
-        `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}/editing-versions/v${newRoundNum}.json`);
+    const json = JSON.stringify(payload, null, 2);
+    const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/v${newRoundNum}.json`;
+    const { ok, method, detail } = await persistFile(relPath, json, {
+      downloadName: `v${newRoundNum}.json`,
+    });
+    if (!ok) {
+      alert(`Save failed: ${detail}`);
       return;
     }
-    const json = JSON.stringify(payload, null, 2);
-    const dir = `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}/editing-versions`;
-    const filepath = `${dir}/v${newRoundNum}.json`;
-    const cmd = `mkdir -p "${dir}" && cat > "${filepath}" <<'__JSON_EOF__'\n${json}\n__JSON_EOF__`;
-    const { ok, reason } = await callBash(cmd);
-    if (ok) {
-      alert(`Round ${newRoundNum} saved to ${filepath}.\n\nReload the viewer to see it in the round dropdown.`);
+    if (method === "download") {
+      alert(`Round ${newRoundNum} downloaded as v${newRoundNum}.json.\n\n` +
+        `Move it into ${relPath} (then reload to see it in the round dropdown).\n\n` +
+        `Tip: run \`python3 scripts/viewer_save_server.py\` from the project root ` +
+        `and saves will be written there automatically.`);
     } else {
-      alert(`Save failed: ${reason}`);
+      alert(`Round ${newRoundNum} saved to ${detail}.\n\n` +
+        `Reload the viewer to see it in the round dropdown.`);
     }
   }
 
@@ -818,23 +908,12 @@ Cross-reference timecodes against the captioned FCPXMLs in XML/exports/, branch 
 
 Set model to Sonnet 4.6.`;
     setExportCopied(false);
-    let wrote = "none";
-    if (hasCallMcpTool()) {
-      const dir = `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}`;
-      const handoffPath = `${dir}/${filename}`;
-      const cmd = `mkdir -p "${dir}" && cat > "${handoffPath}" <<'__JSON_EOF__'\n${json}\n__JSON_EOF__`;
-      const { ok } = await callBash(cmd);
-      wrote = ok ? "disk" : "fail";
-      if (ok) await writeTweakLog();  // best-effort: persist the override log alongside the cut
-    } else {
-      try {
-        const blob = new Blob([json], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = filename; a.click();
-        URL.revokeObjectURL(url);
-        wrote = "download";
-      } catch (_) { wrote = "fail"; }
+    const res = await persistFile(relPath, json, { downloadName: filename });
+    // Modal copy distinguishes only "written to disk" vs "downloaded" vs "fail".
+    const wrote = res.method === "download" ? "download"
+      : res.ok ? "disk" : "fail";
+    if (res.ok && res.method !== "download") {
+      await writeTweakLog();  // best-effort: persist the override log alongside the cut
     }
     setExportInfo({ win, label, count: filtered.length, time: fmtSec(totalSec), file: relPath, filename, prompt, wrote });
   }
@@ -1056,7 +1135,6 @@ Set model to Sonnet 4.6.`;
     const ops = getPendingOps();
     const batches = batchesOverride || batchNotesByRound[roundIndex] || [];
     if (ops.length === 0 && batches.length === 0) return { ok: false, reason: "nothing to log" };
-    if (!hasCallMcpTool()) return { ok: false, reason: "not in Cowork" };
     const round = ROUNDS[roundIndex];
     const payload = {
       schema_version: 2,
@@ -1078,11 +1156,11 @@ Set model to Sonnet 4.6.`;
         description: o.description,
       })),
     };
-    const dir = `${PROJECT_META.ssd_root}/handoffs/${PROJECT_META.slug}`;
-    const filepath = `${dir}/tweak-log-v${round.round_number}.json`;
+    const relPath = `handoffs/${PROJECT_META.slug}/tweak-log-v${round.round_number}.json`;
     const json = JSON.stringify(payload, null, 2);
-    const cmd = `mkdir -p "${dir}" && cat > "${filepath}" <<'__TWEAKLOG_EOF__'\n${json}\n__TWEAKLOG_EOF__`;
-    return await callBash(cmd);
+    // Best-effort: write via Cowork or the local helper, but never force a
+    // download — this fires on every Send and would spam the browser otherwise.
+    return await persistFile(relPath, json, { allowDownload: false });
   }
 
   // Send the current batch: copy the message, append this batch to the cumulative
