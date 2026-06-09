@@ -234,7 +234,8 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path) -> dict:
     speakers = cc.get("speakers", [])
     target_seconds = 120
     # Best-effort: look for target_runtime_seconds in any trimmed-quotes file
-    for f in handoffs.glob("trimmed-quotes-v*.json"):
+    # (or, pre-emit, in editing-versions working rounds)
+    for f in sorted(handoffs.glob("trimmed-quotes-v*.json")) + sorted((handoffs / "editing-versions").glob("v*.json") if (handoffs / "editing-versions").is_dir() else []):
         try:
             j = json.loads(f.read_text())
             if "target_runtime_seconds" in j:

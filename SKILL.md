@@ -13,7 +13,7 @@ description: |
 ---
 
 # Documentary Junior Editor — Master Skill Index
-### Version 5.7 | May 2026
+### Version 5.8 | June 2026
 
 This is the master index for the documentary-junior-editor skill. Read this file first at
 the start of every session. It describes the pipeline, the folder structure, how agents
@@ -285,7 +285,19 @@ documentary-junior-editor/
 │   │   ├── Final_Edit.txt
 │   │   ├── lessons-learned.md
 │   │   └── transcripts/
-│   └── crisis-nursery-testimonial/ ← Nonprofit Testimonial
+│   ├── crisis-nursery-testimonial/ ← Nonprofit Testimonial
+│   │   ├── Final_Edit.txt
+│   │   ├── lessons-learned.md
+│   │   └── transcripts/
+│   ├── international-institute/   ← Nonprofit Fundraising (Fund-a-Need)
+│   │   ├── Final_Edit.txt
+│   │   ├── lessons-learned.md
+│   │   └── transcripts/
+│   ├── tccs-dr-pan-testimonials/ ← B2B / Healthcare Testimonial
+│   │   ├── Final_Edit.txt
+│   │   ├── lessons-learned.md
+│   │   └── transcripts/
+│   └── tc-pain-clinic-2026-organic/ ← OTT/CTV Ad Campaign (organic variant)
 │       ├── Final_Edit.txt
 │       ├── lessons-learned.md
 │       └── transcripts/
@@ -517,7 +529,29 @@ fallback if n8n has issues.
 
 See `CHANGELOG.md` for full version history.
 
-Current version: 5.7 — May 2026
+Current version: 5.8 — June 2026
+
+### v5.8 highlights (quote viewer Tight/Loose/Library rework + TC Pain Clinic reference examples)
+
+- **Quote viewer membership model.** Replaced the conviction-tier + Rough/Tight-view model
+  with an authoritative two-window membership model (`membership: "tight" | "loose"`),
+  unified the Edit + Review surfaces, made the agent handoff iterative, fixed the split
+  bug, and turned Export into an FCPXML-Agent handoff. Viewer/build-script only; no agent
+  skill semantics changed. See `CHANGELOG.md` v5.8.
+- **TC Pain Clinic 2026 reference examples (first ad-format projects).** The OTT/CTV :30
+  ad campaign and its `-organic` variant cut are the first ad-format examples in the
+  knowledge base. The `-organic` example documents the **shared-upstream variant pattern**
+  (one shoot → common Creative-Context/Synthesis trunk → multiple Edit/FCPXML branches
+  under sibling slugs).
+- **`build_fcpxml.py` act-divider offset bug — second confirmed reproduction.** The
+  title-card offset-stacking bug (all act dividers emitted at the sequence-start sentinel
+  instead of their act positions) reproduced on all three TC Pain Clinic FCPXMLs after
+  Hammer NER 2026. Escalated from OPEN to high-priority IN PROGRESS in SKILL-review.md
+  Phase 3 follow-ups.
+- **SKILL.md version + reference-tree drift cleanup.** Header/footer version bumped to
+  match the already-shipped v5.8 CHANGELOG; reference-examples tree updated to list
+  `international-institute`, `tccs-dr-pan-testimonials`, and `tc-pain-clinic-2026-organic`
+  (previously missing from the tree).
 
 ### v5.7 highlights (feedback capture + Edit Agent lessons from Hammer NER 2026)
 

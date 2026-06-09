@@ -1,0 +1,84 @@
+# TC Pain Clinic 2026 (Organic Variant) — Final Edit
+# Completed: 2026-06-08
+# Video type: OTT/CTV Ad Campaign (:30 spot, organic-only variant)
+# Interview subjects: 3 (Dr. Will — Founder/Medical Director; Dr. Haas — Assistant Medical Director; Sheila — Clinic Administrator)
+# Clip types: multicam (all three interviews; wide + zoom angles)
+# Total rounds: 1 (TIGHT cut, 15 entries)
+# Variant note: 'organic-only' — built from organic interview takes + orphans; NO scripted/safety lines.
+# Source pool: handoffs/tc-pain-clinic-2026-organic/tagged-quotes-v1.json (54 organic quotes)
+
+
+--- No Wait, Easy Access ---
+
+1. Dr Will (entry 3, source #3, segments [0, 2, 3])
+"At Twin Cities Pain Clinic, we know that pain is not something that you can wait on. we can typically get patients in within 48 hours. We can even do same-day appointments when needed."
+TC: 0:08:45 - 0:09:13
+
+2. Dr. Haas (entry 36, source #36, segments [1, 4])
+"And that's very unique, I think, in healthcare. So I think that that's unique in that we can get patients in soon,"
+TC: 10:12 - 10:49
+
+3. Sheila (entry 60, source #60, segments [3, 4])
+"When you're in chronic pain, you don't want to wait. So we have access same day sometimes, and definitely like within the next day."
+TC: 3:19 - 3:56
+
+
+--- An Elevated Level of Care ---
+
+4. Dr Will (entry 83, source #83, segments [0]) [ORPHAN]
+"It's tough. To have chronic pain is very depressing for anyone. I would feel the same feelings. So too often people are dismissed and told that, you know, you just have to work on your feelings rather than actually getting rid of the pain."
+TC: 0:13:52 - 0:14:02
+
+5. Dr. Haas (entry 27, source #27, segments [0, 4])
+"Well, I think what really sets Twin Cities Pain Clinic and the providers here apart from other providers and, and other pain practices is that our patients can really feel that we genuinely are passionate about our specialty and about our patients and about being there to help them."
+TC: 0:26 - 1:11
+
+6. Dr. Haas (entry 28, source #28, segments [1])
+"we're the experts in interventional pain management,"
+TC: 1:46 - 2:18
+
+7. Dr. Haas (entry 30, source #30, segments [0, 3, 4])
+"Yeah, a lot of times the patients have seen a lot of providers in different specialties or even in the specialty of pain management. So, it's a lot of feeling defeated and, you know, trying to work on establishing that trust, that respect for their story, and then leading them down a path where they feel confident that we have—that we will take them each step along the way."
+TC: 3:09 - 4:10
+
+8. Dr. Haas (entry 39, source #39, segments [5])
+"All of us here at Twin Cities Pain Clinic are here to help that patient feel better, and that's our primary goal."
+TC: 15:35 - 16:15
+
+9. Dr Will (entry 82, source #82, segments [0]) [ORPHAN]
+"we're just motivated to help people get rid of their pain."
+TC: 0:15:25 - 0:15:54
+
+
+--- The Best Treatment Possible ---
+
+10. Dr Will (entry 15, source #15, segments [0, 1, 2])
+"When they finally do meet us, it's like a light bulb goes off. They're like, wait, there are things you can do? I don't have to put up with this?"
+TC: 0:12:22 - 0:12:34
+
+11. Dr Will (entry 20, source #20, segments [0, 1])
+"I see people go from being very depressed in chronic pain to being very happy with much less pain in just a matter of, you know, a week because of a treatment."
+TC: 0:14:02 - 0:14:16
+
+12. Dr Will (entry 22, source #22, segments [0, 1])
+"It gets to the point where they don't even think about it anymore. They can go about their life."
+TC: 0:07:31 - 0:07:38
+
+13. Dr Will (entry 26, source #26, segments [0, 1])
+"This is what we do full-time, unlike other places that might just dabble in it. This is our full-time, everyday effort to focus on pain."
+TC: 0:15:01 - 0:15:14
+
+14. Dr. Haas (entry 38, source #38, segments [2, 3, 4, 5, 6])
+"the thing about pain is a lot of times you can't see it on the outside. And a lot of the suffering and, and how it interferes in patients' lives, that you can't see that. And so I do think that patients just feel maybe that they're not entitled to feel better, that this is just the way it's going to be, but it doesn't have to be that way. There are a lot of other options to feel better and to live a more engaging life."
+TC: 14:21 - 15:08
+
+15. Dr Will (entry 80, source #80, segments [0]) [ORPHAN]
+"We're just focused more on quality of life. People are realizing, you know, we're living longer and it's not all about just living longer, it's living well and having better quality of life."
+TC: 0:03:37 - 0:04:32
+
+
+# NOTE ON ACT-DIVIDER TITLE CARDS
+# The FCPXML output (tc-pain-clinic-2026-organic_tight_cut_v1.fcpxml) includes three
+# act-divider title cards (one per act). Known issue: all three render at the
+# sequence-start offset (86400314/24000s) rather than their act positions — the
+# documented build_fcpxml.py title-card offset-stacking bug. Strip or reposition at finishing.
