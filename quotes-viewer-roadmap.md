@@ -425,6 +425,96 @@ Retained as a pointer only; no separate build item.
 
 ---
 
+## Open items — 2026-06-09 kickoff brief (TC Pain Clinic organic)
+
+> **Provenance:** `Downloads/quote-viewer-kickoff-brief.md`, prepared 2026-06-09 from
+> the TC Pain Clinic 2026 (organic variant) editing session + Skill Review pass.
+> Carries the data contract that prevents the blank-page crashes, plus a P1–P5 punch
+> list. Worked as one batch on 2026-06-09 (commits local, not pushed).
+
+### Browser-first persistence — local save-helper + download fallback
+**Source project:** TC Pain Clinic 2026 organic (kickoff brief P1).
+**Problem:** The viewer runs browser-first, but the working-round Save (and the tweak
+log) wrote only via Cowork's `callMcpTool` disk path — dead in a plain browser tab, so
+Tight selections silently evaporated. Highest-leverage gap.
+**Proposed change:** A browser-viable persistence path so selections actually persist.
+**Priority:** P1.
+**Status:** Shipped (`622e95b`). Added `scripts/viewer_save_server.py` — a tiny
+localhost helper (sandboxed to `<root>/handoffs/**.json`, 127.0.0.1-only, CORS) the
+viewer POSTs `{path, content}` to. New `persistFile()` picks the most robust available
+tier: **Cowork callMcpTool → local helper → browser download** (never-lose-data
+fallback). `saveAsNewRound` (previously a no-op outside Cowork) now persists; export
+gains the helper tier; the tweak log writes via Cowork-or-helper but never forces a
+download. **Jeff chose helper+fallback** (2026-06-09) for max robustness. Verified:
+helper endpoints + path sandbox via curl; a real cross-origin browser POST
+(localhost:8772 → 127.0.0.1:8765) wrote the file with the page rendering clean.
+▶ Usage: run `python3 scripts/viewer_save_server.py` from the project/SSD root while
+working in the viewer; without it, saves degrade to downloads.
+
+### Fail the build loud on input-contract violations
+**Source project:** TC Pain Clinic 2026 organic (kickoff brief P2).
+**Problem:** The silent `["Act 1","Act 2","Act 3"]` act_labels fallback and the bare
+`speakers: []` default each produced a blank page with no error.
+**Proposed change:** Replace silent fallbacks with a hard, descriptive failure;
+schema-check speakers as `{name, slug}` before build.
+**Priority:** P2.
+**Status:** Shipped (`387a1f4`). Dropped the act_labels default; `validate_project_metadata()`
+now aborts the build (`BuildContractError`, non-zero exit) on empty/missing act_labels
+or non-`{name,slug}` speakers, on **both** build paths (`--data` fixture and `--slug`
+handoffs), naming what's wrong and where. Verified: good fixture builds (exit 0); empty
+act_labels and string speakers each abort with exit 1 + a clear message.
+
+### Guard the speaker-color lookup (already shipped 2026-06-01)
+**Source project:** TC Pain Clinic 2026 organic (kickoff brief P3).
+**Problem:** A quote whose `speakerSlug` had no matching speaker (or string-form
+speakers) threw and blanked the whole page.
+**Priority:** P3.
+**Status:** Shipped earlier (`67b1082`, blank-page fix batch). Every color lookup
+(`quotes_viewer_template.jsx` clean/entry/review cards) degrades to a default color via
+`speakerColors[slug] || {bg,fg}`, so a single bad record can't throw. P2 now also blocks
+string-form speakers at build time. ❓ Minor open sub-point (not built; not requested):
+the brief also suggested a *visible warning* on degrade — currently the fallback is
+silent. Left out per simplicity bias; re-file if it's actually wanted.
+
+### Pre-handoff QA gate — committed render/regression harness
+**Source project:** TC Pain Clinic 2026 organic (kickoff brief P4).
+**Problem:** Last session's verify harness lived in `/tmp` and was never committed, so
+the historical blank-page bugs had no standing regression test.
+**Proposed change:** Commit the harness as a runnable gate; add fixtures for each known
+failure mode; make it a required build/QA step.
+**Priority:** P4.
+**Status:** Shipped (`08dbb19`). `scripts/test_viewer_build.py` runs 6 checks and exits
+non-zero on any regression (drop into the build/QA flow). Four committed negative
+fixtures in `scripts/test-fixtures/`: missing act_labels, string speakers, empty orphan
+pool, string `source_quote_id`. Verified the gate has teeth (a regressed fixture flips
+it to exit 1). **Implementation note:** built as a zero-dependency build-level gate
+rather than Babel+jsdom — this repo is deliberately npm-install-free (vendored
+Babel/React), and all four brief failure modes are assertable at the build/migration
+layer. Full runtime render smoke-tests run via the Claude Preview MCP (used for P1+P5).
+
+### Surface orphan-pool emptiness
+**Source project:** TC Pain Clinic 2026 organic (kickoff brief P5).
+**Problem:** The Quote Library's orphan section rendered only when orphans existed, so
+an empty orphan pool (a silent upstream merge gap) looked identical to a healthy one.
+**Proposed change:** Show an explicit "no orphans found in pool" state instead of
+nothing.
+**Priority:** P5.
+**Status:** Shipped (`b266437`). The Orphans section is now always rendered, with three
+states: list / "none match the current filters" / an amber warning that orphans were
+likely not merged upstream (`is_orphan:true` inside `tagged-quotes-v*.json`). Verified
+in a browser build: good fixture (1 orphan) lists it; zero-orphan pool shows the amber
+merge-gap warning.
+
+### [DECISION] Canonical home for viewer feedback — this roadmap
+**Source project:** TC Pain Clinic 2026 organic (kickoff brief §4).
+**Decision:** This file (`quotes-viewer-roadmap.md`, in the Claude Code viewer repo) is
+the single source of truth for viewer feedback — already true on the viewer side.
+⚑ Cross-scope (Coach territory, NOT edited here): the brief's other half is pointing the
+Editing Coach SKILL at this file instead of a skill-repo copy. That instruction lives in
+`SKILL-editing-coach.md` — update on the next Coach pass.
+
+---
+
 ## Cross-scope dependencies — for Editing Coach / Skill Review
 
 The viewer batch (v5.6, 2026-05-21) shipped the **viewer + build-script halves** of
@@ -447,8 +537,24 @@ says drag-to-reorder works "within or across acts," but the viewer constrains dr
 within an act (cross-act moves use the act-reassign dropdown). Reconcile the doc or
 the behavior — surfaced for the skill owners to decide.
 
+**Added from the 2026-06-09 kickoff-brief batch (NOT edited here):**
+
+2. **`SKILL-editing-coach.md` should point at this roadmap** as the single feedback
+   sink (kickoff brief §4). Done on the viewer side; the Coach SKILL still references a
+   skill-repo copy. Coach territory — update on the next Coach pass.
+
+3. **Synthesis should emit orphans as `is_orphan:true` entries inside
+   `tagged-quotes-v*.json`** (durable fix). The build best-effort-parses standalone
+   `*-orphans-v*.md`, and the viewer now surfaces an empty orphan pool (P5) — but the
+   real fix is upstream emission so orphans arrive reliably. Synthesis/Transcript
+   territory.
+
+4. **Standardize `source_quote_id` as an integer** in the documented `trimmed-quotes` /
+   `editing-versions` schema (the build coerces string→int, now regression-tested, but
+   the SKILL examples should pick one type). Edit/skill-doc territory.
+
 ---
 
 *Maintained as part of the `documentary-junior-editor` skill set. Coach writes here;
 the Claude Code viewer project reads here.*
-*Current as of: 2026-05-29*
+*Current as of: 2026-06-09*

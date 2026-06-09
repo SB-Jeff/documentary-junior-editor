@@ -1,5 +1,50 @@
 # Documentary Junior Editor — Changelog
 
+## v5.9 — 2026-06-09 (quote viewer — kickoff-brief P1–P5 batch)
+
+Viewer release. Works the 2026-06-09 kickoff brief (`Downloads/quote-viewer-kickoff-brief.md`,
+from the TC Pain Clinic 2026 organic session + Skill Review) — the data-contract hardening and
+browser-first persistence punch list. See the `2026-06-09 kickoff brief` section in
+`quotes-viewer-roadmap.md`. Five commits, one per item; P1 + P5 verified in a real browser via
+the Claude Preview MCP, P2/P4 via the new committed QA gate. Commits local — **not pushed**.
+
+### Quote viewer (`scripts/quotes_viewer_template.jsx`, `scripts/build_quotes_viewer.py`, `scripts/viewer_save_server.py`)
+
+- **Browser-first persistence (P1, `622e95b`).** New `scripts/viewer_save_server.py` — a tiny
+  localhost helper (sandboxed to `<root>/handoffs/**.json`, 127.0.0.1-only, CORS) the viewer
+  POSTs `{path, content}` to. New `persistFile()` tries the most robust available tier in order:
+  **Cowork `callMcpTool` → local helper → browser download** (never-lose-data fallback).
+  `saveAsNewRound` (a no-op outside Cowork before) now persists; export gains the helper tier;
+  the tweak log writes via Cowork-or-helper but never forces a download. Run
+  `python3 scripts/viewer_save_server.py` from the project/SSD root while editing.
+- **Fail the build loud (P2, `387a1f4`).** Dropped the silent `["Act 1","Act 2","Act 3"]`
+  fallback. `validate_project_metadata()` now aborts the build (non-zero exit) on empty/missing
+  `act_labels` or non-`{name,slug}` `speakers`, on both the `--data` and `--slug` paths — naming
+  what's wrong and where. A bad input stops the build instead of shipping a blank viewer.
+- **Orphan-pool empty-state (P5, `b266437`).** The Quote Library's Orphans section is now always
+  rendered, with three states: list / "none match the current filters" / an amber warning that
+  orphans were likely not merged upstream (`is_orphan:true` in `tagged-quotes-v*.json`). A silent
+  upstream merge gap is now visible at review time.
+- **Speaker-color guard (P3).** Already shipped in the 2026-06-01 blank-page batch (`67b1082`):
+  every color lookup degrades to a default via `speakerColors[slug] || {bg,fg}`, so a bad
+  `speakerSlug` can't throw. P2 now also blocks string-form speakers at build. (Brief's optional
+  "visible warning on degrade" left out per simplicity bias — flagged in the roadmap.)
+
+### QA / build tooling (`scripts/test_viewer_build.py`, `scripts/test-fixtures/`)
+
+- **Pre-handoff QA gate (P4, `08dbb19`).** Committed `scripts/test_viewer_build.py` — a runnable
+  gate (6 checks, exits non-zero on any regression) plus one fixture per historical failure mode
+  (`negative_missing_act_labels`, `negative_string_speakers`, `negative_empty_orphans`,
+  `negative_string_source_quote_id`). Pins every blank-page bug as a regression test. Built as a
+  zero-dependency build-level gate (this repo is deliberately npm-install-free); runtime render
+  smoke-tests run via the Claude Preview MCP.
+
+### Cross-scope flags (not edited here — see `quotes-viewer-roadmap.md`)
+
+- `SKILL-editing-coach.md` should point at `quotes-viewer-roadmap.md` as the single feedback sink (§4).
+- Synthesis should emit orphans as `is_orphan:true` inside `tagged-quotes-v*.json` (durable fix for P5).
+- Standardize `source_quote_id` as an integer in the documented schema (the build coerces; now regression-tested).
+
 ## v5.8 — 2026-05-31 (quote viewer — Tight/Loose/Library rework)
 
 Viewer release. Implements the approved hammer-ner-2026 membership redesign (see the
