@@ -144,8 +144,9 @@ stale-state check:
 
 **This phase is required before Phase 1. Do not skip.** `build_fcpxml.py`'s
 `find_speaker_fcpxml()` matches only `*.fcpxml` files. If source files are
-still `.fcpxmld` packages when Phase 1 runs, the script silently finds
-nothing and downstream phases fail in confusing ways.
+still `.fcpxmld` packages when Phase 1 runs, the script errors out at the
+source-lookup stage (FileNotFoundError listing the candidates it tried) —
+run extraction first rather than discovering this mid-generation.
 
 ### Source location auto-detection
 
@@ -205,9 +206,11 @@ This phase was upgraded from "suggested" to "required" in v5.4.1 after the
 2026 Nanos Boston project surfaced the failure mode: the Params Agent
 parses `Info.fcpxml` directly from inside each `.fcpxmld` package (its
 work is unaffected), but the FCPXML Agent then runs `build_fcpxml.py`
-which can't find any source files because they're still packages. Without
-the precondition check above, the failure is silent — files appear to
-exist, but the find function returns empty.
+which can't find any source files because they're still packages. The
+script now fails with an explicit FileNotFoundError at the source-lookup
+stage, but the precondition check above still saves the wasted run — and
+catches the confusing "files appear to exist on disk but aren't `.fcpxml`"
+state before generation starts.
 
 ---
 
@@ -215,7 +218,8 @@ exist, but the find function returns empty.
 
 ### 1.1 — Read the timeline
 
-Open `handoffs/trimmed-quotes-v[N].json`. The schema is:
+Open `handoffs/trimmed-quotes-v[N].json` (in the resolved handoffs directory).
+The schema is:
 
 ```json
 {
@@ -224,22 +228,30 @@ Open `handoffs/trimmed-quotes-v[N].json`. The schema is:
   "project_slug": "international-institute",
   "target_runtime_seconds": 240,
   "estimated_runtime_seconds": 320,
+  "window": "loose",
   "entries": [
-    {"entry_id": "e_001",
+    {"entry_id": "23",
      "source_quote_id": "23",
      "speaker": "Full Name",
      "part": "Act label",
-     "runtime_recommendation": "must-keep",
+     "membership": "tight",
      "segments": [
        {"source_segment_idx": 0, "head_trim_words": 3},
        {"source_segment_idx": 1},
        {"source_segment_idx": 3}
      ]},
-    {"entry_id": "e_002", "type": "title_card", "text": "...", "estimated_seconds": 2},
+    {"entry_id": "T1", "type": "title_card", "text": "...", "estimated_seconds": 2},
     ...
   ]
 }
 ```
+
+`membership` is the v5.9 two-window model: `"tight"` entries form the tight
+cut; the full entry list is the loose cut. (`entry_id` derives from the
+source quote num — `"23"`, `"23a"` for splits, `"T1"`/`"T2"` for non-spoken
+entries. The legacy `e_NNN` namespace and `runtime_recommendation` field are
+retired; if an older trimmed-quotes file carries them, ask Jeff before
+proceeding.)
 
 Each entry is one playable beat in the cut, **in playback order**. There are
 four entry types:
@@ -312,27 +324,35 @@ naming Jeff has been using; match it rather than forcing the canonical form.
 
 ### 1.6 — Confirm which cut to generate before running (REQUIRED, added v5.7)
 
-The timeline carries two cuts via `runtime_recommendation`: the **rough cut**
-(all entries — must-keep + probable-keep) and the **tight cut** (must-keep
-only). The Edit Agent's handoff designates a primary emit, but Jeff may want
-the other, or both. Do not assume — confirm.
+The timeline carries two cuts via `membership`: the **loose cut** (all
+entries) and the **tight cut** (`membership: "tight"` entries only). The Edit
+Agent's handoff designates a primary emit, but Jeff may want the other, or
+both. Do not assume — confirm.
 
 Before calling `build_fcpxml.py`:
 
-1. Count the timeline entries by recommendation: how many `must-keep`, how
-   many `probable-keep`.
+1. Count the timeline entries by membership: how many `tight`, how many
+   `loose`.
 2. State both cuts to Jeff with their entry counts and, if estimable, their
-   approximate runtimes — e.g. "Rough cut = 54 entries (~18:48); tight cut =
-   28 must-keep entries (~10:30). The handoff designates the rough cut as
+   approximate runtimes — e.g. "Loose cut = 54 entries (~18:48); tight cut =
+   28 tight entries (~10:30). The handoff designates the loose cut as
    primary."
-3. Ask which to generate: **rough** (all entries), **tight** (must-keep
-   only), or **both**.
+3. Ask which to generate: **loose** (all entries), **tight** (tight
+   membership only), or **both**.
 4. Do not proceed to Phase 2 generation until the cut selection is confirmed.
 
 When generating both, emit distinct filenames (`..._rough_cut_v[N].fcpxml`
-and `..._tight_cut_v[N].fcpxml`). (Hammer NER 2026: the agent generated the
-rough cut per the handoff and had to regenerate when Jeff wanted the tight
-cut — this step removes that round-trip.)
+and `..._tight_cut_v[N].fcpxml` — the loose cut keeps the legacy `rough_cut`
+output naming). (Hammer NER 2026: the agent generated the wide cut per the
+handoff and had to regenerate when Jeff wanted the tight cut — this step
+removes that round-trip.)
+
+**Viewer export filenames (v5.10).** The Edit Agent's quote viewer now
+exports both cuts directly: Loose-window (full) cuts save as
+`trimmed-quotes-v[N].json` and Tight-window cuts as
+`trimmed-quotes-v[N]-tight.json`. If a `-tight` sibling exists alongside the
+main emission, mention it when asking Jeff which cut to generate — a "both"
+answer maps each input file to its corresponding output filename.
 
 ---
 
@@ -393,9 +413,12 @@ perform dynamic resource-ID remap when merging multiple speakers:
 3. Add any per-output effects (title-card style, Flow transition) at fresh
    IDs above all speaker IDs.
 
-This is currently implemented in the TCCS Dr Pan & Testimonials
-project-specific adapter (`build_tccs_rough_cut_v1.py`). Fold the logic
-back into `build_fcpxml.py` as part of the Phase 3 follow-up.
+This remap is implemented in `generate_fcpxml.py`'s
+`merge_speaker_resources()` and runs automatically on every
+`build_fcpxml.py` invocation (duplicate `<format>` elements are also
+deduplicated by signature). No manual remap or post-processing is needed —
+if you see broken refs in output, treat it as a script bug to report, not
+something to hand-patch.
 
 ### 2.1.5 — Act-boundary title cards (REQUIRED every emission)
 
@@ -415,7 +438,19 @@ already opens an act with a strong cold-open clip.
 Title-card entries the Edit Agent emits explicitly (title-card-as-shortener
 pattern, per `SKILL-edit.md`) are separate from act-boundary cards and
 should be generated in addition to them, in the position the Edit Agent
-specifies.
+specifies. **Note (v5.10):** the script does not yet render explicit
+`title_card` / `interstitial` / `context_beat` timeline entries — see the
+drop warning documented in §2.4.
+
+Act-boundary card generation is automatic: `build_fcpxml.py`'s
+`parse_act_structure()` reads the act labels from `act-structure-v[Y].md`
+(headings starting with Act/Part/Section, plus Intro/Introduction/Opening/
+Prologue/Epilogue/Conclusion/Outro as of v5.10) and passes them to
+`generate_fcpxml.py`, which canonicalizes each quote's `part` value against
+them (punctuation/dash-tolerant slug matching) and inserts one divider card
+per act boundary. The act-divider/title-card offset bug from earlier
+versions is fixed. Your job is to confirm the divider count in the
+`--verify` report (Phase 3), not to insert cards by hand.
 
 ### 2.1.6 — Multi-output multicam re-import duplication (CRITICAL)
 
@@ -442,8 +477,16 @@ each output into a **separate event** (`<event name="2 | rough cuts v2"`)
 in the same library, so the multicam duplicates are at least scoped to
 that event. But the canonical fix is UID-stable references.
 
-This is currently NOT handled by `build_fcpxml.py` and is on the Phase 3
-follow-up list.
+This is handled by `build_fcpxml.py`: the Library Location, Event Name,
+and Event UID from `fcpxml-params-v[X].md` are passed through to
+`generate_fcpxml.py` so the output targets the destination library, and
+source-side multicam `uid` attributes are preserved through the resource
+merge so FCP recognizes existing library multicams instead of duplicating
+them. Generated `<project>` elements carry no `uid`/`modDate` (FCP assigns
+a fresh project UID on import), which prevents the project-UID-collision
+re-processing cycle. Verify the params handoff populated those three
+fields; if they are blank, stop and ask the Params Agent track to fix the
+handoff rather than hand-editing the output.
 
 ### 2.2 — Pre-flight
 
@@ -463,33 +506,18 @@ verification reveals the real range, log it; if the segment truly has
 zero usable audio, flag to Jeff and surface as a candidate for drop from
 the timeline.
 
-### 2.3 — Caption-matcher performance fix (standard for v5.0)
+### 2.3 — Caption-matcher TC-window narrowing (built in)
 
-`build_fcpxml.py`'s fuzzy matcher scans `captions × max_span` (max_span=15 at
-sentence level, 40 at whole-quote fallback) windows per sentence.
-`search_hint` resets to 0 at the start of each quote, so every quote pays the
-full scan cost. On long interviews (e.g., Crisis Nursery's Tyanna with ~708
-captions), this exceeded the 45-second shell timeout end-to-end.
-
-**The validated workaround is now the standard approach in Phase 3 Timing
-Extraction.** Before calling `build_fcpxml.py`, narrow the per-quote / per-
-segment caption search window using the `startTC` / `endTC` fields already in
-the source quote and segments (±15-second buffer). Match scores stay
-0.85–1.00 and total match time drops to ~2 seconds.
-
-In code, this means iterating timeline entries and segments in advance, and
-either:
-
-- Pre-trimming the captions list per-segment to just the captions whose
-  timecodes fall within `[segment.startTC - 15s, segment.endTC + 15s]` before
-  invoking the matcher, or
-- Passing per-segment `search_start`/`search_end` parameters to the matcher
-  so it constrains its window without rebuilding the captions list.
-
-The permanent fix belongs in `generate_fcpxml.py`'s `find_quote_range` (use
-the segment's TC window to set `search_start`/`search_end` directly). **This
-is a Phase 3 follow-up code change.** Until that ships, apply the workaround
-above on every long-interview project. Flag any timeout recurrence to Jeff.
+TC-window narrowing is implemented in `generate_fcpxml.py`:
+`_narrow_caption_search_window()` bisects the caption list to the
+`[startTC - 15s, endTC + 15s]` range, and `find_captions_for_quote()`
+applies it automatically whenever the segment/quote carries `startTC` /
+`endTC` (the v5 segment fields flow through). Match scores stay 0.85–1.00
+and long interviews (e.g., Crisis Nursery's ~708-caption Tyanna) match in
+~2 seconds instead of timing out. **No manual caption pre-trimming is
+needed on any project.** If segments are missing TCs the matcher falls back
+to a full-range scan — if that ever times out again, flag it to Jeff rather
+than hand-narrowing.
 
 ### 2.4 — Call the script
 
@@ -503,7 +531,8 @@ run_script(
     "--source-pool", "handoffs/tagged-quotes-v[Z].json",
     "--xml-dir", "XML/exports/",
     "--output", "XML/imports/[project-slug]_rough_cut_v[N].fcpxml",
-    "--project-name", "[Project Name]"
+    "--project-name", "[Project Name]",
+    "--verify"
   ],
   input_files: [
     "handoffs/trimmed-quotes-v[N].json",
@@ -515,6 +544,29 @@ run_script(
   output_dir: "XML/imports/"
 )
 ```
+
+**Exit-code behavior (v5.10).** The script exits non-zero when any quote
+sentence fails caption matching (truncation) or any speaker yields zero
+clips. The output FCPXML is still written either way — a non-zero exit
+means "written but incomplete," not "no file." Pass `--allow-partial` to
+downgrade these to warnings with exit 0 — only do this when Jeff has
+explicitly said a partial cut is acceptable for the round; otherwise treat
+a non-zero exit as the Phase 2.5 failure path.
+
+**`--verify` (v5.10, always pass it).** Emits
+`<output_basename>.verify.json` next to the output plus a human-readable
+summary: per-speaker clip counts vs. expected, per-entry segment clip
+counts, clip_type sanity, truncated sentences, and act-divider count.
+Verification failure exits non-zero unless `--allow-partial` is also set.
+Phase 3 reads this report instead of hand-counting clips.
+
+**Non-spoken entries are currently dropped.** Explicit `title_card`,
+`interstitial`, and `context_beat` timeline entries are NOT yet rendered by
+the script — it drops them with a stderr warning listing per-type counts
+(rendering is a tracked follow-up, W2/C6 in `skill-review-2026-06-10.md`).
+Act-boundary divider cards (§2.1.5) are unaffected. When the warning fires,
+tell Jeff exactly which entries will not appear in the cut — do not stay
+silent about them.
 
 ### 2.5 — On failure
 
@@ -528,27 +580,36 @@ run_script(
 3. Notify Jeff describing the failure, pointing at `handoffs/fcpxml-failure.md`.
 4. Update status to failed.
 
-**Common failure modes in v5.0:**
+**Common failure modes in v5.10:**
 
-- **Single_clip interview generated with multicam fields.** If
-  `build_fcpxml.py` doesn't yet support per-interview branching, it may
-  produce `<mc-clip>` elements for single_clip sources, which won't import
-  cleanly. Manual workaround: post-process the output FCPXML to substitute
-  `<asset-clip>` for `<mc-clip>` in single_clip clusters, using the
-  `asset_ref_id` from `fcpxml-params-v[X].md`. Flag this as the script's
-  Phase 3 follow-up gap.
-- **Caption mismatch on segment-level matching.** If the script doesn't yet
-  consume `segments[]` from the timeline, it may try to match the
-  reconstructed-from-segments quote text against captions. Manual workaround:
-  reconstruct the entry's verbatim text from segments + trims and pass it to
-  the script as a single trimmed quote, then post-process the FCPXML to
-  split that single clip into one clip per segment.
-- **Timeout on long interviews.** Apply the §2.3 caption-matcher workaround
-  before calling the script.
+- **Truncation / zero-clip exit.** The script exits non-zero when a quote
+  sentence fails caption matching or a speaker yields zero clips (§2.4).
+  Read the stderr + `<output_basename>.verify.json` to see exactly which
+  sentences/speakers failed, and report them to Jeff. Re-run with
+  `--allow-partial` only on Jeff's explicit say-so.
+- **Bad params.** `parse_params_md` raises specific `ValueError`s (exit
+  code 3) for missing sections, speakers without ref/angle/asset entries,
+  or an unknown clip_type. Fix the params handoff (or ask the Params Agent
+  track to), don't patch the script's inputs by hand.
+- **Ambiguous speaker source file.** `find_speaker_fcpxml`'s fuzzy fallback
+  (case-insensitive stem, then first/last-name substring) now fails loudly
+  when multiple files match, listing the candidates instead of silently
+  binding the first sorted hit. Resolve by making the params speaker key
+  and source filename unambiguous, then re-run.
+- **Timeout on long interviews.** Should no longer occur — TC-window
+  narrowing is built in (§2.3). If it recurs, check that segments carry
+  `startTC`/`endTC`, and flag to Jeff.
+
+Per-interview clip_type branching, per-segment clip generation, v5
+`entries[]`/`segments[]` consumption, and multi-speaker resource-ID remap
+are all handled by the script — none of them require post-processing the
+output. If output looks wrong in those areas, it is a script bug to
+escalate, not a gap to hand-patch.
 
 **Do not fall back to generating FCPXML inline.** The script is the only
-production path. If the script is broken in a way that the workarounds above
-can't handle, escalate — don't paper over it with a hand-rolled FCPXML.
+production path. If the script is broken in a way that fixing the inputs
+(params, timeline, source files) can't resolve, escalate — don't paper
+over it with a hand-rolled or hand-patched FCPXML.
 
 ### 2.6 — On success
 
@@ -569,17 +630,24 @@ deliverable itself:
       `[project-slug]_reduction_v[N].fcpxml` for Reduction-phase emissions)
       with the correct version
 - [ ] The file is saved to `XML/imports/` (or `xml/imports/`, or `xml/`)
-- [ ] **Per-interview clip_type sanity check.** Open the output FCPXML.
-      For each speaker, confirm that:
-      - Multicam interviews produce `<mc-clip>` spine elements
-      - Single_clip interviews produce `<asset-clip>` spine elements
-      Mismatch indicates the branching logic failed; treat as a generation
-      failure and apply the §2.5 manual workaround.
-- [ ] **Per-segment clip count.** For each spoken-quote entry, count the
-      generated clips for that entry's source on the spine. The count should
-      equal the number of segments in the entry (after dropping segments
-      not in the entry's `segments[]` list). Off-by-one suggests the
-      per-segment branching didn't apply.
+- [ ] **Read the `--verify` report.** Open
+      `<output_basename>.verify.json` (emitted because you passed
+      `--verify` in §2.4) and confirm:
+      - Per-speaker clip counts match expected (no zero-clip speakers)
+      - Per-entry segment clip counts match each entry's `segments[]`
+      - clip_type sanity passes (multicam speakers → `<mc-clip>`,
+        single_clip speakers → `<asset-clip>`)
+      - No truncated sentences
+      - Act-divider count matches the act count in
+        `act-structure-v[Y].md`
+- [ ] **Surface dropped non-spoken entries.** If the §2.4 drop warning
+      fired for `title_card`/`interstitial`/`context_beat` entries, list
+      them for Jeff in the Phase 4 delivery message.
+
+**Manual spot-check (fallback only).** If the verify report is missing or
+you suspect it is wrong, open the output FCPXML directly and spot-check the
+same things by hand: per-speaker spine element types and clip counts per
+entry. This is a fallback, not the primary path — the JSON report is.
 
 If any check fails, treat it as a generation failure (see Phase 2.5 failure
 path).
@@ -596,9 +664,10 @@ When the file is verified and saved:
 4. Remind Jeff that caption-based timing is approximate — the rough cut gets
    him to the neighborhood, not to the exact frame. The editor trims to exact
    frames in Final Cut Pro.
-5. Note any Phase 3 follow-up gaps you encountered (e.g., "Single_clip
-   branching applied via post-processing — script update still pending"), so
-   Jeff knows what to flag for the script work.
+5. Note any open gaps that affected this emission — most commonly dropped
+   non-spoken entries (e.g., "2 title_card and 1 context_beat entries are
+   not in this cut; rendering is tracked as W2/C6") — so Jeff knows what to
+   add by hand in FCP or flag for script work.
 
 After Jeff imports and watches the cut, he may:
 - **Approve** — the round is done; Jeff may end the project, run the Skill
@@ -655,15 +724,16 @@ If Jeff approves the project, launch the Skill Review Agent:
 
 ---
 
-*FCPXML Agent — documentary-junior-editor v5.7*
+*FCPXML Agent — documentary-junior-editor v5.10 (June 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
-*FCPXML generation delegated to `scripts/build_fcpxml.py`. Phase 3 code
-follow-ups currently OPEN (highest priority next code work): (1) v5 schema
-consumption — accept `{"entries": [...]}` with `segments[]` and
-`source_segment_idx`, not legacy `{"quotes": [...]}`; (2) per-interview
-`clip_type` branching; (3) per-segment clip generation; (4) multi-speaker
-resource-ID dynamic remap (see Phase 2.1); (5) library-multicam UID
-references (see Phase 2.1.6); (6) `parse_params_md()` basename bug fix —
-currently uses `os.path.basename()` on `.fcpxmld/Info.fcpxml` paths,
-stripping the package name; (7) `find_quote_range` TC-window narrowing
-(see Phase 2.3 and 2.5).*
+*FCPXML generation delegated to `scripts/build_fcpxml.py`. The former
+Phase 3 follow-up list (v5 schema consumption, clip_type branching,
+per-segment clip generation, resource-ID remap, library-multicam UID
+references, params basename fix, TC-window narrowing) is fully implemented
+as of v5.10. Genuinely open follow-ups: (1) rendering of non-spoken
+timeline entries — `title_card` / `interstitial` / `context_beat` are
+dropped with a warning (W2/C6 in `skill-review-2026-06-10.md`); (2)
+frame-rate sourcing — timing math and single-clip `tcFormat`/`audioRole`
+assume 23.98fps NDF / dialogue rather than reading them from the source
+format; (3) Q9 — duplicate-media-ref-ID rule under review (see
+`SKILL-fcpxml-params.md` Completeness Check).*

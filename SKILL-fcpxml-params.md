@@ -240,35 +240,49 @@ run is v1; later runs increment). Never overwrite an existing version.
 > metadata — it often uses short names, legacy spellings, or joint-interview
 > groupings that differ from the canonical transcript names (Hammer NER 2026:
 > media metadata `Isiah` / `Mike & Janna Stern` vs. timeline `Isaiah Allen` /
-> `Jana Stern` / `Mike Stern`). `build_fcpxml.py`'s `build_spine()` does an
-> exact dict lookup against these keys and **silently skips any speaker that
-> doesn't match** — a mismatch can yield a 0-clip FCPXML. Read the distinct
-> `speaker` values from `tagged-quotes-v[N].json` first, then map each to its
-> source FCPXML; if a transcript speaker has no matching source file, flag it
-> explicitly rather than emitting a name the spine builder can't resolve.
-> *(A fuzzy-resolution fallback in `build_fcpxml.py` is a parked Phase 3 code
-> follow-up; until it lands, exact-match is the contract.)*
+> `Jana Stern` / `Mike Stern`). The lookup is tolerant but not psychic:
+> `build_spine()` canonicalizes case and punctuation before matching
+> (`_canonical_speaker` — "Dr. Haas" matches "Dr Haas"), and
+> `find_speaker_fcpxml()` falls back from exact filename to case-insensitive
+> stem to first/last-name substring matching, failing loudly with the list
+> of candidates when the substring fallback is ambiguous. None of that
+> rescues a genuinely different name: a speaker key that doesn't resolve
+> against the timeline names means zero clips for that speaker, which
+> `build_fcpxml.py` now fails on with a non-zero exit (unless
+> `--allow-partial`). Read the distinct `speaker` values from
+> `tagged-quotes-v[N].json` first, then map each to its source FCPXML; if a
+> transcript speaker has no matching source file, flag it explicitly rather
+> than emitting a name the spine builder can't resolve. The contract stands:
+> params speaker keys must match the Synthesis `speaker` field.
 
-> **OPEN ISSUE — Parser format mismatch (v4.0 carry-over).**
-> The human-readable per-speaker format below (`### [Speaker Name]` sections
-> with bullets) is NOT the format that `scripts/build_fcpxml.py`'s
-> `parse_params_md` currently parses. The parser expects flat top-level
-> sections (`## Media Ref IDs`, `## Angle IDs`, etc.).
+> **Parser format (resolved in v5.10 — one canonical format).**
+> `scripts/build_fcpxml.py`'s `parse_params_md` reads the flat top-level
+> sections in the template below, and ONLY those — emit exactly this
+> format, once, with no redundant duplicate blocks:
 >
-> **For v5.0 we keep BOTH formats** in the same handoff document — the
-> parser-expected top-level sections so `build_fcpxml.py` works as it does
-> today, plus per-interview detail sections below for human reading and for
-> the FCPXML Agent's branching logic.
+> - `## Clip Types` — a markdown table; the parser locates the speaker
+>   column (any header containing "speaker"/"interview"/"name") and the
+>   `clip_type` column, and accepts `multicam` / `single_clip` (or
+>   `single-clip`). If the section is omitted, speakers under Media Ref IDs
+>   default to multicam and speakers under Asset Ref IDs to single_clip.
+> - `## Media Ref IDs` and `## Angle IDs` — `- Speaker: value` list items;
+>   required for every multicam speaker.
+> - `## Asset Ref IDs` and `## Asset Names` — `- Speaker: value` list
+>   items; required for every single_clip speaker.
+> - `## Reference FCPXML`, `## Library Location`, `## Event Name`,
+>   `## Event UID`, `## Format Reference` — single scalar values.
+>   `_resolve_reference_file` accepts a bare `.fcpxml` name, a `.fcpxmld`
+>   package path, or a `.fcpxmld/Info.fcpxml` path and resolves all three
+>   to the extracted `.fcpxml` filename (the old basename-stripping bug is
+>   fixed).
 >
-> **Long-term direction.** The parser should evolve to read per-clip_type
-> sections at top level — e.g., a `## Clip Types` block listing each
-> interview's `clip_type`, then per-clip_type sections (`## Multicam
-> Interviews`, `## Single-Clip Interviews`). The current top-level block
-> assumes multicam everywhere and breaks for single-clip mixed projects.
->
-> **This is a Phase 3 follow-up code change to `scripts/build_fcpxml.py`.**
-> Do not modify the script in this SKILL pass; flag the change for Jeff in
-> the handoff document and the FCPXML Agent's failure path.
+> Section headings are matched by case-insensitive substring, so keep the
+> template's heading order — in particular `## Reference FCPXML` before
+> `## Format Reference`, and `## Event Name` before `## Event UID` — so
+> the generic fallback matches ("reference", "event") bind to the right
+> sections. The parser raises a specific error for any missing required
+> section or any speaker missing its per-clip_type values, so a malformed
+> handoff fails fast rather than generating a broken FCPXML.
 
 ### Handoff document format
 
@@ -301,11 +315,11 @@ run is v1; later runs increment). Never overwrite an existing version.
 - Alice Mupenzi: [tele angleID]
 - Blaine Joseph: [tele angleID]
 
-## Asset Ref IDs (single_clip interviews only — parser-consumed once parser is updated)
+## Asset Ref IDs (single_clip interviews only — parser-consumed)
 
 - Ben: r3
 
-## Asset Names (single_clip interviews only — parser-consumed once parser is updated)
+## Asset Names (single_clip interviews only — parser-consumed)
 
 - Ben: Ben_captioned_interview
 
@@ -363,42 +377,19 @@ r1
 
 ---
 
-## Per-interview details (human-readable)
-
-### Alice Mupenzi (multicam)
-- Source: `XML/exports/Alice_Mupenzi.fcpxml`
-- clip_type: multicam
-- Media ref ID: r2
-- Tele (zoom) angleID: [value]
-- Wide angleID: [value]
-- Format ref: r1
-
-### Blaine Joseph (multicam)
-- Source: `XML/exports/Blaine_Joseph.fcpxml`
-- clip_type: multicam
-- Media ref ID: r5
-- Tele (zoom) angleID: [value]
-- Wide angleID: [value]
-- Format ref: r1
-
-### Ben (single_clip)
-- Source: `XML/exports/Ben_captioned_interview.fcpxml`
-- clip_type: single_clip
-- Asset ref ID: r3
-- Asset name: Ben_captioned_interview
-- Format ref: r1
-- Captions: present as direct children of `<asset-clip>`
-- tcFormat: NDF (or DF, whichever the asset-clip carries)
-- audioRole: dialogue (or whichever the asset-clip carries)
-
----
-
 ## Notes
 
 - Angle naming convention (multicam): confirm that `name="zoom"` (tele/tight)
   is the default selected angle. The canonical "Angle IDs" section above uses
   the tele angleID for each multicam speaker. See "Identifying tele vs wide"
   in Phase 1 for the camera-file-code naming pattern observed on Nanos.
+- Wide angleIDs (not parser-consumed — record here so angle swaps in FCP
+  are easy): `Alice Mupenzi: [value]`, `Blaine Joseph: [value]`. Any other
+  per-speaker caveats (tcFormat/audioRole oddities, source-path quirks)
+  also belong in this Notes section; the parser ignores unknown content
+  here, so it is the safe place for human-facing detail. Do NOT add a
+  second per-speaker parameter block in another format — the top-level
+  sections above are the single canonical format.
 - Single-clip interviews require the FCPXML Agent's single_clip code path
   (Lesson 10, v5.0). Captions match against captions that are direct children
   of `<asset-clip>` rather than nested under multicam.
@@ -416,39 +407,24 @@ r1
   bare `.fcpxml` files, include an explicit flag in this handoff alerting
   the FCPXML Agent to run Phase 0 (`extract_fcpxml.py`) before attempting
   to read source files. `build_fcpxml.py`'s `find_speaker_fcpxml()` only
-  matches `*.fcpxml`, not `*.fcpxmld`, and will silently find no files if
-  extraction hasn't run. Add the flag as the first bullet under "Notes" in
-  the handoff:
+  matches `*.fcpxml`, not `*.fcpxmld` — if extraction hasn't run it errors
+  out (FileNotFoundError listing what it looked for) and the run dies at
+  the source-lookup stage. Add the flag as the first bullet under "Notes"
+  in the handoff:
 
       - **`.fcpxmld` packages detected at [path].** FCPXML Agent: run
         Phase 0 (`extract_fcpxml.py [path]`) before Phase 1. The Params
         Agent has parsed `Info.fcpxml` directly from inside each package
         for its own work, but downstream agents need extracted files.
 
----
-
-## Phase 3 follow-up flag (code change, out of scope for this SKILL)
-
-`scripts/build_fcpxml.py`'s `parse_params_md` currently parses only the flat
-top-level sections (`## Media Ref IDs`, `## Angle IDs`, etc.) and assumes all
-interviews are multicam. It should be updated to:
-
-1. Read the new `## Clip Types` block to learn each interview's clip_type.
-2. Branch: for multicam interviews, consume `## Media Ref IDs` and
-   `## Angle IDs` as today. For single_clip interviews, consume new
-   `## Asset Ref IDs` and `## Asset Names` sections.
-3. Pass the per-interview clip_type through to `generate_fcpxml.py` so the
-   spine generation can branch per-interview.
-
-Until that update ships, the FCPXML Agent must apply manual workarounds for
-single-clip interviews (see `SKILL-fcpxml.md`).
 ```
 
-The top-level sections are consumed by `scripts/build_fcpxml.py` today. The
-new `## Clip Types` section and the single_clip top-level sections are consumed
-by the FCPXML Agent directly (read this SKILL output as markdown) until the
-parser update ships. The per-interview details block is for humans and for the
-FCPXML Agent's branching logic.
+All top-level sections above are consumed by `scripts/build_fcpxml.py`'s
+`parse_params_md` (resolved in v5.10): `## Clip Types` drives per-interview
+branching, the multicam sections feed `<mc-clip>` generation, the
+single_clip sections feed `<asset-clip>` generation, and the clip_type map
+is passed through to `generate_fcpxml.py`'s spine builder. The Notes
+section is for humans; the parser ignores it.
 
 ---
 
@@ -462,7 +438,11 @@ Before saving the handoff, verify:
    Types table with one of `multicam` or `single_clip`.
 
 2. **All multicam interviews have media ref ID and both angleIDs.** No empty
-   values. No duplicate media ref IDs across speakers.
+   values. No duplicate media ref IDs across speakers. (NOTE: the
+   no-duplicates rule is under review — per-speaker FCP exports routinely
+   share ref IDs like r2/r3, and `generate_fcpxml.py`'s
+   `merge_speaker_resources` handles collisions by remapping; pending
+   decision Q9 in `skill-review-2026-06-10.md`.)
 
 3. **All single_clip interviews have asset ref ID and asset name.** No empty
    values. No duplicate asset ref IDs across speakers.
@@ -526,5 +506,11 @@ Cowork; the agent completes in a few minutes for typical projects.
 
 ---
 
-*FCPXML Params Agent — documentary-junior-editor v5.7*
+*FCPXML Params Agent — documentary-junior-editor v5.10 (June 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
+*The v4-era parser-format mismatch is resolved — `parse_params_md` consumes
+the canonical handoff format above (Clip Types table + per-clip_type
+sections + `_resolve_reference_file` path handling). Open items touching
+this agent: Q9 duplicate-media-ref-ID rule (under review, see Completeness
+Check) and frame-rate/tcFormat sourcing from the source format (tracked in
+`skill-review-2026-06-10.md`).*
