@@ -185,6 +185,30 @@ Before starting, the agent reads `handoffs/pipeline-state.json` (or
 `handoffs/[project-slug]/pipeline-state.json` for multi-project SSDs) to detect
 upstream changes since this agent last ran. See "Stale-state handling" below.
 
+### Directory resolution
+
+A single SSD can hold more than one project's handoff set. Resolve the
+handoff directory **once, at session start**, and use it consistently for
+ALL reads and writes in this session — inputs, emitted JSON and handoff
+docs, the built viewer HTML, and `pipeline-state.json` updates alike:
+
+1. **If the kickoff prompt names a project slug or handoff path**, use it
+   directly (e.g., `crisis-nursery-testimonial` →
+   `handoffs/crisis-nursery-testimonial/`).
+2. **If the kickoff prompt does not specify**, glob
+   `handoffs/*/tagged-quotes-v*.json`. If exactly one slugged subfolder
+   matches, use it. If multiple match, stop and ask Jeff which project.
+   Do not guess.
+3. **Legacy fallback:** single-project folders with no slugged subfolder
+   use the flat `handoffs/` layout as the handoff directory.
+
+Throughout the rest of this skill, paths written as `handoffs/...` mean
+**the resolved handoff directory** — substitute
+`handoffs/[project-slug]/...` when working on a multi-project SSD. Never
+read from one form and write to the other.
+
+### Input files
+
 After the state check, confirm the following inputs exist (read the
 highest-numbered version of each, e.g. `tagged-quotes-v2.json` if v2 exists):
 
@@ -334,8 +358,11 @@ A timeline entry has:
   mid-segment cuts" under Per-segment trims.
 - `_subLabel` — `"a"`, `"b"`, etc. when this entry is one of a split set
   from a single source quote; `null` otherwise.
-- `runtime_recommendation` — `must-keep` or `probable-keep` (two-tier
-  system; see "Runtime recommendations on every entry" in Phase 3).
+- `membership` — `"tight"` or `"loose"` (see "Membership on every entry"
+  in Phase 3). The retired `runtime_recommendation` field is dropped at
+  build time — `build_quotes_viewer.py` migrates legacy values
+  (must-keep / tight-candidate → tight, everything else → loose;
+  non-spoken structural entries are always tight).
 - `notes` — optional editorial notes
 
 **Crucially:** a timeline entry is a **contiguous-in-source-order play of
@@ -380,9 +407,9 @@ Each segment reference inside a timeline entry can carry optional trims:
 
 ```json
 {
-  "entry_id": "e_001",
+  "entry_id": "23",
   "source_quote_id": "23",
-  "runtime_recommendation": "must-keep",
+  "membership": "tight",
   "segments": [
     {"source_segment_idx": 0,
      "head_trim_words": 3,
@@ -432,9 +459,9 @@ punch, then context, drop segment 2 entirely):
 
 ```json
 [
-  {"entry_id": "e_001", "source_quote_id": "23",
+  {"entry_id": "23a", "source_quote_id": "23", "_subLabel": "a",
    "segments": [{"source_segment_idx": 3}]},
-  {"entry_id": "e_002", "source_quote_id": "23",
+  {"entry_id": "23b", "source_quote_id": "23", "_subLabel": "b",
    "segments": [{"source_segment_idx": 0},
                 {"source_segment_idx": 1}]}
 ]
@@ -450,24 +477,24 @@ The editor wants to interleave material from quote #21 and quote #14:
 
 ```json
 [
-  {"entry_id": "e_010", "source_quote_id": "21",
+  {"entry_id": "21a", "source_quote_id": "21", "_subLabel": "a",
    "segments": [{"source_segment_idx": 0},
                 {"source_segment_idx": 1}]},
-  {"entry_id": "e_011", "source_quote_id": "14",
+  {"entry_id": "14", "source_quote_id": "14",
    "segments": [{"source_segment_idx": 0},
                 {"source_segment_idx": 1},
                 {"source_segment_idx": 2}]},
-  {"entry_id": "e_012", "source_quote_id": "21",
+  {"entry_id": "21b", "source_quote_id": "21", "_subLabel": "b",
    "segments": [{"source_segment_idx": 3},
                 {"source_segment_idx": 4}]}
 ]
 ```
 
-This replaces the v3.x `#21a/#21b` split notation. **There is no separate
-"split" operation** in v5.0 — splitting is implicit in writing two entries
-that reference the same `source_quote_id`. Display labels (`#21a`, `#21b`)
-can be derived for the viewer if helpful, but they are not part of the data
-model.
+This replaces the v3.x split notation. **There is no separate "split"
+operation** — splitting is implicit in writing two entries that reference
+the same `source_quote_id`. The sub-letter lives in the data model: each
+entry of a split set takes an `entry_id` derived from the source quote num
+plus a letter (`"21a"`, `"21b"`) and carries the letter in `_subLabel`.
 
 ### Why this matters
 
@@ -514,6 +541,15 @@ forming your point of view. Each roadmap describes how a section should open,
 its emotional arc, which speakers should carry it, and what it needs to
 accomplish.
 
+### Session setup — ask Jeff to start the save helper
+
+As part of session setup, ask Jeff to start the viewer save helper —
+`python3 scripts/viewer_save_server.py`, run from the SSD project root — so
+viewer saves persist to disk even when the Cowork bash bridge is
+unavailable. If neither the Cowork tier nor the helper is running, viewer
+saves fall back to a browser download (see "Viewer persistence" in
+Phase 2).
+
 ---
 
 ## Phase 2: Generating the Live Artifact at Session Start
@@ -548,41 +584,71 @@ python3 scripts/build_quotes_viewer.py \
 The script auto-discovers `tagged-quotes-v*.json`, `trimmed-quotes-v*.json`,
 `pipeline-state.json`, and any `editing-versions/v*.json` files, migrates the
 v5.0 entries' segment-based trims to the viewer's character-range trim format,
-collapses the four-tier recommendation history (if present) to the canonical
-two-tier system (must-keep / probable-keep), and produces the HTML.
+migrates legacy recommendation tiers (if present) to the canonical
+`membership` model (must-keep / tight-candidate → tight, everything else →
+loose; non-spoken structural entries always tight), drops the
+retired `runtime_recommendation` legacy field, and produces the HTML.
 
 After the script runs, call `mcp__cowork__create_artifact` with the generated
 HTML to surface the viewer in Jeff's session.
 
-### Viewer capabilities (v5.0)
+### Viewer capabilities (v5.9)
 
-The viewer has three top-level views: **Edit** (the default, formerly Timeline),
-**Review** (selected quotes as continuous narrative), and **Quote Library**
-(all source + orphan quotes, raw material inventory).
+The viewer has two top-level views: **Edit** (the default — the timeline
+rendered as clean read-cards with per-card click-to-reveal editing; the old
+Review view is folded in here, so reading the cut as continuous narrative
+happens on this page) and **Quote Library** (all source + orphan quotes,
+raw material inventory).
 
-- **Edit view** uses v4.0.1-style quote-block cards: whole-quote display,
-  drag-and-drop reorder (initiated from the drag handle on the left edge,
-  not the card body), ↑/↓ move buttons, scissors split into sub-quotes
-  (`#5` → `#5a` + `#5b`), character-range trim editor (highlight text +
-  press Delete), clickable recommendation badge that toggles must-keep ↔
-  probable-keep, act-reassign dropdown, and a per-card Comment-on-this
-  button that focuses the Send-to-agent panel's commentary textarea.
-- **Rough/Tight sub-toggle** in the Edit view header filters by
-  recommendation tier. Rough = must-keep + probable-keep; Tight =
-  must-keep only. The Cut block also shows the active cut's entry count +
-  runtime and houses the Export button.
+- **Edit view** renders each timeline entry as a clean read-card; clicking
+  a card reveals edit-in-place controls (Open all / Collapse all flip every
+  card in the active window). Controls: drag-and-drop reorder — the whole
+  card is a drag source via pointer events, constrained to within an act
+  (cross-act moves use the act-reassign dropdown; ↑/↓ move buttons remain
+  as a fallback) — scissors split into sub-quotes (`#5` → `#5a` + `#5b`),
+  character-range trim editor (highlight text + press Delete), the
+  membership button (**Cut → Loose** on tight entries, **Add Back →
+  Tight** on loose entries), act-reassign dropdown, and a per-card
+  Comment-on-this button that focuses the Send-to-agent panel's
+  commentary textarea.
+- **Tight/Loose window toggle** in the Edit view header filters the
+  Timeline by `membership`. Loose = the full timeline (tight + loose
+  entries); Tight = membership-tight entries only. The window block also
+  shows the active window's entry count + runtime and houses the Export
+  button.
 - **Round dropdown** (top-left of header) loads versions baked into the
   HTML at build time. Includes a "+ Save current as new round" option
-  that writes a new `editing-versions/v[N].json` directly to disk via
-  `window.cowork.callMcpTool('mcp__workspace__bash', ...)`.
+  that writes a new `editing-versions/v[N].json` via the three-tier
+  `persistFile()` save path (see "Viewer persistence" below).
 - **Send-to-agent panel** docked bottom-right is a unified surface for
   pending-tweaks list + editorial commentary textarea + Send button.
   Sends a composed chat message (paste-into-chat pattern) including the
   ops list, optional commentary, full timeline JSON, and version stamp.
-- **Export** in the Edit view's Cut block is self-contained: it writes
-  the current working state directly to the round's JSON file via
-  `callMcpTool`, then invokes `build_fcpxml.py`. **Does not require Sync
-  first** — state alignment happens as part of Export.
+- **Export** in the Edit view's window block writes the selected window's
+  cut as JSON and copies a ready-to-paste FCPXML Agent launch prompt for
+  a new Cowork session — the viewer does **not** invoke `build_fcpxml.py`
+  itself. Tight-window exports write
+  `trimmed-quotes-v[N]-tight.json`; Loose-window (full-timeline) exports
+  write `trimmed-quotes-v[N].json` — separate filenames, so the two never
+  overwrite each other. **Does not require Sync first** — Export writes
+  the current working state directly.
+
+### Viewer persistence — persistFile()'s three tiers
+
+All viewer disk writes (Save-as-new-round, Export, the tweak log) go
+through `persistFile()`, which tries three writers, most robust first,
+and reports which one wrote:
+
+1. **Cowork** — `window.cowork.callMcpTool('mcp__workspace__bash', ...)`,
+   available when the viewer runs inside a Cowork artifact.
+2. **Save helper** — the local save server (`scripts/viewer_save_server.py`)
+   on `127.0.0.1:8765`. Jeff must start it manually — `python3
+   scripts/viewer_save_server.py`, run from the SSD project root — after
+   which the viewer writes files to the correct project-relative path
+   silently, even outside Cowork.
+3. **Browser download** — the never-lose-data fallback when neither writer
+   is available. (Best-effort writes like the tweak log skip this tier
+   rather than spam downloads.)
 
 When the agent references a specific entry or source quote in chat, the
 viewer auto-scrolls to it and renders a focus highlight via
@@ -599,12 +665,21 @@ live artifact is Jeff watching the cut take shape in real time.
 Specifically, update the artifact after:
 
 - Any change to the timeline (entry added, removed, reordered)
-- Any per-entry change (segments included/excluded, head/tail trims, runtime
-  recommendation)
+- Any per-entry change (segments included/excluded, head/tail trims,
+  membership)
 - Any selection change in the source pool
 - Any interstitial added, edited, or removed
 - Any title-card-as-shortener proposal accepted
 - Any context-beat suggestion logged
+
+**The two-writers rule — ask before rebuilding.** The viewer and the agent
+are two writers over the same state. Before rebuilding or replacing the
+artifact (any `update_artifact` that re-bakes the data block, or a
+`build_quotes_viewer.py` re-run), ask Jeff to either **Send or discard any
+pending in-viewer tweaks** — a rebuild clobbers unsynced viewer state.
+"The viewer is the source of truth" (above) applies to *synced* state; it
+does not protect mid-flight pending tweaks that haven't been Sent or saved
+yet.
 
 ### Viewer-to-agent communication: the Send-to-agent panel
 
@@ -613,10 +688,13 @@ Specifically, update the artifact after:
 messages into chat unilaterally. Instead, the viewer uses two distinct
 channels for talking back to the agent:
 
-- **Direct disk writes via `window.cowork.callMcpTool('mcp__workspace__bash', ...)`**
-  for state persistence: Save-as-new-round writes a new
-  `editing-versions/v[N].json`, Export overwrites the current round's
-  JSON and invokes `build_fcpxml.py`. These do not require chat
+- **Direct file writes via the three-tier `persistFile()` path** (Cowork
+  bash → localhost save helper → browser download; see "Viewer
+  persistence" above) for state persistence: Save-as-new-round writes a
+  new `editing-versions/v[N].json`; Export writes the selected window's
+  `trimmed-quotes-v[N].json` (Loose) or `trimmed-quotes-v[N]-tight.json`
+  (Tight) and copies a paste-into-new-session FCPXML Agent launch prompt
+  — it does not invoke `build_fcpxml.py`. These do not require a chat
   round-trip.
 - **The Send-to-agent panel (clipboard + paste)** for editorial
   communication: pending tweaks list + optional commentary textarea +
@@ -648,14 +726,16 @@ which quote is being discussed.
 ### Saving the final-state HTML viewer
 
 End-of-session, save the final state of the viewer as
-`handoffs/[project-slug]_quotes_view.html` (existing naming convention,
-unchanged in v5.0 — the file is a snapshot, not a versioned output). This
-file is the offline-accessible record of the latest round; Jeff can open it
-in any browser at any time without a Cowork session.
+`[project-slug]_quotes_view.html` in the resolved handoff directory (the
+file is a snapshot, not a versioned output). This file is the
+offline-accessible record of the latest round; Jeff can open it in any
+browser at any time without a Cowork session.
 
-The HTML build process (React 18 + Babel + Tailwind CDNs, console-warning
-suppression, etc.) is unchanged from v4.0.1. See `scripts/quotes_viewer_template.jsx`
-header comment for current build details.
+The HTML build is fully offline and self-contained: the vendored React 18 +
+ReactDOM UMD bundles are inlined and the JSX is compiled to plain JS at
+build time (Node + vendored `@babel/standalone` in `scripts/vendor/`). No
+CDN fetches, no runtime Babel, Tailwind-free. See the
+`scripts/build_quotes_viewer.py` header comment for current build details.
 
 ---
 
@@ -703,44 +783,48 @@ selects that tell a tight story. The trim is part of why you select a quote
 not the full 90-second passage.
 
 In segment terms: a "first-pass entry" is a `(source_quote_id, segments[])`
-proposal, with optional head/tail trims, plus a `runtime_recommendation`.
+proposal, with optional head/tail trims, plus a membership call (`tight`
+or `loose`).
 Don't propose entries that include every segment of a source quote unless
 every segment really earns its place.
 
-### Runtime recommendations on every entry
+### Membership on every entry
 
-Every timeline entry gets a `runtime_recommendation` field, set when the
-entry is first proposed and revisable across rounds. The system is
-**two-tier**:
+Every timeline entry gets a `membership` field, set when the entry is
+first proposed and revisable across rounds. The system is **two-stratum**:
 
-- `must-keep` — the cut breaks without this beat; non-negotiable. Appears in
-  both Rough and Tight cuts; exported to FCPXML in both modes.
-- `probable-keep` — strongly believed in, but expendable under pressure.
-  Appears in Rough only; falls out of the Tight cut.
+- `tight` — the cut breaks without this beat; non-negotiable. Appears in
+  both the Loose and Tight windows; included in both windows' exports.
+- `loose` — strongly believed in, but expendable under pressure. Appears
+  in the Loose window only; falls out of the Tight window.
 
-The viewer's Cut sub-toggle in the Edit view header switches between
-**Rough** (must-keep + probable-keep, the agent's wider editorial selection)
-and **Tight** (must-keep only, closest to final). The toggle is a view
-filter *and* an export filter — the Export button in the Cut block invokes
-`build_fcpxml.py` against whichever cut is currently selected, so the
-exported FCPXML matches what's on screen.
+Non-spoken structural entries (title cards, interstitials, context beats)
+are always `tight` — the viewer never filters them out of the Tight window.
+
+The viewer's window toggle in the Edit view header switches between
+**Loose** (the full timeline, tight + loose — the agent's wider editorial
+selection) and **Tight** (membership tight only, closest to final). The
+toggle is a view filter *and* an export filter — the Export button writes
+whichever window is currently selected (Tight-window exports to
+`trimmed-quotes-v[N]-tight.json`, Loose-window to
+`trimmed-quotes-v[N].json`) and copies the FCPXML Agent launch prompt, so
+the exported cut matches what's on screen.
 
 Entries the agent considered but doesn't recommend including should not be
 added to the timeline at all — leave them as orphans in the source pool
 where the editor can still inspect and rescue them. A timeline entry is a
-commitment; if you're considering cutting it, that's what `probable-keep`
-is for.
+commitment; if you're considering cutting it, that's what `loose`
+membership is for.
 
-The recommendations are the agent's editorial point of view, surfaced for
-the Discussion. They are not commitments — every recommendation can move
-across rounds, and the editor changes them directly in the viewer by
-clicking the recommendation badge on each card.
+The membership calls are the agent's editorial point of view, surfaced for
+the Discussion. They are not commitments — every call can move across
+rounds, and the editor changes them directly in the viewer via the
+membership button on each card (**Cut → Loose** / **Add Back → Tight**).
 
-The total runtime of the rough cut (must-keep + probable-keep) should
-target **2× the target runtime**. That gives the Reduction phase real room
-to land at target by demoting probable-keep entries that don't earn their
-keep into the dropped pool. The tight cut (must-keep only) is what
-ultimately ships.
+The total runtime of the rough cut (the full timeline — tight + loose)
+should target **2× the target runtime**. That gives the Reduction phase
+real room to land at target by cutting entries that don't earn their keep
+to Loose. The tight cut (membership tight only) is what ultimately ships.
 
 ### Selection Principles
 
@@ -925,10 +1009,10 @@ an estimated runtime. It does not consume source segments. Format:
 
 ```json
 {
-  "entry_id": "e_007",
+  "entry_id": "T1",
   "type": "title_card",
   "text": "Twenty-two years at Mayo Clinic.",
-  "runtime_recommendation": "probable-keep",
+  "membership": "tight",
   "estimated_seconds": 2
 }
 ```
@@ -966,12 +1050,12 @@ and as a placeholder entry in the timeline.
 
 ```json
 {
-  "entry_id": "e_014",
+  "entry_id": "T2",
   "type": "context_beat",
   "intent": "Stat about how many U.S. families in similar circumstances are
              unhoused — would raise the stakes before Act 2.",
   "research_needed": true,
-  "runtime_recommendation": "probable-keep",
+  "membership": "tight",
   "estimated_seconds": 4
 }
 ```
@@ -981,7 +1065,7 @@ and as a placeholder entry in the timeline.
 ```markdown
 ## Suggested context beats
 
-- **Act 1, after entry e_004:** A stat about how many U.S. families face
+- **Act 1, after entry 4:** A stat about how many U.S. families face
   similar circumstances would raise the stakes before the protagonist's
   experience lands. (research needed)
 - **Act 2, transition into closing:** A date anchor for when the program
@@ -1065,7 +1149,7 @@ tell Jeff rather than silently departing from the plan.
 For each act:
 
 1. State which entries you recommend, in what order, with their segment
-   selections, trims, and runtime recommendations
+   selections, trims, and membership calls
 2. Give a brief rationale for each entry — including why the included
    segments are the part that earns its place
 3. Flag entries you considered but did not include, and why
@@ -1083,7 +1167,7 @@ For each act:
    passed Rule 2. Coherence is the editor's to confirm in the viewer; it is
    the agent's to get right before the proposal lands.
 6. Apply the proposed selections, ordering, segments, trims, and
-   recommendations to the live viewer via `update_artifact`
+   memberships to the live viewer via `update_artifact`
 7. Inline the full text of any newly-introduced source quote on first
    reference; subsequent references can use shorthand
 8. Ask Jeff to review the viewer before moving to the next act
@@ -1100,18 +1184,19 @@ out?"
 
 The Discussion is the conversation that sits between the rough cut and any
 trimming toward target. It is a real phase, not an afterthought. Run it
-explicitly. Use Review mode in the viewer (continuous-narrative reading
-view) as the primary surface — the question is "does this tell the
-story?", not "which words come out?"
+explicitly. Use the Edit view's read-cards as the primary surface — cards
+default to a clean continuous read (Collapse all for a pure reading pass;
+editing controls stay hidden until a card is clicked) — the question is
+"does this tell the story?", not "which words come out?"
 
 Jeff will surface things the rough cut revealed — a beat he didn't know he
 wanted, a redundancy he can now see, an ordering change that opens a cut
-elsewhere, a probable-keep that should be promoted to must-keep. Capture
+elsewhere, a loose entry that should be added back to tight. Capture
 decisions as they land; don't accumulate a backlog.
 
-The Discussion may also surface that your runtime recommendations are
-miscalibrated. If Jeff disagrees with several `must-keep` calls, that's a
-signal — re-examine your reasoning, update the recommendations, and apply
+The Discussion may also surface that your membership calls are
+miscalibrated. If Jeff disagrees with several `tight` calls, that's a
+signal — re-examine your reasoning, update the memberships, and apply
 the change to the viewer immediately.
 
 ---
@@ -1119,29 +1204,36 @@ the change to the viewer immediately.
 ## Phase 5: Reduction
 
 Once Discussion has produced decisions, Reduction applies them.
-**Reduction is primarily about tightening recommendations to land the Tight
-Cut at target runtime** — not about deciding what comes out of the timeline
-entirely. The question shifts from "does this tell the story?" to "what's
-the tightest version of this story?" The Edit view in the viewer (with the
-Cut sub-toggle flipped to Tight) is the primary surface for this phase.
+**Reduction is primarily about tightening membership to land the Tight
+window at target runtime** — not about deciding what comes out of the
+timeline entirely. The question shifts from "does this tell the story?" to
+"what's the tightest version of this story?" The Edit view in the viewer
+(with the window toggle flipped to Tight) is the primary surface for this
+phase.
 
-**The Reduction mechanism is recommendation demotion, not entry drops.**
-For each entry that's currently `must-keep`, ask: does the cut break
-without this beat? If no, click the recommendation badge to demote it to
-`probable-keep`. The Tight cut's runtime tally ticks down. The entry stays
-in the timeline JSON, visible in the Rough view, available for rescue if
-the next round's discussion changes your mind. Demote-not-drop preserves
-the editorial signal across rounds.
+**The Reduction mechanism is membership demotion (Cut → Loose), not entry
+drops.** For each entry that's currently `tight`, ask: does the cut break
+without this beat? If no, click **Cut → Loose** to set its membership to
+loose. The Tight window's runtime tally ticks down. The entry stays in the
+timeline JSON, visible in the Loose window, available for rescue (**Add
+Back → Tight**) if the next round's discussion changes your mind.
+Demote-not-drop preserves the editorial signal across rounds.
 
-Use Drop entry only when the entry truly shouldn't have been pulled into
-the timeline at all — wrong speaker, wrong material, off-topic. For "this
-beat is expendable for runtime," demote to `probable-keep` instead.
+Three dispositions, in membership terms — keep them distinct:
+
+- **Never-add** — material you considered but don't recommend. Leave it as
+  an orphan in the Quote Library; it never enters the timeline.
+- **Demote (Cut → Loose)** — the default for "this beat is expendable for
+  runtime." Set membership to loose; the entry stays in play.
+- **Drop entry** — remove from the timeline entirely. Rare. Use only when
+  the entry truly shouldn't have been pulled in at all — wrong speaker,
+  wrong material, off-topic.
 
 Trimming, splitting into sub-quotes, and entry reordering still happen
 during Reduction alongside the demotion work — they're complementary, not
 sequential. Trimming a quote may reveal that the surrounding entries don't
-need it as much; splitting an entry into 1a/1b may let one half land as
-must-keep while the other becomes probable-keep.
+need it as much; splitting an entry into 1a/1b may let one half stay
+tight while the other goes loose.
 
 ### When Jeff is satisfied with a section's selection, begin trimming it
 
@@ -1171,19 +1263,19 @@ quote. Sometimes the full quote is already tight and needs nothing removed.
 
 **What you can do at the timeline level:**
 
-- **Reorder entries** anywhere in the timeline (within or across acts)
-  via drag-and-drop on the card's left-edge handle, or ↑/↓ buttons within
-  an act
+- **Reorder entries** within an act via drag-and-drop — the whole card is
+  a drag source (pointer events) — or the ↑/↓ buttons; cross-act moves
+  use the act-reassign dropdown
 - **Split an entry into sub-quotes** (`#5` → `#5a` + `#5b`) via the
   scissors button — place markers between words to define the split, and
   the entry becomes multiple independently-positioned sub-entries
 - **Add new entries** by clicking "Add to timeline" on a Quote Library
   card
 - **Reassign an entry's act** via the dropdown on the act tag
-- **Toggle recommendation** (must-keep ↔ probable-keep) via clicking the
-  recommendation badge on each card — the primary Reduction mechanism
+- **Set membership** (tight ↔ loose) via the **Cut → Loose** / **Add
+  Back → Tight** button on each card — the primary Reduction mechanism
 - **Drop entries** that shouldn't have been pulled in at all (use
-  recommendation demotion for "expendable for runtime" instead)
+  Cut → Loose for "expendable for runtime" instead)
 
 **What you can never do:**
 
@@ -1194,6 +1286,16 @@ quote. Sometimes the full quote is already tight and needs nothing removed.
   contiguous-in-source-order by definition)
 - Mix segments from multiple source quotes into a single timeline entry
 - Paraphrase even a single phrase
+
+**One documented exception to the contiguous-trim constraint:** the
+viewer's character-range editor *can* cut words from the middle of a
+segment. Those mid-segment cuts are accepted behavior, stored as
+authoritative `_editCuts` on the entry (see "Known limitation —
+mid-segment cuts" in the Data Model). The `segments[]` + word-trim model
+only approximates them with the nearest contiguous span, so the exported
+FCPXML may play slightly wider at those points and the editor refines the
+in/out in Final Cut Pro. Everything in the list above remains absolute —
+no exception ever adds, changes, or reorders words.
 
 **Trimming principles:**
 
@@ -1260,7 +1362,7 @@ quote. Sometimes the full quote is already tight and needs nothing removed.
 
 Present recommended trims section by section:
 
-**Entry e_004 — quote #23 — Speaker Name**
+**Entry 23 — quote #23 — Speaker Name**
 Source segments: [0, 1, 2, 3]
 Recommended segments for entry: [0, 1, 3] (drop segment 2)
 Trims: segment 0 head_trim_words=3, segment 3 tail_trim_words=2
@@ -1268,8 +1370,8 @@ Resulting verbatim text:
 "a patient first comes for a consultation, I want to understand what they
 actually want. I never have."
 Reason: drops segment 2 ("Most surgeons skip that step.") — already covered
-by entry e_007. Head-trim on segment 0 removes throat-clearing.
-Runtime recommendation: must-keep (lands the philosophy in eight seconds)
+by entry 31. Head-trim on segment 0 removes throat-clearing.
+Membership: tight (lands the philosophy in eight seconds)
 
 For entries where you recommend no trim, say so explicitly.
 
@@ -1311,8 +1413,8 @@ When the selection changes:
 - A previously unincluded source quote is pulled in to fill a gap revealed
   by trimming
 - An entry is restructured into multiple entries to enable an intercut
-- A `probable-keep` recommendation is upgraded to `must-keep` after a beat
-  it set up was deselected, leaving it standing alone with new weight
+- A `loose` entry is added back to `tight` after a beat it set up was
+  deselected, leaving it standing alone with new weight
 
 Accommodate these changes fluidly. The full quote pool is always available
 in the artifact. Jeff can select, deselect, restructure, and reorder at any
@@ -1324,13 +1426,18 @@ point.
 
 Each completed Rough Cut → Discussion → Reduction loop ends with an emit:
 
-1. **Versioned timeline:** save as `handoffs/trimmed-quotes-v[N].json`
-   (where N is the next unused version — never overwrite an existing
-   version).
-2. **Versioned handoff doc:** save as `handoffs/edit-handoff-v[N].md`.
+1. **Versioned timeline:** save as `trimmed-quotes-v[N].json` in the
+   resolved handoff directory (where N is the next unused version — never
+   overwrite an existing version). This is the Loose-window / full-timeline
+   file and the canonical round emit. If the round also produced a
+   Tight-window export from the viewer, that file is
+   `trimmed-quotes-v[N]-tight.json` — separate filenames; the two never
+   overwrite each other.
+2. **Versioned handoff doc:** save as `edit-handoff-v[N].md` in the
+   resolved handoff directory.
 3. **Final-state HTML viewer for this round:** save as
-   `handoffs/[project-slug]_quotes_view.html` (overwrite is fine — the HTML
-   is a snapshot, not a versioned record).
+   `[project-slug]_quotes_view.html` in the resolved handoff directory
+   (overwrite is fine — the HTML is a snapshot, not a versioned record).
 4. **Update `pipeline-state.json`** — increment Edit Agent's
    `current_version` to N, record `based_on` (which Synthesis and
    Creative-Context versions were consumed), set `last_run`.
@@ -1478,7 +1585,7 @@ checking.
 
 When Jeff confirms a round is complete and verification passes, save:
 
-#### 1. `handoffs/edit-handoff-v[N].md`
+#### 1. `edit-handoff-v[N].md` (in the resolved handoff directory)
 
 A structured summary for the FCPXML Agent containing:
 
@@ -1490,8 +1597,9 @@ A structured summary for the FCPXML Agent containing:
   removed, restructured, recommendations updated, Discussion outcomes
   applied
 - Key files (paper cut JSON path, source FCPXMLs, FCPXML params, viewer
-  artifacts, the HTML viewer path: `handoffs/[project-slug]_quotes_view.html`)
-- Notes for the FCPXML Agent (e.g., "Entries e_011 and e_013 are an
+  artifacts, the HTML viewer path:
+  `[resolved handoff dir]/[project-slug]_quotes_view.html`)
+- Notes for the FCPXML Agent (e.g., "Entries 21a and 21b are an
   intercut — quote #21 wraps around quote #14. Generate clips per source
   segment per entry, in the order specified in `trimmed-quotes-v[N].json`."
   The Edit Agent's role is to communicate intent so the FCPXML Agent
@@ -1501,8 +1609,11 @@ A structured summary for the FCPXML Agent containing:
 - Title card and interstitial counts and positions
 - **Suggested context beats** — the section described in Phase 3 above,
   with location, intent, and `(research needed)` tag
-- **Viewer template gap notes** — what the legacy viewer can and cannot
-  show until the Phase 3 follow-up template ships
+- **Viewer fidelity notes** — any points where the viewer's display and
+  the generated FCPXML will differ, chiefly entries carrying mid-segment
+  `_editCuts` (the FCPXML approximates those with the nearest contiguous
+  span and may play slightly wider; list them so the editor knows where
+  to refine the in/out in Final Cut Pro)
 
 End with the standard handoff footer:
 
@@ -1527,14 +1638,17 @@ End with the standard handoff footer:
 
 > Read `documentary-junior-editor/SKILL-fcpxml.md` and run the FCPXML Agent
 > for this project. The Edit Agent has emitted round [N] with timeline
-> `handoffs/trimmed-quotes-v[N].json` and handoff
-> `handoffs/edit-handoff-v[N].md`. Generate
+> `handoffs/[project-slug]/trimmed-quotes-v[N].json` and handoff
+> `handoffs/[project-slug]/edit-handoff-v[N].md` (flat `handoffs/` on
+> single-project folders). Generate
 > `[ProjectName]_rough_cut_v[N].fcpxml` and report back when complete.
 ```
 
-#### 2. `handoffs/trimmed-quotes-v[N].json`
+#### 2. `trimmed-quotes-v[N].json` (in the resolved handoff directory)
 
-The finalized timeline for this round:
+The finalized timeline for this round (the Loose-window / full-timeline
+file; a viewer Tight-window export of the same round is the separate
+`trimmed-quotes-v[N]-tight.json`):
 
 ```json
 {
@@ -1545,11 +1659,11 @@ The finalized timeline for this round:
   "estimated_runtime_seconds": 320,
   "entries": [
     {
-      "entry_id": "e_001",
+      "entry_id": "23",
       "source_quote_id": "23",
       "speaker": "Full Name",
       "part": "Act label",
-      "runtime_recommendation": "must-keep",
+      "membership": "tight",
       "segments": [
         {"source_segment_idx": 0, "head_trim_words": 3},
         {"source_segment_idx": 1},
@@ -1558,51 +1672,53 @@ The finalized timeline for this round:
       "notes": ""
     },
     {
-      "entry_id": "e_002",
+      "entry_id": "T1",
       "type": "title_card",
       "text": "Twenty-two years at Mayo Clinic.",
-      "runtime_recommendation": "probable-keep",
+      "membership": "tight",
       "estimated_seconds": 2
     },
     {
-      "entry_id": "e_003",
+      "entry_id": "T2",
       "type": "interstitial",
       "text": "The program launched in 2018 with thirty families.",
-      "runtime_recommendation": "must-keep",
+      "membership": "tight",
       "estimated_seconds": 5
     },
     {
-      "entry_id": "e_004",
+      "entry_id": "T3",
       "type": "context_beat",
       "intent": "A stat about how many families face similar circumstances —
                  would raise the stakes before the protagonist's experience.",
       "research_needed": true,
-      "runtime_recommendation": "probable-keep",
+      "membership": "tight",
       "estimated_seconds": 4
     },
     {
-      "entry_id": "e_010",
+      "entry_id": "21a",
       "source_quote_id": "21",
+      "_subLabel": "a",
       "speaker": "Other Name",
       "part": "Act 2 label",
-      "runtime_recommendation": "must-keep",
+      "membership": "tight",
       "segments": [{"source_segment_idx": 0}, {"source_segment_idx": 1}]
     },
     {
-      "entry_id": "e_011",
+      "entry_id": "14",
       "source_quote_id": "14",
       "speaker": "Third Name",
       "part": "Act 2 label",
-      "runtime_recommendation": "must-keep",
+      "membership": "tight",
       "segments": [{"source_segment_idx": 0}, {"source_segment_idx": 1},
                    {"source_segment_idx": 2}]
     },
     {
-      "entry_id": "e_012",
+      "entry_id": "21b",
       "source_quote_id": "21",
+      "_subLabel": "b",
       "speaker": "Other Name",
       "part": "Act 2 label",
-      "runtime_recommendation": "probable-keep",
+      "membership": "loose",
       "segments": [{"source_segment_idx": 3}, {"source_segment_idx": 4}]
     }
   ]
@@ -1612,7 +1728,11 @@ The finalized timeline for this round:
 Notes on the schema:
 
 - `entries[]` are in playback order. `entry_id` is unique within this
-  timeline.
+  timeline, derived from the source quote num (`"23"`; `"21a"` / `"21b"`
+  with `_subLabel` for split sets). Non-spoken entries use a `T`-prefixed
+  id. The legacy `e_NNN` namespace is retired.
+- `membership` is `"tight"` or `"loose"`. Non-spoken structural entries
+  (title cards, interstitials, context beats) are always `"tight"`.
 - An entry with `source_quote_id` is a spoken-quote entry. It must have
   `segments[]`. The FCPXML Agent generates one clip per segment per entry.
 - An entry with `type: "title_card"` has `text` and `estimated_seconds`,
@@ -1622,7 +1742,7 @@ Notes on the schema:
 - An entry with `type: "context_beat"` is a placeholder for content Jeff
   will research; the FCPXML Agent leaves a gap of `estimated_seconds` and
   notes the gap in the FCPXML.
-- Entries e_010, e_011, e_012 are an intercut — quote #21 wraps around
+- Entries 21a, 14, 21b are an intercut — quote #21 wraps around
   quote #14. The FCPXML Agent generates separate clips for each entry.
 - `target_runtime_seconds` and `estimated_runtime_seconds` set the gap
   between "what we have" and "what we need to get to."
@@ -1632,7 +1752,7 @@ For entries with no trims, omit `head_trim_words` / `tail_trim_words`
 Agent from the source segments + trims; it is not duplicated in the
 timeline JSON.
 
-#### 3. `handoffs/[project-slug]_quotes_view.html`
+#### 3. `[project-slug]_quotes_view.html` (in the resolved handoff directory)
 
 A self-contained HTML viewer file capturing the final state of this
 round's edit session. Same naming convention as v4.x — file is overwritten
@@ -1646,9 +1766,11 @@ Requirements:
 - Must contain the final state for this round — all source quotes
   (selected and unselected), all timeline entries, all trims, all title
   cards, all interstitials, all context beats — baked into the data block
-- Must be self-contained: React 18 + Babel standalone + Tailwind CSS from
-  CDNs
-- Must be fully interactive when opened in a browser (no build step, no
+- Must be genuinely self-contained and offline: vendored React 18 +
+  ReactDOM UMD bundles inlined, JSX compiled to plain JS at build time —
+  no CDN fetches, no runtime Babel, Tailwind-free. This is exactly what
+  `build_quotes_viewer.py` produces; never hand-wrap the template.
+- Must be fully interactive when opened in a browser (no network, no
   Cowork session)
 
 Document the viewer path in `edit-handoff-v[N].md` under Key Files so the
@@ -1701,7 +1823,7 @@ When Jeff returns after watching the round-N FCPXML cut:
 - Update the existing live artifact rather than regenerating from scratch
   (the artifact carries forward; only the data block changes)
 - Focus on Jeff's specific feedback: entries to add, remove, reorder,
-  re-trim, restructure, or upgrade/downgrade in `runtime_recommendation`
+  re-trim, restructure, or move between `tight` and `loose` membership
 - The full source pool remains available in the artifact
 
 Re-enter the loop at Phase 1, run Phases 2–7 with round N+1 as the next
@@ -1719,5 +1841,5 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.7*
+*Edit Agent — documentary-junior-editor v5.10 (June 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

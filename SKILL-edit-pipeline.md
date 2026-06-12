@@ -14,6 +14,15 @@ description: |
 model: opus-4.7
 ---
 
+> **⚠️ FROZEN AT THE v5.0 DATA MODEL — DO NOT PORT FROM OR RUN AS-IS.**
+> This file still describes the retired four-tier `runtime_recommendation`
+> system and predates the `membership` (tight/loose) model, `_editCuts`
+> character-range trims, and the viewer tweak log. It MUST NOT be used as a
+> porting source (e.g., for the storyboard-ops n8n pipeline) or executed as
+> a live skill until it is re-synced. The authoritative editorial content
+> is `SKILL-edit.md` (v5.10). Re-sync is tracked as **Q10** in
+> `skill-review-2026-06-10.md`.
+
 # Edit Agent (Pipeline)
 
 This is the n8n-orchestrated variant of the Edit Agent. The editorial substance
@@ -564,7 +573,8 @@ The Cardinal Rule, act structure, and verification still apply.
 
 ---
 
-*Edit Agent (Pipeline) — documentary-junior-editor v5.0*
+*Edit Agent (Pipeline) — documentary-junior-editor v5.10 (June 2026) —
+content frozen at the v5.0 data model; see the banner at the top*
 *Derived from SKILL-edit.md v5.0 with Cowork-specific HTML viewer
 generation removed and replaced by the n8n dashboard tool surface. v5.0
 adopts the segments + timeline-entries data model, multi-round iteration,
