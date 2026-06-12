@@ -9,7 +9,9 @@ Reads:
       (a) A pre-assembled project data JSON file (--data option)
       (b) Auto-discovered files in the project handoffs folder
           (tagged-quotes-v*.json, trimmed-quotes-v*.json,
-          editing-versions/v*.json, pipeline-state.json)
+          editing-versions/v*.json, pipeline-state.json).
+          Tight-window exports (trimmed-quotes-v[N]-tight.json) are window
+          variants, not rounds — round discovery/version counting ignores them.
 
 Writes:
   - A genuinely self-contained HTML viewer: React 18 + ReactDOM UMD bundles
@@ -406,7 +408,9 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
 
     target_seconds = 120
     # Best-effort: look for target_runtime_seconds in any trimmed-quotes file
-    # (or, pre-emit, in editing-versions working rounds)
+    # (or, pre-emit, in editing-versions working rounds). Deliberately matches
+    # -tight window variants too — they carry the same target_runtime_seconds
+    # and this scan is value-lookup only, not version counting.
     for f in sorted(handoffs.glob("trimmed-quotes-v*.json")) + sorted((handoffs / "editing-versions").glob("v*.json") if (handoffs / "editing-versions").is_dir() else []):
         try:
             j = json.loads(f.read_text())
@@ -506,8 +510,14 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         round_files = sorted(editing_versions_dir.glob("v*.json"),
                              key=lambda p: int(re.search(r"v(\d+)", p.name).group(1)))
     else:
-        round_files = sorted(handoffs.glob("trimmed-quotes-v*.json"),
-                             key=lambda p: int(re.search(r"v(\d+)", p.name).group(1)))
+        # Anchor on trimmed-quotes-v(\d+).json exactly: Tight-window exports
+        # (trimmed-quotes-v[N]-tight.json) are window variants of an existing
+        # round, NOT rounds of their own — they must never appear in the round
+        # dropdown or shift version numbering (B3).
+        round_files = sorted(
+            (p for p in handoffs.glob("trimmed-quotes-v*.json")
+             if re.fullmatch(r"trimmed-quotes-v(\d+)\.json", p.name)),
+            key=lambda p: int(re.search(r"v(\d+)", p.name).group(1)))
 
     for f in round_files:
         try:

@@ -15,11 +15,11 @@ import { useState, useCallback, useRef, useEffect } from "react";
 //      feature changes happen here.
 //
 // Architecture (v5.0):
-//   - Three top-level views: Quote Library / Timeline / Review
+//   - Two top-level views: Edit (timeline) / Quote Library
 //   - Quote Library shows every source quote + orphans; segments backend-only
-//   - Timeline uses v4.0.1-style quote-block cards with character-range trim,
+//   - Edit view uses v4.0.1-style quote-block cards with character-range trim,
 //     scissors split, drag, ↑/↓, and per-entry Cut/Add Back membership verbs
-//   - Tight/Loose Window toggle filters Timeline by membership (Tight shows
+//   - Tight/Loose Window toggle filters the Edit view by membership (Tight shows
 //     tight only; Loose shows tight ∪ loose); Export is contextual to the window
 //   - Round dropdown loads from baked-in rounds; "Save as new round" writes
 //     directly to disk via window.cowork.callMcpTool (graceful no-op outside
@@ -28,8 +28,10 @@ import { useState, useCallback, useRef, useEffect } from "react";
 //     Send copies the batch to chat and appends it to the cumulative tweak log
 //   - "Talk to agent" sends iteratively — each Send is one batch, then the panel
 //     clears for the next while the cumulative log keeps every batch
-//   - Export hands the selected window's cut to the FCPXML Agent: writes
-//     trimmed-quotes-v[N].json + a ready-to-paste agent launch prompt
+//   - Export hands the selected window's cut to the FCPXML Agent: the Loose
+//     (full-timeline) window writes trimmed-quotes-v[N].json, the Tight window
+//     writes trimmed-quotes-v[N]-tight.json (so the two never overwrite each
+//     other), plus a ready-to-paste agent launch prompt naming that exact file
 //
 // ============================================================================
 // DATA BLOCK — Replaced per-project by build_quotes_viewer.py at build time.
@@ -877,10 +879,14 @@ export default function QuotesView() {
   // ====== Export ======
 
   // Hand the selected window's cut to the FCPXML Agent. Writes
-  // trimmed-quotes-v[N].json (reliable) and hands a ready-to-paste FCPXML Agent
-  // launch prompt — the viewer does NOT build the XML itself (failure-prone
-  // without the agent around it). In Cowork the file is written to disk; in a
-  // plain browser it degrades to a download. The prompt copy always works.
+  // trimmed-quotes-v[N].json for the Loose (full-timeline) window and
+  // trimmed-quotes-v[N]-tight.json for the Tight window — distinct files so the
+  // two exports of the same round never overwrite each other (B3). Version
+  // detection downstream anchors on trimmed-quotes-v(\d+).json, so -tight files
+  // never count as rounds. Also hands a ready-to-paste FCPXML Agent launch
+  // prompt — the viewer does NOT build the XML itself (failure-prone without
+  // the agent around it). In Cowork the file is written to disk; in a plain
+  // browser it degrades to a download. The prompt copy always works.
   async function exportToFCPXML() {
     const tl = getTimeline();
     const win = windowMode;
@@ -888,7 +894,7 @@ export default function QuotesView() {
     const filtered = win === "tight" ? tl.filter((e) => membershipOf(e) === "tight") : tl;
     const totalSec = filtered.reduce((a, e) => a + entrySeconds(e), 0);
     const round = ROUNDS[roundIndex];
-    const filename = `trimmed-quotes-v${round.round_number}.json`;
+    const filename = `trimmed-quotes-v${round.round_number}${win === "tight" ? "-tight" : ""}.json`;
     const relPath = `handoffs/${PROJECT_META.slug}/${filename}`;
     const payload = {
       schema_version: 5,
