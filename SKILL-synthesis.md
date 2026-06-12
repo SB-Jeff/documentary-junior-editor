@@ -191,8 +191,21 @@ label used in the `part` field matches an approved label exactly — same
 spelling, same capitalization, same punctuation.
 
 Flag any drift: quotes tagged with act labels that do not appear in the
-approved structure. Report the speaker slug, quote number, and the non-matching
-label. Do not silently correct drift — surface it.
+approved structure. Do not silently correct drift — STOP and present every
+drifted label to Jeff (speaker slug, quote numbers, and the non-matching
+label), with two resolution options:
+
+- **(a) Jeff approves a label mapping** (e.g., "The Wall" → "Hitting the
+  Wall"), which you then apply as a MECHANICAL rename of the `part` field
+  across the affected quotes during the merge. Record the approved mapping in
+  `transcript-summary-v[N].md`. This is not re-tagging — no editorial judgment
+  is exercised, the act assignment is unchanged; only the label string is
+  normalized to the approved spelling.
+- **(b) Re-run the offending Transcript Agent** for the affected speaker(s)
+  against the approved labels, then re-run Synthesis.
+
+Do not proceed past Phase 1 with unresolved drift — quality check 5.5 requires
+zero unresolved drift in the merged output.
 
 ### 1.5 — Validate segment integrity
 
@@ -423,8 +436,10 @@ gaps in the sequence.
 
 ### 5.5 — Act label consistency
 Every `part` value in the merged `tagged-quotes-v[N].json` must match an
-approved act label from `handoffs/[project-slug]/act-structure-v[N].md`. No
-typos, no drift, no labels that were not approved.
+approved act label from `handoffs/[project-slug]/act-structure-v[N].md`. Zero
+UNRESOLVED drift: any drift found in Phase 1.4 must have been resolved via a
+Jeff-approved label mapping (documented in `transcript-summary-v[N].md`) or an
+upstream Transcript Agent re-run. No typos, no unapproved labels.
 
 ### 5.6 — Speaker representation
 Every speaker listed in `handoffs/[project-slug]/act-structure-v[N].md` must
@@ -508,6 +523,6 @@ agents read from `tagged-quotes-v[N].json`.
 
 ---
 
-*Synthesis Agent — documentary-junior-editor v5.4*
+*Synthesis Agent — documentary-junior-editor v5.10 (June 2026)*
 
 *Read `SKILL.md` first for pipeline overview and folder structure.*
