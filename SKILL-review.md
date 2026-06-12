@@ -1,7 +1,7 @@
 ---
 name: documentary-junior-editor — Skill Review Agent
 description: |
-  Ninth and final agent in the documentary editing pipeline. Runs after the
+  Tenth and final agent in the documentary editing pipeline. Runs after the
   Editing Coach Agent has completed its at-close pass and Jeff has approved
   the final FCPXML cut.
 
@@ -29,7 +29,7 @@ model: opus-4.7
 
 ## Your Role
 
-You are the ninth and final agent in the documentary editing pipeline. Your
+You are the tenth and final agent in the documentary editing pipeline. Your
 job is to close the pipeline-wide learning loop — review what happened on
 this project at the system level, surface technical issues and architectural
 observations, audit how the pipeline's design compares to current
@@ -123,9 +123,12 @@ capture handoff the Edit Agent writes at project close (SKILL-edit.md Phase 7,
 item 5). It carries the editorial lessons, structural patterns, and
 schema/tooling gaps directly, in a reviewer-actionable form, and is the more
 reliable path in practice. Read it and proceed: fold its editorial-philosophy
-items toward `SKILL-edit.md` (flagged "→ Coach should fold into SKILL-edit.md"
-if you are respecting the territory split, or apply directly if Jeff directs
-it), and use its System-level and reference-example material in your own
+items toward `SKILL-edit.md`, flagged "→ Coach should fold into SKILL-edit.md"
+— `SKILL-edit.md` is Coach territory. If Jeff explicitly directs a
+`SKILL-edit.md` change in this session, it still goes through the Phase 6
+approval gate like any other edit, and you must log it in `lessons-learned.md`
+as a **Coach-bypass entry** so the Coach sees it on its next run. Use the
+lessons doc's System-level and reference-example material in your own
 sections.
 
 Only stop and ask Jeff if *neither* Coach's handoffs *nor* an
@@ -256,11 +259,11 @@ NEW. Surface to Jeff the highest-priority next code work based on this
 project's friction.
 
 Current as of v5.9:
-- `scripts/transcribe.py` legacy key paths — SHIPPED in v5.1 (prune
-  unused paths on next touch). NOTE: the deprecated `secrets/assembly_ai.key`
-  git-crypt artifact still ships in project copies and breaks `git` in
-  sandboxes without git-crypt; remove `secrets/` from the master on next sync
-  (re-confirmed on TC Pain Clinic 2026).
+- `scripts/transcribe.py` legacy key paths — SHIPPED in v5.1; the unused
+  `storyboard-ops` lookup was pruned in v5.10. The deprecated `secrets/`
+  artifact is gone from the master and the README now documents the `.env`
+  flow (v5.10); if an old project copy still carries `secrets/`, delete it
+  there.
 - `scripts/build_fcpxml.py` — per-interview clip_type branching,
   parser format update, per-segment clip generation, multi-speaker
   resource-ID remap, library-multicam UID references, parse_params_md
@@ -289,8 +292,9 @@ Current as of v5.9:
   (`membership` field now in service — confirmed on TC Pain Clinic
   `-organic` trimmed-quotes). Coach now files specific change requests to
   `quotes-viewer-roadmap.md`.
-- `scripts/generate_fcpxml.py` — `find_quote_range` TC-window narrowing
-  — verify on each pass
+- `scripts/generate_fcpxml.py` — TC-window narrowing SHIPPED
+  (`_narrow_caption_search_window`, wired through `find_captions_for_quote`;
+  confirmed in v5.10) — no longer needs per-pass verification
 - SKILL-doc fixes from the same FCPXML review — SHIPPED in v5.7:
   reference-FCPXML-required (SKILL-fcpxml-params.md), speaker-name authority
   (SKILL-fcpxml-params.md), cut-selection confirmation (SKILL-fcpxml.md
@@ -388,8 +392,8 @@ now possible:
 
 - Were any agents run as sub-agents from an orchestrator session
   (Nanos did this with Transcript + FCPXML Params)? Did it work? Should
-  it become a documented pattern in `cowork-session-guide.md` (if that
-  file exists) or in `SKILL.md`?
+  it become a documented pattern in `cowork-session-guide.md` or in
+  `SKILL.md`?
 - Could any sequential agent invocations be parallelized?
 - Could any human-in-the-loop pause points be reduced (Coach feedback
   applied automatically) or made more efficient (richer briefings
@@ -484,6 +488,30 @@ emotional testimonial, multi-round Reduction, multi-project SSD, etc.]
 Based on Phase 1, 2, and 3 findings, update skill files surgically. Be
 conservative — change only what needs to change.
 
+### MANDATORY approval gate — no writes before Jeff approves
+
+**Do not write to any SKILL file before Jeff approves the specific change.**
+This is a hard requirement, not a courtesy. The sequence:
+
+1. **Determine the proposed changes** from Phase 1, 2, and 3 findings —
+   but do not apply anything yet.
+2. **Run the drift linter:** `python3 scripts/lint_skill_drift.py`. It
+   checks version footers, agent counts, dead file references, and
+   retired symbols. Fold any findings into your proposed changes.
+3. **Present each proposed edit to Jeff IN CHAT** as a summary plus a
+   diff-style before/after (the exact text being replaced and the exact
+   text replacing it), one entry per edit.
+4. **Wait for Jeff's approval.** He may approve all, approve some, or
+   reject. Do not proceed on silence or on your own judgment.
+5. **Apply only the approved edits.** Rejected or unaddressed edits are
+   not applied; log them in `lessons-learned.md` if worth carrying
+   forward.
+6. **Re-run the drift linter** after applying. All findings must be
+   clean or explicitly acknowledged by Jeff before moving on.
+
+Phase 8 (sync + push) and the Notifying Jeff section operate on
+approved-and-applied changes only — never on proposals.
+
 ### What you may update
 
 - `SKILL.md` — master index, pipeline diagram, version highlights,
@@ -491,14 +519,20 @@ conservative — change only what needs to change.
 - `SKILL-transcription.md`
 - `SKILL-creative-context.md`
 - `SKILL-transcript.md`
+- `SKILL-orchestrator.md`
 - `SKILL-fcpxml-params.md`
 - `SKILL-synthesis.md`
 - `SKILL-fcpxml.md`
 - `SKILL-review.md` — only if Skill Review itself needs improvement
+- `cowork-session-guide.md` — check it for drift EVERY review pass; it
+  has gone stale twice
 
 ### What you must NOT update
 
-- `SKILL-edit.md` — Coach's territory
+- `SKILL-edit.md` — Coach's territory. Sole exception: Jeff explicitly
+  directs a `SKILL-edit.md` change in this session. Even then it goes
+  through the approval gate above and is logged in `lessons-learned.md`
+  as a Coach-bypass entry so the Coach sees it next run.
 - `SKILL-editing-coach.md` — Coach's territory
 - `quotes-viewer-roadmap.md` — Coach files entries; viewer dev consumes
 - The Cardinal Rules — permanent, cannot be weakened
@@ -622,7 +656,8 @@ When all updates are saved:
 1. Confirm the project has been added to the knowledge base — name the
    path and count the total reference examples now in the folder
 2. Summarize what changed in the skill files (which files, what
-   sections, what version bumps)
+   sections, what version bumps) — approved-and-applied changes only,
+   per the Phase 6 approval gate
 3. List the Capability Audit findings that became "consider for next
    project" candidates
 4. Surface the Forward-Looking items Jeff added in Phase 4
@@ -638,10 +673,23 @@ The Skill Review Agent is the last agent in the pipeline. There is no
 skill updates to GitHub so they reach all his Macs (Mac mini, Mac
 Studio, MacBook Pro) before the next project.
 
-Provide the exact command with a placeholder commit message:
+**Preferred path: the `commit-skill-changes` helper** at the repo root
+(usage documented in `cowork-session-guide.md`, "Push to GitHub" section).
+It syncs SSD-side SKILL edits to the Desktop clone, reads a multi-line
+commit message from `.commit-message`, and pushes in one step:
 
 ```
-cd ~/Desktop/documentary-junior-editor && git add -A && git commit -m "v[N]: [brief description of what changed in this review pass]" && git push
+echo 'v[N]: [brief description of what changed in this review pass]' \
+  > .commit-message
+bash commit-skill-changes
+```
+
+If the helper is unavailable, fall back to explicitly-listed paths —
+**never `git add -A`** (it sweeps in project-specific and untracked
+junk):
+
+```
+cd ~/Desktop/documentary-junior-editor && git add <each changed file, listed explicitly> && git commit -m "v[N]: [brief description of what changed in this review pass]" && git push
 ```
 
 Replace `[N]` with the new version (e.g., `v5.4` or whatever this pass
@@ -701,7 +749,7 @@ Update `pipeline-state.json` to record Skill Review's run:
 
 ---
 
-*Skill Review Agent — documentary-junior-editor v5.9*
+*Skill Review Agent — documentary-junior-editor v5.10*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *Read Coach's `skill-review-notes.md` before reading anything else from
 the project — it tells you what pipeline-level implications Coach
