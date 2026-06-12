@@ -292,6 +292,7 @@ def find_captions_for_quote(quote_text: str, captions: List[Caption],
                             gap_threshold_secs: float = 5.0,
                             start_tc: Optional[str] = None,
                             end_tc: Optional[str] = None,
+                            unmatched_out: Optional[List[str]] = None,
                             ) -> List[Tuple[int, int, float]]:
     """
     Match a (possibly trimmed) quote to caption ranges, splitting at gaps.
@@ -314,6 +315,13 @@ def find_captions_for_quote(quote_text: str, captions: List[Caption],
         scores at 0.85–1.00. If TCs are missing or unparseable, the
         function falls back to the legacy full-range search.
 
+    unmatched_out: optional list. When provided, every sentence of the
+        quote that could NOT be matched to captions is appended to it
+        (verbatim sentence text). If the whole-quote fallback succeeds, the
+        quote matched as one block and nothing is appended. This is the
+        silent-truncation reporting hook (W3): an unmatched sentence means
+        the emitted clip plays LESS than the verbatim quote text.
+
     Returns a list of (start_idx, end_idx, score) tuples — one per clip segment.
     Returns empty list if no match found.
     """
@@ -328,6 +336,7 @@ def find_captions_for_quote(quote_text: str, captions: List[Caption],
 
     # Match each sentence to captions
     sentence_matches = []
+    local_unmatched = []  # sentences with no caption match (W3 reporting)
     search_hint = search_start_idx  # Advances as we match within the window
 
     for sentence in sentences:
@@ -339,7 +348,10 @@ def find_captions_for_quote(quote_text: str, captions: List[Caption],
         if start_idx is not None:
             sentence_matches.append((start_idx, end_idx, score))
             search_hint = end_idx + 1
-        # If a sentence doesn't match, skip it — don't break the chain
+        else:
+            # Sentence doesn't match — skip it (don't break the chain) but
+            # record it so the caller can surface the truncation loudly.
+            local_unmatched.append(sentence)
 
     if not sentence_matches:
         # Fallback: try matching the entire quote as one block. Still
@@ -350,8 +362,15 @@ def find_captions_for_quote(quote_text: str, captions: List[Caption],
             search_start=search_start_idx, search_end=search_end_idx,
         )
         if start_idx is not None:
+            # Whole quote matched as one block — no truncation after all.
             return [(start_idx, end_idx, score)]
+        if unmatched_out is not None:
+            unmatched_out.extend(local_unmatched if local_unmatched
+                                 else [quote_text])
         return []
+
+    if unmatched_out is not None:
+        unmatched_out.extend(local_unmatched)
 
     # Merge sentence matches into clip segments, splitting at large gaps
     segments = []
@@ -668,19 +687,34 @@ def create_section_divider(section_name: str, offset: FractionTime,
     # 16 * 1001 / 24000 = 16016/24000 = ~0.667s.
     gap_duration = duration if duration is not None else FractionTime(16016, 24000)
 
+    # The gap's `start` is the origin of the gap's own local timeline (FCP's
+    # conventional ~1-hour origin). Nested elements position themselves in
+    # that local timeline: a title that should appear for the gap's full
+    # length must have offset == gap start and duration <= gap duration.
+    # (Previously the title's offset/duration were hardcoded sentinels copied
+    # from a 1s-gap prototype — the title duration of 1.001s overflowed the
+    # 0.67s gap, which is the known all-dividers-pile-up-at-sequence-start
+    # bug in FCP on import.)
+    gap_local_start = FractionTime(86400314, 24000)
+
     gap = ET.Element('gap')
     gap.set('name', 'Gap')
     gap.set('offset', offset.to_string())
-    gap.set('start', '86400314/24000s')
+    gap.set('start', gap_local_start.to_string())
     gap.set('duration', gap_duration.to_string())
 
     title = ET.SubElement(gap, 'title')
     title.set('ref', title_effect_ref)
     title.set('lane', '1')
-    title.set('offset', '86400314/24000s')
+    # Offset in the GAP's local timeline — must equal the gap's `start` so
+    # the title begins exactly where the gap begins on the project timeline.
+    title.set('offset', gap_local_start.to_string())
     title.set('name', f'{display_name} - Basic Title')
+    # `start` is in the TITLE's own local timeline (where playback of the
+    # title generator begins) — the conventional FCP value is fine here.
     title.set('start', '86486400/24000s')
-    title.set('duration', '120120/120000s')
+    # Title must fit inside the gap: same duration as the gap.
+    title.set('duration', gap_duration.to_string())
 
     # Title parameters
     flatten = ET.SubElement(title, 'param')
@@ -715,29 +749,50 @@ def create_section_divider(section_name: str, offset: FractionTime,
     return gap, new_offset, text_style_counter
 
 
+def normalize_label(s: str) -> str:
+    """
+    Normalize an act/section label (or slug) for comparison:
+    lowercase; hyphens/underscores/em-dashes/en-dashes become spaces;
+    remaining punctuation stripped; whitespace collapsed.
+
+    Makes slug forms like 'act-1-addie' compare equal to display forms
+    like 'Act 1 — Addie'. Shared with build_fcpxml.py's part-vs-label
+    check so both sides canonicalize identically.
+    """
+    s = (s or "").lower()
+    for ch in ("-", "_", "—", "–"):
+        s = s.replace(ch, " ")
+    s = re.sub(r"[^\w\s]", "", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
 def _canonicalize_section(section: str, act_labels: List[str]) -> str:
     """
     Map a quote's `section` (the v5 `part` field, copied through by
     adapt_quote) to a canonical act label from act-structure.md.
 
-    Strategy: exact case-insensitive match first, then bidirectional
-    substring match (handles "Act 1: Intro" matching against "Intro", or
-    vice versa). Returns the canonical label on a match, or the original
-    `section` string on miss (with the original casing preserved).
+    Strategy: both sides are normalized via normalize_label() (lowercase,
+    dashes/underscores -> spaces, punctuation stripped, whitespace
+    collapsed) so slug forms ('act-1-addie') match display forms
+    ('Act 1 — Addie'). Exact normalized match first, then bidirectional
+    normalized substring match (handles "Act 1: Intro" matching against
+    "Intro", or vice versa). Returns the canonical label on a match, or
+    the original `section` string on miss (original casing preserved).
     """
     if not section or not act_labels:
         return section or ""
-    sl = section.strip().lower()
+    sl = normalize_label(section)
     if not sl:
         return ""
-    # Exact, case-insensitive
+    # Exact, normalized
     for label in act_labels:
-        if label.lower() == sl:
+        if normalize_label(label) == sl:
             return label
-    # Bidirectional substring
+    # Bidirectional normalized substring
     for label in act_labels:
-        ll = label.lower()
-        if sl in ll or ll in sl:
+        ll = normalize_label(label)
+        if ll and (sl in ll or ll in sl):
             return label
     return section
 
@@ -751,11 +806,25 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
                 asset_names: Optional[Dict[str, str]] = None,
                 format_ref: str = "r1",
                 act_labels: Optional[List[str]] = None,
-                ) -> Tuple[List[ET.Element], int]:
+                ) -> Tuple[List[ET.Element], int, Dict]:
     """
     Build spine elements (mc-clip / asset-clip nodes and section divider gaps)
     from paper cut quotes. Returns (list of spine elements, final
-    text_style_counter).
+    text_style_counter, build_report).
+
+    build_report is a dict (W3/W1 plumbing):
+      'truncations':    [{quote_num, speaker, entry, text, kind}] — every
+                        sentence (kind='sentence') or whole quote
+                        (kind='quote') that found no caption match. These
+                        clips play LESS than the verbatim quote text.
+      'speaker_misses': [{speaker, quote_num, reason}] — quotes dropped
+                        because their speaker had no source FCPXML or no
+                        asset ref.
+      'clips':          [{speaker, quote_num, entry, clip_type, offset,
+                          duration, paper_cut_index}] — one per emitted
+                        spine clip, in spine order.
+      'dividers':       [{section, offset, duration}] — one per emitted
+                        act-divider gap, in spine order.
 
     When a trimmed quote has content removed from the middle, this produces
     multiple clip elements for that quote — one per contiguous segment. Gaps
@@ -796,6 +865,12 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
     text_style_counter = 1
     padding = FractionTime(2002, 24000)  # ~2 frames padding on each side
     current_section = None
+    build_report = {
+        'truncations': [],
+        'speaker_misses': [],
+        'clips': [],
+        'dividers': [],
+    }
 
     def _canonical_speaker(name, keys):
         # Normalize punctuation/case so catalog names ("Dr. Haas") match
@@ -807,7 +882,7 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
                 return k
         return name
 
-    for quote_info in paper_cuts:
+    for paper_cut_index, quote_info in enumerate(paper_cuts):
         speaker = _canonical_speaker(quote_info['speaker'], source_fcpxmls.keys())
         quote_text = quote_info['quote']
         section = quote_info.get('section', '')
@@ -823,15 +898,26 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
 
         # Insert section divider when the section changes
         if section and section != current_section:
+            divider_offset = offset
             divider, offset, text_style_counter = create_section_divider(
                 section, offset, title_effect_ref, text_style_counter
             )
             spine_clips.append(divider)
+            build_report['dividers'].append({
+                'section': section,
+                'offset': divider_offset.to_string(),
+                'duration': divider.get('duration'),
+            })
             current_section = section
             print(f"\n  --- {section} ---")
 
         if speaker not in source_fcpxmls:
             print(f"Warning: speaker '{speaker}' not in source FCPXMLs, skipping")
+            build_report['speaker_misses'].append({
+                'speaker': speaker,
+                'quote_num': quote_info.get('quote_num'),
+                'reason': 'speaker not found in source FCPXMLs',
+            })
             continue
 
         captions = source_fcpxmls[speaker]['captions']
@@ -841,15 +927,40 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
         # its scan window to the ±15s buffered TC range. For long
         # interviews this is the difference between completing in seconds
         # and hitting the shell timeout.
+        unmatched_sentences: List[str] = []
         segments = find_captions_for_quote(
             quote_text, captions, gap_threshold_secs,
             start_tc=quote_info.get('start_tc') or None,
             end_tc=quote_info.get('end_tc') or None,
+            unmatched_out=unmatched_sentences,
         )
 
         if not segments:
             print(f"Warning: could not match quote '{quote_text[:50]}...' for {speaker}")
+            build_report['truncations'].append({
+                'quote_num': quote_info.get('quote_num'),
+                'speaker': speaker,
+                'entry': quote_info.get('notes', ''),
+                'text': quote_text,
+                'kind': 'quote',
+            })
             continue
+
+        # Partial truncation: the quote matched, but one or more sentences
+        # inside it did not — the emitted clip plays less than the verbatim
+        # text. Record each unmatched sentence (W3).
+        for sent in unmatched_sentences:
+            preview = sent if len(sent) <= 60 else sent[:60] + "..."
+            print(f"Warning: unmatched sentence in quote "
+                  f"#{quote_info.get('quote_num', '?')} for {speaker}: "
+                  f"'{preview}'")
+            build_report['truncations'].append({
+                'quote_num': quote_info.get('quote_num'),
+                'speaker': speaker,
+                'entry': quote_info.get('notes', ''),
+                'text': sent,
+                'kind': 'sentence',
+            })
 
         # Per-interview clip_type — multicam (default) vs single_clip
         clip_type = clip_types.get(speaker, "multicam")
@@ -867,6 +978,11 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
             if not ref:
                 print(f"Warning: speaker {speaker!r} is single_clip but has "
                       "no asset ref id; skipping its quotes")
+                build_report['speaker_misses'].append({
+                    'speaker': speaker,
+                    'quote_num': quote_info.get('quote_num'),
+                    'reason': 'single_clip speaker has no asset ref id',
+                })
                 continue
             # The asset name from params is preferable (matches the
             # captioned interview filename); fall back to the speaker's
@@ -943,13 +1059,22 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
                 clip.append(caption_elem)
 
             spine_clips.append(clip)
+            build_report['clips'].append({
+                'speaker': speaker,
+                'quote_num': quote_info.get('quote_num'),
+                'entry': quote_info.get('notes', ''),
+                'clip_type': clip_type,
+                'offset': clip.get('offset'),
+                'duration': clip.get('duration'),
+                'paper_cut_index': paper_cut_index,
+            })
             offset = offset + clip_duration
 
             if len(segments) > 1:
                 seg_dur = clip_duration.numerator / clip_duration.denominator
                 print(f"    Segment {seg_idx + 1}: captions {start_idx}-{end_idx}, {seg_dur:.1f}s")
 
-    return spine_clips, text_style_counter
+    return spine_clips, text_style_counter, build_report
 
 
 def generate_fcpxml(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
@@ -1038,7 +1163,7 @@ def generate_fcpxml(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
     # spine clip references the correct (post-remap) resource id, and pass
     # act_labels so the section dividers use canonical wording from
     # act-structure.md (SKILL Phase 2.1.5).
-    spine_clips, final_ts_count = build_spine(
+    spine_clips, final_ts_count, build_report = build_spine(
         paper_cuts, source_fcpxmls,
         speaker_refs_remapped, speaker_angles,
         title_effect_ref=title_effect_ref,
@@ -1076,7 +1201,6 @@ def generate_fcpxml(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
     # projects (whose params md lacks these fields) keep working.
     ref_library = ref_root.find('.//library')
     ref_event = ref_root.find('.//event')
-    ref_project = ref_root.find('.//project')
 
     resolved_lib_loc = library_location or (
         ref_library.get('location', '') if ref_library is not None else '')
@@ -1095,15 +1219,11 @@ def generate_fcpxml(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
 
     project = ET.SubElement(event, 'project')
     project.set('name', project_name)
-    # Project uid/modDate are not load-bearing for multicam recognition
-    # (the multicam UIDs in <resources> are what FCP keys on) but a stable
-    # project uid keeps re-imports tidy. Pull from reference if available;
-    # otherwise omit — FCP will assign on import.
-    if ref_project is not None:
-        if ref_project.get('uid'):
-            project.set('uid', ref_project.get('uid'))
-        if ref_project.get('modDate'):
-            project.set('modDate', ref_project.get('modDate'))
+    # C1: deliberately NO `uid` / `modDate` on the generated <project>.
+    # Copying the reference project's uid into every generated XML made
+    # multiple outputs share one project UID, which re-triggers FCP's
+    # duplicate-multicam-on-second-import bug. FCP assigns a fresh uid and
+    # modDate on import; only the project name is ours to set.
 
     sequence = ET.SubElement(project, 'sequence')
     sequence.set('format', sequence_format)
@@ -1146,6 +1266,12 @@ def generate_fcpxml(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
 
     print(f"Generated FCPXML with {len(spine_clips)} clips")
     print(f"Total duration: {total_duration.to_string()}")
+
+    # W3/W1: surface the build report (truncations, speaker misses,
+    # per-clip and per-divider records) to the CLI wrapper.
+    build_report['n_spine_elements'] = len(spine_clips)
+    build_report['total_duration'] = total_duration.to_string()
+    return build_report
 
 
 # ============================================================================
