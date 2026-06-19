@@ -1737,8 +1737,8 @@ Set model to Sonnet 4.6.`;
     const map = {
       idle:    { cls: "idle",    glyph: "○", text: "Live state" },
       saving:  { cls: "saving",  glyph: "◌", text: "Saving…" },
-      saved:   { cls: "saved",   glyph: "●", text: "Saved to disk" },
-      offline: { cls: "offline", glyph: "○", text: "Offline — start app server" },
+      saved:   { cls: "saved",   glyph: "●", text: "Saved" },
+      offline: { cls: "offline", glyph: "○", text: "Offline" },
       error:   { cls: "error",   glyph: "▲", text: "Save failed" },
     };
     const v = map[s] || map.idle;
@@ -1823,11 +1823,6 @@ Set model to Sonnet 4.6.`;
             className={`tb-btn${topMenu === "open" ? " active" : ""}`}
             onClick={() => toggleTopMenu("open")}
           >Open</button>
-          <button
-            className={`tb-btn tb-export${topMenu === "export" ? " active" : ""}`}
-            onClick={() => toggleTopMenu("export")}
-          >Export to Final Cut</button>
-
           {topMenu === "save" && (
             <div className="tb-panel" data-topbar="1">
               <div className="tb-panel-title">Save</div>
@@ -1884,46 +1879,56 @@ Set model to Sonnet 4.6.`;
             </div>
           )}
 
-          {topMenu === "export" && (
-            <div className="tb-panel" data-topbar="1">
-              <div className="tb-panel-title">Export to Final Cut</div>
-              <div className="tb-panel-sub">Hands the cut to the FCPXML Agent.</div>
-              <button
-                className="btn tb-panel-btn"
-                onClick={() => { setTopMenu(null); exportToFCPXML(false); }}
-              >Timeline cut ({activeEntries} · {fmtSec(activeSec)})</button>
-              {looseEntries.length > 0 && (
-                <button
-                  className="btn tb-panel-btn tb-panel-btn-secondary"
-                  onClick={() => { setTopMenu(null); exportToFCPXML(true); }}
-                  title="Export the full timeline including cut quotes (Timeline + Cuts)"
-                >Full timeline ({allEntries.length} · {fmtSec(fullSec)})</button>
-              )}
-            </div>
-          )}
         </div>
-        <div className="mode-toggle">
-          {[
-            { mode: "library", label: "Quote Library" },
-            { mode: "timeline", label: "Timeline" },
-            { mode: "cuts", label: "Cuts" },
-          ].map((m) => (
-            <button
-              key={m.mode}
-              className={view === m.mode ? "active" : ""}
-              onClick={() => setView(m.mode)}
-            >
-              {m.label}
-              {m.mode === "cuts" && looseEntries.length > 0 && (
-                <span className="cuts-count">{looseEntries.length}</span>
-              )}
-            </button>
-          ))}
-        </div>
-        {/* M4 persistence indicator — the honest "is the agent seeing my edits?"
-            signal. Saved = viewer-state.json is on disk for SKILL-edit to read;
-            Offline = the app server isn't running, so the agent can't see edits. */}
+        {/* Autosave status — quiet, beside the save controls (M4). */}
         {renderPersistIndicator()}
+
+        {/* RIGHT CLUSTER: the work — view tabs (dividers kept) + export the
+            Timeline. Export lives here because it acts on the Timeline. */}
+        <div className="hdr-right">
+          <div className="mode-toggle">
+            {[
+              { mode: "library", label: "Quote Library" },
+              { mode: "timeline", label: "Timeline" },
+              { mode: "cuts", label: "Cuts" },
+            ].map((m) => (
+              <button
+                key={m.mode}
+                className={view === m.mode ? "active" : ""}
+                onClick={() => setView(m.mode)}
+              >
+                {m.label}
+                {m.mode === "cuts" && looseEntries.length > 0 && (
+                  <span className="cuts-count">{looseEntries.length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <span className="hdr-right-sep" aria-hidden="true"></span>
+          <div className="topbar-actions tb-export-wrap" data-topbar="1">
+            <button
+              className={`tb-btn tb-export${topMenu === "export" ? " active" : ""}`}
+              onClick={() => toggleTopMenu("export")}
+            >Export to Final Cut</button>
+            {topMenu === "export" && (
+              <div className="tb-panel" data-topbar="1">
+                <div className="tb-panel-title">Export to Final Cut</div>
+                <div className="tb-panel-sub">Hands the cut to the FCPXML Agent.</div>
+                <button
+                  className="btn tb-panel-btn"
+                  onClick={() => { setTopMenu(null); exportToFCPXML(false); }}
+                >Timeline cut ({activeEntries} · {fmtSec(activeSec)})</button>
+                {looseEntries.length > 0 && (
+                  <button
+                    className="btn tb-panel-btn tb-panel-btn-secondary"
+                    onClick={() => { setTopMenu(null); exportToFCPXML(true); }}
+                    title="Export the full timeline including cut quotes (Timeline + Cuts)"
+                  >Full timeline ({allEntries.length} · {fmtSec(fullSec)})</button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
        </div>
       </div>
       {(
@@ -3114,17 +3119,25 @@ Set model to Sonnet 4.6.`;
     .cuts-view .empty { text-align:center; color: var(--text-muted); padding:48px 16px; }
 
     /* === M4 persistence indicator === */
-    .persist-ind { display:inline-flex; align-items:center; gap:5px; margin-left:14px;
-      padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600;
-      letter-spacing:.01em; white-space:nowrap; border:1px solid transparent; cursor:default; }
-    .persist-glyph { font-size:10px; line-height:1; }
-    .persist-ind.saved   { color:#15803d; background:rgba(22,163,74,.10);  border-color:rgba(22,163,74,.25); }
-    .persist-ind.saving  { color:#b45309; background:rgba(217,119,6,.10);  border-color:rgba(217,119,6,.22); }
-    .persist-ind.offline { color:#6b7280; background:rgba(107,114,128,.10); border-color:rgba(107,114,128,.22); }
-    .persist-ind.error   { color:#b91c1c; background:rgba(220,38,38,.10);  border-color:rgba(220,38,38,.28); }
-    .persist-ind.idle    { color:#6b7280; background:rgba(107,114,128,.08); border-color:rgba(107,114,128,.16); }
+    /* Quiet autosave status, grouped beside Save/Open (no filled pill when all
+       is well — color carries the state; it only draws attention on trouble). */
+    .persist-ind { display:inline-flex; align-items:center; gap:5px; margin-left:2px;
+      padding:5px 4px; font-size:11px; font-weight:500;
+      letter-spacing:.01em; white-space:nowrap; cursor:default; }
+    .persist-glyph { font-size:9px; line-height:1; }
+    .persist-ind.saved   { color:#15803d; }
+    .persist-ind.saving  { color:#b45309; }
+    .persist-ind.offline { color:#b45309; }
+    .persist-ind.error   { color:#b91c1c; }
+    .persist-ind.idle    { color:#6b7280; }
     .persist-ind.saving .persist-glyph { animation:persist-spin 1s linear infinite; display:inline-block; }
     @keyframes persist-spin { to { transform:rotate(360deg); } }
+
+    /* Right cluster: views + Export, pushed to the right edge. A hairline divides
+       the view tabs from Export (their own inter-tab dividers are kept). */
+    .hdr-right { margin-left:auto; display:inline-flex; align-items:flex-end; gap:12px; }
+    .hdr-right-sep { width:1px; align-self:stretch; background:var(--border-strong); margin:4px 0; }
+    .tb-export-wrap { align-self:center; }
 
     /* === M3 top-bar (Save / Open / Export to Final Cut) === */
     .topbar-actions { position:relative; display:inline-flex; gap:6px; align-items:center; }
