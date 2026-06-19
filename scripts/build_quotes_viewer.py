@@ -1168,6 +1168,20 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .act-title { font-size: 18px; font-weight: 600; margin: 0; }
 .act-sub { color: var(--text-muted); font-size: 13px; }
+/* One "Add title card" button per act (option C) — replaces the old per-gap
+   "+ interstitial" rows. Right-aligned in the act header. */
+.act-header-actions { margin-left: auto; align-self: center; }
+.act-add-btn {
+  background: transparent; border: 1px solid var(--border-strong); border-radius: 6px;
+  padding: 4px 11px; font: inherit; font-size: 12px; color: var(--text-muted);
+  cursor: pointer; white-space: nowrap;
+}
+.act-add-btn:hover { color: var(--text); background: var(--surface-2); border-color: var(--text-muted); }
+.act-add-btn.active { color: var(--text); background: var(--surface-2); border-color: var(--text-muted); }
+.ins-add-pos {
+  width: 100%; margin-bottom: 8px; padding: 5px 8px; font: inherit; font-size: 12px;
+  border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text);
+}
 
 /* === Library toolbar (hide-in-cut toggle + search) === */
 .lib-toolbar {

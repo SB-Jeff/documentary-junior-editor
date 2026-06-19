@@ -598,17 +598,22 @@ function SplitPanel({ entry, markers, setMarkers, onSplit, onCancel }) {
 // editable (Cardinal Rule 1 governs spoken quotes only).
 // ============================================================================
 
-function InterstitialAddForm({ onAdd, onCancel }) {
-  const [type, setType] = useState("interstitial");
+function InterstitialAddForm({ onAdd, onCancel, positions }) {
+  // Default to a title card — the common case (interstitials/context beats are
+  // rare). The act-header "Add title card" button opens this; the type select
+  // still lets you switch. `positions` (when provided) is a list of
+  // { value, label } insertion points so the act-level button can pick WHERE.
+  const [type, setType] = useState("title_card");
   const [text, setText] = useState("");
   const [seconds, setSeconds] = useState(3);
+  const [position, setPosition] = useState((positions && positions[0] && positions[0].value) || "start");
   const isContext = type === "context_beat";
   return (
     <div className="ins-add" onClick={(e) => e.stopPropagation()}>
       <div className="ins-add-row">
         <select className="ins-add-type" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="interstitial">Interstitial — factual bridge</option>
           <option value="title_card">Title card — short on-screen text</option>
+          <option value="interstitial">Interstitial — factual bridge</option>
           <option value="context_beat">Context beat — research needed</option>
         </select>
         <label className="ins-secs">~<input
@@ -616,6 +621,13 @@ function InterstitialAddForm({ onAdd, onCancel }) {
           onChange={(e) => setSeconds(Math.max(1, Number(e.target.value) || 1))}
         />s</label>
       </div>
+      {positions && positions.length > 0 && (
+        <select className="ins-add-pos" value={position} onChange={(e) => setPosition(e.target.value)}>
+          {positions.map((p) => (
+            <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </select>
+      )}
       <textarea
         className="ins-add-text"
         autoFocus
@@ -627,7 +639,7 @@ function InterstitialAddForm({ onAdd, onCancel }) {
       />
       <div className="ins-add-actions">
         <button className="btn btn-primary" disabled={!text.trim()}
-          onClick={() => onAdd({ type, text: text.trim(), seconds })}>Add</button>
+          onClick={() => onAdd({ type, text: text.trim(), seconds, position })}>Add</button>
         <button className="btn" onClick={onCancel}>Cancel</button>
       </div>
     </div>
@@ -2258,20 +2270,52 @@ Set model to Sonnet 4.6.`;
     );
   };
 
-  // Slim "+ interstitial" insertion control rendered between timeline entries.
-  const renderInsertControl = (refId, act, key) => {
-    const slot = refId === null ? `start:${act}` : refId;
+  // A short preview label for an entry, used in the "Add title card" position
+  // picker ("After: Shane — So technology is not…").
+  const entryPositionLabel = (entry) => {
+    const src = findSourceQuote(entry.source_quote_id);
+    const who = src?.speaker || entry.speaker
+      || ({ title_card: "Title card", interstitial: "Interstitial", context_beat: "Context beat" }[entry.type] || "card");
+    const txt = (trimmedQuoteText(entry) || entry.text || "").trim();
+    const words = txt.split(/\s+/).filter(Boolean).slice(0, 5).join(" ");
+    return `After: ${who}${words ? " — " + words + "…" : ""}`;
+  };
+
+  // Position options for inserting a card into an act: at the start, or after
+  // any existing entry. `entries` is the act's entries in display order.
+  const actInsertPositions = (entries) => [
+    { value: "start", label: "At the start of this act" },
+    ...entries.map((e) => ({ value: e.entry_id, label: entryPositionLabel(e) })),
+  ];
+
+  // Act-header "Add title card" control (option C). One button per act instead
+  // of a "+ interstitial" row between every card. Opens the add form (which
+  // defaults to a title card and includes a position picker) right under the
+  // act header. `addingAfterId` doubles as the open-state key: `actadd:<act>`.
+  const renderActAddControl = (act, entries) => {
+    const slot = `actadd:${act}`;
     const open = addingAfterId === slot;
     return (
-      <div className="ins-slot" key={key}>
-        {open ? (
-          <InterstitialAddForm
-            onAdd={(fields) => insertInterstitial(refId, act, fields)}
-            onCancel={() => setAddingAfterId(null)}
-          />
-        ) : (
-          <button className="ins-add-btn" onClick={() => setAddingAfterId(slot)}>+ interstitial</button>
-        )}
+      <button
+        className={`act-add-btn${open ? " active" : ""}`}
+        onClick={() => setAddingAfterId(open ? null : slot)}
+        title="Add a title card, interstitial, or context beat to this act"
+      >+ Add title card</button>
+    );
+  };
+
+  const renderActAddForm = (act, entries) => {
+    if (addingAfterId !== `actadd:${act}`) return null;
+    return (
+      <div className="ins-slot" data-topbar="1">
+        <InterstitialAddForm
+          positions={actInsertPositions(entries)}
+          onAdd={(fields) => {
+            const refId = fields.position === "start" ? null : fields.position;
+            insertInterstitial(refId, act, fields);
+          }}
+          onCancel={() => setAddingAfterId(null)}
+        />
       </div>
     );
   };
@@ -2645,17 +2689,14 @@ Set model to Sonnet 4.6.`;
                 <span className="act-sub">
                   {entries.length} entr{entries.length === 1 ? "y" : "ies"} · ~{fmtSec(sec)}
                 </span>
+                <span className="act-header-actions">{renderActAddControl(act, entries)}</span>
               </div>
-              {entries.flatMap((entry, idx) => {
+              {renderActAddForm(act, entries)}
+              {entries.map((entry) => {
                 const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
-                const card = revealedIds.has(entry.entry_id)
+                return revealedIds.has(entry.entry_id)
                   ? (isSpoken ? renderTimelineCard(entry) : renderInterstitialCard(entry))
                   : renderCleanCard(entry);
-                const els = [];
-                if (idx === 0) els.push(renderInsertControl(null, act, `ins-start-${act}`));
-                els.push(card);
-                els.push(renderInsertControl(entry.entry_id, act, `ins-after-${entry.entry_id}`));
-                return els;
               })}
             </section>
           );
