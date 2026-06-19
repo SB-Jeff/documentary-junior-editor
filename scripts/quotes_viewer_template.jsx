@@ -58,6 +58,13 @@ const PROJECT_META = {
   speakers: [
     // { name: "Speaker Name", slug: "speaker-slug", role: "patient", primary: true },
   ],
+  // Creative context (SPEC §3.3) — populated by the build script from the
+  // Creative Context handoffs. Drives the sub-header "Creative context" panel.
+  // acts is aligned to act_labels (Orphan excluded); roadmap/premise default to "".
+  acts: [
+    // { label: "Act 1", roadmap: "One-line narrative roadmap for this act." },
+  ],
+  premise: "",
 };
 
 // Source quote pool. Every catalogued quote, including orphans. The viewer
@@ -632,6 +639,12 @@ export default function QuotesView() {
   // Tight/Loose window toggle — the Timeline vs Cuts views now do that job.
   // Internal membership values stay "tight"/"loose"; only the labels changed.
   const [view, setView] = useState("timeline");
+  // Timeline sub-mode (M3 T2 §A): "edit" = the working cards (trim/split/cut/
+  // drag) — the existing surface, unchanged; "review" = a clean serif read of
+  // the cut as it plays (kept post-trim text only, grouped by act, no controls,
+  // trimmed text hidden). Default Edit. Only meaningful in the Timeline view;
+  // Library/Cuts ignore it.
+  const [timelineMode, setTimelineMode] = useState("edit");
   const [revealedIds, setRevealedIds] = useState(() => new Set());
   const [speakerFilter, setSpeakerFilter] = useState("all");
   const [actFilter, setActFilter] = useState("all");
@@ -702,6 +715,9 @@ export default function QuotesView() {
       mutator(tl);
       return { ...prev, [roundIndex]: tl };
     });
+    // Staleness (M3 T2 §B): any local edit means the agent's last look is now
+    // out of date. Cleared on Send (sendToAgent).
+    setDirtyByRound((m) => ({ ...m, [roundIndex]: true }));
     setPendingOpsByRound((prev) => {
       const list = prev[roundIndex] || [];
       const op = {
@@ -749,10 +765,35 @@ export default function QuotesView() {
   // The intent note for the batch currently being assembled (cleared on Send).
   const [batchNote, setBatchNote] = useState("");
   const [sendStatus, setSendStatus] = useState({ text: "", cls: "" });
+  // Staleness cue (M3 T2 §B). Client-side dirty flag: set true inside
+  // applyLocalEdit the moment Jeff edits, cleared when he Sends. The agent only
+  // reads viewer state on its turn (i.e. on each Send), so between Sends any
+  // edit means "the agent hasn't seen this yet." Honest, not fake real-time.
+  // Staleness is per-cut: editing cut A must not clear/raise the badge for cut B.
+  // Keyed by roundIndex; a derived `dirtySinceSend` keeps all read sites simple.
+  const [dirtyByRound, setDirtyByRound] = useState({});
+  const dirtySinceSend = !!dirtyByRound[roundIndex];
   // Export → FCPXML Agent handoff modal. null when closed; otherwise carries the
   // written-file info + the ready-to-paste agent prompt.
   const [exportInfo, setExportInfo] = useState(null);
   const [exportCopied, setExportCopied] = useState(false);
+
+  // === Top-bar Save / Open / Export-to-Final-Cut menus (M3 §5 redesign) ===
+  // The legacy "Round N" <select> is replaced by three header buttons, each
+  // toggling a small inline panel. Only one is open at a time. The Open panel
+  // lists saved cuts (ROUNDS — editing-versions v[N].json + any named saves) and
+  // loads one (reusing the round-switch / roundIndex path). The Save panel
+  // re-persists the current arrangement (overwrite) or writes a NEW NAMED
+  // deliverable keyed on a typed name. The Export panel consolidates the two
+  // FCPXML export flows (Timeline → -tight file, Full timeline → non-suffixed).
+  const [topMenu, setTopMenu] = useState(null);   // "save" | "open" | "export" | null
+  const [newCutName, setNewCutName] = useState("");  // typed name for "Save as new"
+  const [saveStatus, setSaveStatus] = useState({ text: "", cls: "" });
+
+  // Sub-header "Creative context" inline panel (M3 §5). Act-scoped: a single
+  // act shows only PROJECT_META.acts[that].roadmap; All shows premise + every
+  // act's roadmap. Sourced from the Creative Context agent.
+  const [creativeOpen, setCreativeOpen] = useState(false);
 
   // === Drag-to-reorder state (pointer-events based) ===
   // Native HTML5 drag-and-drop is unreliable inside Cowork's sandboxed artifact
@@ -863,36 +904,94 @@ export default function QuotesView() {
   // === Speaker color memo ===
   const speakerColors = buildSpeakerColors(PROJECT_META.speakers || []);
 
-  // ====== Round + save-as-new ======
+  // ====== Saved cuts (named deliverables) — Save / Save-as-new ======
+  // A project has MANY named deliverables (long cut + social shorts), each a
+  // snapshot of the current Timeline arrangement + trims + tier assignments in
+  // handoffs/<slug>/editing-versions/<name>.json (SPEC §3.3). The current cut is
+  // ROUNDS[roundIndex]; its on-disk file stem is `version` ("v3" or a slugified
+  // name). "Save changes" overwrites that file; "Save as new" writes a NEW file
+  // keyed on a typed NAME (slugified). Both reuse the persistFile() path.
 
-  async function saveAsNewRound() {
-    const newRoundNum = ROUNDS.length + 1;
-    const tl = getTimeline();
+  // Slugify a typed deliverable name for the on-disk file stem.
+  function slugifyName(name) {
+    return (name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/['"]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  // Build the editing-versions payload for the current Timeline arrangement.
+  // `roundField` keeps the legacy numeric `round` for v[N] files; named saves
+  // carry the human name in `cut_name` while leaving `round` as the source round
+  // number so downstream tooling that reads `round` still works.
+  function buildCutPayload(roundField, cutName) {
     const payload = {
       schema_version: 5,
-      round: newRoundNum,
+      round: roundField,
       project_slug: PROJECT_META.slug,
       target_runtime_seconds: PROJECT_META.target_seconds,
-      entries: tl,
+      entries: getTimeline(),
     };
+    if (cutName) payload.cut_name = cutName;
+    return payload;
+  }
+
+  async function persistCut(relPath, downloadName, payload, okWord) {
     const json = JSON.stringify(payload, null, 2);
-    const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/v${newRoundNum}.json`;
-    const { ok, method, detail } = await persistFile(relPath, json, {
-      downloadName: `v${newRoundNum}.json`,
-    });
+    setSaveStatus({ text: "Saving…", cls: "" });
+    const { ok, method, detail } = await persistFile(relPath, json, { downloadName });
     if (!ok) {
-      alert(`Save failed: ${detail}`);
-      return;
+      setSaveStatus({ text: `Save failed: ${detail}`, cls: "err" });
+      return false;
     }
     if (method === "download") {
-      alert(`Round ${newRoundNum} downloaded as v${newRoundNum}.json.\n\n` +
-        `Move it into ${relPath} (then reload to see it in the round dropdown).\n\n` +
-        `Tip: run \`python3 scripts/viewer_save_server.py\` from the project root ` +
-        `and saves will be written there automatically.`);
+      setSaveStatus({ text: `Downloaded ${downloadName} — move it into ${relPath}, then reload.`, cls: "warn" });
     } else {
-      alert(`Round ${newRoundNum} saved to ${detail}.\n\n` +
-        `Reload the viewer to see it in the round dropdown.`);
+      setSaveStatus({ text: `${okWord} → ${detail}. Reload to see it under Open.`, cls: "ok" });
     }
+    return true;
+  }
+
+  // Overwrite the CURRENT cut's editing-versions file with the current
+  // arrangement. Keys on ROUNDS[roundIndex].version (the file stem), falling
+  // back to v<round_number> for legacy rounds without an explicit version.
+  async function saveChangesToCut() {
+    const round = ROUNDS[roundIndex];
+    if (!round) { setSaveStatus({ text: "No cut to save into yet — use Save as new.", cls: "warn" }); return; }
+    const stem = round.version || `v${round.round_number}`;
+    const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/${stem}.json`;
+    const payload = buildCutPayload(round.round_number, round.cut_name || round.round_label);
+    await persistCut(relPath, `${stem}.json`, payload, `Saved “${round.round_label}”`);
+  }
+
+  // Write a NEW named deliverable to editing-versions/<slug>.json, keyed on a
+  // typed NAME (not v[N]). The source round number is preserved in `round`.
+  async function saveAsNamedCut() {
+    const name = newCutName.trim();
+    const stem = slugifyName(name);
+    if (!stem) { setSaveStatus({ text: "Type a name for the new cut first.", cls: "warn" }); return; }
+    if (/^v\d+$/.test(stem)) { setSaveStatus({ text: "That name is reserved for numbered rounds — pick another.", cls: "warn" }); return; }
+    if (ROUNDS.some((r) => r.version === stem) && !confirm(`A saved cut named “${name}” already exists. Overwrite it?`)) return;
+    const round = ROUNDS[roundIndex];
+    const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/${stem}.json`;
+    const payload = buildCutPayload(round ? round.round_number : ROUNDS.length + 1, name);
+    const ok = await persistCut(relPath, `${stem}.json`, payload, `Saved new cut “${name}”`);
+    if (ok) setNewCutName("");
+  }
+
+  // Switch the viewer to a saved cut (Open panel). Mirrors the retired round
+  // dropdown's switch path, including the unsynced-tweaks guard.
+  function openCut(nextIndex) {
+    if (nextIndex === roundIndex) { setTopMenu(null); return; }
+    if (getPendingOps().length > 0) {
+      if (!confirm(`You have ${getPendingOps().length} unsynced tweaks on the current cut. Open another cut anyway? Unsynced tweaks stay scoped to their cut.`)) {
+        return;
+      }
+    }
+    setRoundIndex(nextIndex);
+    setTopMenu(null);
   }
 
   // ====== Export ======
@@ -1041,6 +1140,124 @@ Set model to Sonnet 4.6.`;
     );
     setSplittingEntryId(null);
     setSplitMarkers([]);
+  }
+
+  // ====== Rejoin (M3 T2 §D) — inverse of executeSplit ======
+
+  // Split siblings share a source_quote_id and each carry a _subLabel ("a"/"b"/…)
+  // plus an _editCuts span that partitions the same original source text. Rejoin
+  // merges the siblings back into ONE entry: the kept (post-trim) verbatim text
+  // of each part, concatenated in source order, restored under a single entry
+  // with entry_id = the source number and _subLabel cleared. The parts are
+  // removed. It is the exact inverse of executeSplit.
+  // True when an entry is a split part that still has a sibling part in the cut
+  // (so Rejoin is meaningful — at least two parts to merge).
+  function hasRejoinSibling(entry) {
+    if (entry.source_quote_id == null || !entry._subLabel) return false;
+    return getTimeline().filter(
+      (e) => e.source_quote_id === entry.source_quote_id && e._subLabel
+    ).length >= 2;
+  }
+
+  function rejoinSiblings(entry) {
+    const srcId = entry.source_quote_id;
+    if (srcId == null || !entry._subLabel) return;
+    const tlNow = getTimeline();
+    // Siblings = every split part of the same source quote currently in the cut.
+    const siblings = tlNow.filter(
+      (e) => e.source_quote_id === srcId && e._subLabel
+    );
+    if (siblings.length < 2) return;
+    // Order by _subLabel ("a" < "b" < …) so kept text concatenates in source order.
+    const ordered = [...siblings].sort((a, b) =>
+      String(a._subLabel).localeCompare(String(b._subLabel))
+    );
+    const original = fullQuoteText(ordered[0]);
+    const len = original.length;
+    // Per-part kept ranges = complement of its _editCuts over [0,len]. Union the
+    // kept ranges across parts, then the merged _editCuts = complement of that
+    // union — this reproduces the parts' kept text, concatenated in order.
+    const keptRanges = [];
+    for (const part of ordered) {
+      const cuts = [...(part._editCuts || [])].sort((a, b) => a[0] - b[0]);
+      let pos = 0;
+      for (const [s, e] of cuts) {
+        if (s > pos) keptRanges.push([pos, s]);
+        pos = Math.max(pos, e);
+      }
+      if (pos < len) keptRanges.push([pos, len]);
+    }
+    keptRanges.sort((a, b) => a[0] - b[0]);
+    const mergedKept = [];
+    for (const [s, e] of keptRanges) {
+      const last = mergedKept[mergedKept.length - 1];
+      if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+      else mergedKept.push([s, e]);
+    }
+    // Complement of the merged kept ranges → merged _editCuts.
+    const mergedCuts = [];
+    let cur = 0;
+    for (const [s, e] of mergedKept) {
+      if (s > cur) mergedCuts.push([cur, s]);
+      cur = e;
+    }
+    if (cur < len) mergedCuts.push([cur, len]);
+
+    // entry_id collision guard (mirrors executeSplit's newId contract): the
+    // restored single entry takes the source number. Verify nothing else already
+    // owns it (siblings are about to be removed, so they don't count).
+    const restoredId = String(srcId);
+    const collision = tlNow.some(
+      (e) => e.entry_id === restoredId && !(e.source_quote_id === srcId && e._subLabel)
+    );
+    if (collision) {
+      setSendStatus({ text: `Can't rejoin — #${srcId} is already taken`, cls: "warn" });
+      setTimeout(() => setSendStatus({ text: "", cls: "" }), 3500);
+      return;
+    }
+
+    const merged = {
+      ...ordered[0],
+      entry_id: restoredId,
+      _subLabel: null,
+      _editCuts: mergedCuts,
+      notes: (ordered[0].notes || "").replace(/\s*\(split [a-z] of \d+\)/gi, "").trim(),
+    };
+    const partIds = ordered.map((p) => p.entry_id);
+    applyLocalEdit("rejoin",
+      (tl) => {
+        // Insert the merged entry where the first part sat, then drop all parts.
+        const firstIdx = tl.findIndex((x) => x.entry_id === partIds[0]);
+        const keep = tl.filter((x) => !partIds.includes(x.entry_id));
+        const insertAt = firstIdx < 0 ? keep.length
+          : keep.filter((x, i) => tl.indexOf(x) < firstIdx).length;
+        keep.splice(insertAt, 0, merged);
+        tl.length = 0;
+        tl.push(...keep);
+      },
+      `Rejoined ${partIds.join(", ")} into #${srcId}`,
+      {
+        change_type: "rejoin",
+        entry_id: restoredId,
+        before: { sub_ids: partIds, source_quote_id: srcId },
+        after: { entry_id: restoredId, source_quote_id: srcId },
+      }
+    );
+  }
+
+  // ====== Point at this (M3 T2 §C) ======
+
+  // Reference an exact entry into the agent compose body without exposing a
+  // visible quote number: speaker + first ~6 kept words + the under-the-hood
+  // entry_id (hover-fallback handle). Appended to the panel's intent note so it
+  // travels with the next Send alongside the pending ops. Opens the panel.
+  function pointAtEntry(entry) {
+    const src = findSourceQuote(entry.source_quote_id);
+    const speaker = src?.speaker || entry.speaker || "Interstitial";
+    const words = trimmedQuoteText(entry).split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
+    const ref = `Pointing at — ${speaker}: "${words}…" [${entry.entry_id}]`;
+    setBatchNote((prev) => (prev.trim() ? prev.replace(/\s*$/, "") + "\n" + ref : ref));
+    setSendPanelOpen(true);
   }
 
   // ====== Interstitial insertion ======
@@ -1215,6 +1432,9 @@ Set model to Sonnet 4.6.`;
     setBatchNotesByRound((prev) => ({ ...prev, [roundIndex]: allBatches }));
     setBatchByRound((prev) => ({ ...prev, [roundIndex]: b + 1 }));
     setBatchNote("");
+    // Staleness (M3 T2 §B): the agent reads viewer state attached to this Send,
+    // so it is now caught up. Clear the dirty flag.
+    setDirtyByRound((m) => ({ ...m, [roundIndex]: false }));
     if (copied) {
       const suffix = logResult && logResult.ok ? " · log updated" : "";
       setSendStatus({ text: `Sent batch ${b} ✓ — paste into chat` + suffix, cls: "ok" });
@@ -1295,35 +1515,149 @@ Set model to Sonnet 4.6.`;
   // Header
   // ============================================================================
 
+  // Active-act label for the sub-header: the current act filter, or "Full
+  // timeline" when ACT=All. The Creative-context panel is act-scoped against it.
+  const activeActLabel = actFilter === "all" ? "Full timeline" : actFilter;
+  const currentCut = ROUNDS[roundIndex] || null;
+  const toggleTopMenu = (m) => { setSaveStatus({ text: "", cls: "" }); setTopMenu((cur) => (cur === m ? null : m)); };
+
+  // Body of the act-scoped Creative-context panel. Reads PROJECT_META.acts
+  // ([{ label, roadmap }]) and PROJECT_META.premise — both emitted by the build
+  // script from the Creative Context handoffs (degrade to "" when absent).
+  const renderCreativeContext = () => {
+    const acts = PROJECT_META.acts || [];
+    if (actFilter !== "all") {
+      const act = acts.find((a) => a.label === actFilter);
+      const roadmap = act && act.roadmap;
+      if (!roadmap) {
+        return <p className="cc-empty">No creative context available yet for {actFilter}.</p>;
+      }
+      return (
+        <div className="cc-block">
+          <div className="cc-block-label">{actFilter}</div>
+          <p className="cc-roadmap">{roadmap}</p>
+        </div>
+      );
+    }
+    // All: premise + every act's roadmap.
+    const premise = PROJECT_META.premise || "";
+    const withRoadmap = acts.filter((a) => a.roadmap);
+    if (!premise && withRoadmap.length === 0) {
+      return <p className="cc-empty">No creative context available yet.</p>;
+    }
+    return (
+      <div>
+        {premise && (
+          <div className="cc-block">
+            <div className="cc-block-label">Premise</div>
+            <p className="cc-roadmap">{premise}</p>
+          </div>
+        )}
+        {withRoadmap.map((a) => (
+          <div className="cc-block" key={a.label}>
+            <div className="cc-block-label">{a.label}</div>
+            <p className="cc-roadmap">{a.roadmap}</p>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderHeader = () => (
     <div className="hdr">
       <div className="hdr-row1">
        <div className="hdr-row1-inner">
         <h1 className="hdr-title">{PROJECT_TITLE}</h1>
-        <select
-          className="round-select"
-          value={roundIndex}
-          onChange={(e) => {
-            const next = parseInt(e.target.value, 10);
-            if (next === -1) {
-              saveAsNewRound();
-              e.target.value = String(roundIndex);
-              return;
-            }
-            if (getPendingOps().length > 0) {
-              if (!confirm(`You have ${getPendingOps().length} unsynced tweaks on the current round. Switch rounds anyway? Unsynced tweaks stay scoped to their round.`)) {
-                e.target.value = String(roundIndex);
-                return;
-              }
-            }
-            setRoundIndex(next);
-          }}
-        >
-          {ROUNDS.map((r, i) => (
-            <option key={i} value={i}>{r.round_label || `Round ${r.round_number}`}</option>
-          ))}
-          <option value="-1">+ Save current as new round</option>
-        </select>
+        {/* Top-bar actions (M3 §5): Save · Open · Export to Final Cut. Replaces
+            the legacy Round <select> — its load/save jobs move to Open/Save. */}
+        <div className="topbar-actions" data-topbar="1">
+          <button
+            className={`tb-btn${topMenu === "save" ? " active" : ""}`}
+            onClick={() => toggleTopMenu("save")}
+          >Save</button>
+          <button
+            className={`tb-btn${topMenu === "open" ? " active" : ""}`}
+            onClick={() => toggleTopMenu("open")}
+          >Open</button>
+          <button
+            className={`tb-btn tb-export${topMenu === "export" ? " active" : ""}`}
+            onClick={() => toggleTopMenu("export")}
+          >Export to Final Cut</button>
+
+          {topMenu === "save" && (
+            <div className="tb-panel" data-topbar="1">
+              <div className="tb-panel-title">Save</div>
+              <div className="tb-panel-sub">
+                Current cut: <strong>{currentCut ? (currentCut.round_label || `Round ${currentCut.round_number}`) : "—"}</strong>
+              </div>
+              <button
+                className="btn tb-panel-btn"
+                disabled={!currentCut}
+                onClick={saveChangesToCut}
+              >Save changes to this cut</button>
+              <div className="tb-panel-divider"><span>or</span></div>
+              <div className="tb-saveas">
+                <input
+                  className="tb-input"
+                  type="text"
+                  placeholder="New cut name (e.g. Social short)"
+                  value={newCutName}
+                  onChange={(e) => setNewCutName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveAsNamedCut(); }}
+                />
+                <button
+                  className="btn tb-panel-btn"
+                  disabled={!newCutName.trim()}
+                  onClick={saveAsNamedCut}
+                >Save as new</button>
+              </div>
+              {saveStatus.text && <div className={`tb-status ${saveStatus.cls}`}>{saveStatus.text}</div>}
+            </div>
+          )}
+
+          {topMenu === "open" && (
+            <div className="tb-panel" data-topbar="1">
+              <div className="tb-panel-title">Open a saved cut</div>
+              {ROUNDS.length === 0 ? (
+                <div className="tb-empty">No saved cuts yet.</div>
+              ) : (
+                <ul className="tb-cutlist">
+                  {ROUNDS.map((r, i) => (
+                    <li key={i} className={i === roundIndex ? "current" : ""}>
+                      <span className="tb-cutname">
+                        {r.round_label || `Round ${r.round_number}`}
+                        {i === roundIndex && <span className="tb-current-tag">current</span>}
+                      </span>
+                      <button
+                        className="btn tb-open-btn"
+                        disabled={i === roundIndex}
+                        onClick={() => openCut(i)}
+                      >Open</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {topMenu === "export" && (
+            <div className="tb-panel" data-topbar="1">
+              <div className="tb-panel-title">Export to Final Cut</div>
+              <div className="tb-panel-sub">Hands the cut to the FCPXML Agent.</div>
+              <button
+                className="btn tb-panel-btn"
+                onClick={() => { setTopMenu(null); exportToFCPXML(false); }}
+              >Timeline cut ({activeEntries} · {fmtSec(activeSec)})</button>
+              {looseEntries.length > 0 && (
+                <button
+                  className="btn tb-panel-btn tb-panel-btn-secondary"
+                  onClick={() => { setTopMenu(null); exportToFCPXML(true); }}
+                  title="Export the full timeline including cut quotes (Timeline + Cuts)"
+                >Full timeline ({allEntries.length} · {fmtSec(fullSec)})</button>
+              )}
+            </div>
+          )}
+        </div>
         <div className="mode-toggle">
           {[
             { mode: "library", label: "Quote Library" },
@@ -1342,6 +1676,26 @@ Set model to Sonnet 4.6.`;
             </button>
           ))}
         </div>
+       </div>
+      </div>
+      {/* SUB-HEADER (M3 §5): active act inline with the Creative-context toggle.
+          "<ActLabel> · Creative context". The panel is ACT-SCOPED — a single act
+          shows only that act's roadmap; All shows the premise + every roadmap.
+          Sourced from the Creative Context agent; graceful empty states. */}
+      <div className="hdr-subhead">
+       <div className="hdr-subhead-inner" data-topbar="1">
+        <span className="subhead-act">{activeActLabel}</span>
+        <span className="subhead-dot">·</span>
+        <button
+          className={`subhead-cc-btn${creativeOpen ? " active" : ""}`}
+          onClick={() => setCreativeOpen((v) => !v)}
+        >Creative context <span className="cc-caret">{creativeOpen ? "▴" : "▾"}</span></button>
+        {creativeOpen && (
+          <div className="cc-panel">
+            {renderCreativeContext()}
+            <div className="cc-source">from Creative Context agent</div>
+          </div>
+        )}
        </div>
       </div>
       {(
@@ -1366,24 +1720,15 @@ Set model to Sonnet 4.6.`;
                 </button>
               ))}
             </div>
-            {/* Timeline metric + export (Timeline view only) — shares the Act
-                line, right-aligned. The window toggle is gone; the Timeline vs
-                Cuts views replace it. Export defaults to the working (tight)
-                cut → -tight file; the secondary button exports the full
-                timeline (tight ∪ loose) → non-suffixed file. */}
+            {/* Timeline metric (Timeline view only), right-aligned on the Act
+                line. Export moved to the top-bar "Export to Final Cut" menu
+                (M3 §5) — both FCPXML flows (Timeline → -tight, Full timeline →
+                non-suffixed) are consolidated there. */}
             {view === "timeline" && (
               <div className="win-block">
                 <span className="win-metric tight">
                   <span className="val">{activeEntries}</span> entries · <span className="val">{fmtSec(activeSec)}</span>
                 </span>
-                <button className="cut-export" onClick={() => exportToFCPXML(false)}>→ Send Timeline to FCPXML Agent</button>
-                {looseEntries.length > 0 && (
-                  <button
-                    className="cut-export full"
-                    onClick={() => exportToFCPXML(true)}
-                    title="Export the full timeline including cut quotes (Timeline + Cuts)"
-                  >Full timeline ({allEntries.length} · {fmtSec(fullSec)})</button>
-                )}
               </div>
             )}
           </div>
@@ -1407,9 +1752,32 @@ Set model to Sonnet 4.6.`;
             </div>
             {view === "timeline" && (
               <div className="reveal-block">
-                <span className="group-label">Quotes</span>
-                <button onClick={() => revealAll(true)}>Open all</button>
-                <button onClick={() => revealAll(false)}>Collapse all</button>
+                {/* Review | Edit segmented toggle (M3 T2 §A) — Timeline only. */}
+                <div className="tl-mode-toggle" role="tablist" aria-label="Timeline mode">
+                  {[
+                    { m: "review", label: "Review" },
+                    { m: "edit", label: "Edit" },
+                  ].map(({ m, label }) => (
+                    <button
+                      key={m}
+                      role="tab"
+                      aria-selected={timelineMode === m}
+                      className={timelineMode === m ? "active" : ""}
+                      onClick={() => setTimelineMode(m)}
+                      title={m === "review"
+                        ? "Read the cut as it plays — kept text only, no controls"
+                        : "Working cards — trim, split, cut, reorder"}
+                    >{label}</button>
+                  ))}
+                </div>
+                {/* Open all / Collapse all live in Edit mode only. */}
+                {timelineMode === "edit" && (
+                  <>
+                    <span className="group-label">Quotes</span>
+                    <button onClick={() => revealAll(true)}>Open all</button>
+                    <button onClick={() => revealAll(false)}>Collapse all</button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1858,6 +2226,11 @@ Set model to Sonnet 4.6.`;
                 </div>
               )}
             </span>
+            {entry._subLabel && (
+              <span className="split-tag" title={`Split sub-quote of source #${entry.source_quote_id}`}>
+                Split of #{entry.source_quote_id}
+              </span>
+            )}
             <span className={`mship-badge ${mship}`}>{membershipLabel(mship)}</span>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             <button
@@ -1944,6 +2317,18 @@ Set model to Sonnet 4.6.`;
           <div className="tl-actions">
             {membershipVerb(entry)}
             <button
+              className="btn btn-point"
+              title="Reference this exact quote into your message to the agent"
+              onClick={() => pointAtEntry(entry)}
+            >⌖ Point at this</button>
+            {entry._subLabel && hasRejoinSibling(entry) && (
+              <button
+                className="btn btn-rejoin"
+                title={`Merge the split parts back into one #${entry.source_quote_id}`}
+                onClick={() => rejoinSiblings(entry)}
+              >⤳ Rejoin</button>
+            )}
+            <button
               className="btn btn-drop"
               onClick={() => {
                 if (!confirm(`Drop entry ${entry.entry_id} (#${entry.source_quote_id}) back to the Library? The source quote stays in the Library and can be re-added.`)) return;
@@ -2020,6 +2405,56 @@ Set model to Sonnet 4.6.`;
     );
   };
 
+  // Review-mode read card (M3 T2 §A). A clean serif read of one entry as it
+  // plays: ONLY the kept post-trim text via trimmedQuoteText(entry). No editing
+  // controls; trimmed text is HIDDEN (not struck). Spoken quotes show the
+  // speaker; interstitials/title cards show their copy in the same serif voice.
+  const renderReviewCard = (entry) => {
+    const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
+    if (!isSpoken) {
+      const insText = entry.type === "context_beat"
+        ? `[${entry.intent || "context needed"}]`
+        : (entry.text || "");
+      return (
+        <div className="review-card review-interstitial" id={entry.entry_id} key={entry.entry_id}>
+          <p className="review-quote review-ins">{insText}</p>
+        </div>
+      );
+    }
+    const src = findSourceQuote(entry.source_quote_id);
+    const speakerLabel = src?.speaker || entry.speaker || "?";
+    return (
+      <div className="review-card" id={entry.entry_id} key={entry.entry_id}>
+        <div className="review-speaker">{speakerLabel}</div>
+        <p className="review-quote">"{trimmedQuoteText(entry)}"</p>
+      </div>
+    );
+  };
+
+  // Review mode (M3 T2 §A): the cut read end to end, grouped by titled act, with
+  // no editing controls. Shares the act grouping/filter logic with Edit mode.
+  const renderTimelineReview = (grouped, realActs) => (
+    <div className="timeline-view review-mode">
+      {realActs.map((act) => {
+        if (actFilter !== "all" && act !== actFilter) return null;
+        const entries = (grouped[act] || []).filter(passesTimelineFilters);
+        if (entries.length === 0) return null;
+        const sec = entries.reduce((a, e) => a + entrySeconds(e), 0);
+        return (
+          <section key={act} className="act-section review-act">
+            <div className="act-header review-act-header">
+              <h2 className="act-title review-act-title">{act}</h2>
+              <span className="act-sub">
+                {entries.length} entr{entries.length === 1 ? "y" : "ies"} · ~{fmtSec(sec)}
+              </span>
+            </div>
+            {entries.map((entry) => renderReviewCard(entry))}
+          </section>
+        );
+      })}
+    </div>
+  );
+
   const renderTimeline = () => {
     const tl = getTimeline();
     if (tl.length === 0) {
@@ -2037,6 +2472,8 @@ Set model to Sonnet 4.6.`;
       grouped[act] = grouped[act] || [];
       grouped[act].push(e);
     }
+    // Review mode = clean read; Edit mode = the working cards (below).
+    if (timelineMode === "review") return renderTimelineReview(grouped, realActs);
     return (
       <div className="timeline-view">
         {realActs.map((act) => {
@@ -2220,20 +2657,39 @@ Set model to Sonnet 4.6.`;
     );
   };
 
+  // Staleness cue (M3 T2 §B). The docked agent panel always shows where the
+  // agent stands relative to Jeff's edits: "✓ Up to date with your edits" when
+  // dirtySinceSend is false; an amber "↻ You've changed things since I last
+  // looked — ask me and I'll catch up" the moment he edits after the last Send.
+  const renderStaleness = () => (
+    <div className={`sp-stale${dirtySinceSend ? " dirty" : " fresh"}`}>
+      <span className="sp-stale-glyph">{dirtySinceSend ? "↻" : "✓"}</span>
+      <span className="sp-stale-text">
+        {dirtySinceSend
+          ? "You've changed things since I last looked — ask me and I'll catch up"
+          : "Up to date with your edits"}
+      </span>
+    </div>
+  );
+
   const renderSendPanel = () => {
     const ops = currentBatchOps();
     const round = ROUNDS[roundIndex];
     const hasContent = ops.length > 0 || batchNote.trim().length > 0;
     const sentCount = (batchNotesByRound[roundIndex] || []).length;
     return (
-      <div className={`send-panel${sendPanelOpen ? "" : " collapsed"}${ops.length > 0 ? " has-pending" : ""}`}>
+      <div className={`send-panel agent-panel${sendPanelOpen ? "" : " collapsed"}${ops.length > 0 ? " has-pending" : ""}${dirtySinceSend ? " is-stale" : ""}`}>
         <div className="sp-head" onClick={() => setSendPanelOpen(!sendPanelOpen)}>
-          <span className="sp-title">Talk to agent</span>
+          <span className="sp-title">Agent</span>
+          {!sendPanelOpen && (
+            <span className={`sp-stale-dot${dirtySinceSend ? " dirty" : " fresh"}`} title={dirtySinceSend ? "You've changed things since the agent last looked" : "Agent is up to date with your edits"}>{dirtySinceSend ? "↻" : "✓"}</span>
+          )}
           <span className={`sp-count${ops.length === 0 ? " zero" : ""}`}>{ops.length}</span>{"" /* current batch */}
           <span className="sp-toggle">{sendPanelOpen ? "▼" : "▲"}</span>
         </div>
         {sendPanelOpen && (
           <>
+            {renderStaleness()}
             <div className="sp-body">
               <div className="sp-section">
                 <div className="sp-section-head">
@@ -2303,6 +2759,19 @@ Set model to Sonnet 4.6.`;
     return () => document.removeEventListener("click", onDoc);
   }, [reassigningQuoteNum]);
 
+  // Close the top-bar Save/Open/Export menus and the Creative-context panel on
+  // an outside click. Elements that belong to either carry data-topbar="1".
+  useEffect(() => {
+    if (topMenu === null && !creativeOpen) return;
+    const onDoc = (e) => {
+      if (e.target.closest && e.target.closest('[data-topbar="1"]')) return;
+      setTopMenu(null);
+      setCreativeOpen(false);
+    };
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, [topMenu, creativeOpen]);
+
   // Styles for the Milestone-2 view-redesign classes. The shared stylesheet
   // lives in build_quotes_viewer.py (not editable from this template), so the
   // new classes introduced here ship their own scoped CSS. Reuses the existing
@@ -2311,8 +2780,6 @@ Set model to Sonnet 4.6.`;
     .mode-toggle .cuts-count { display:inline-block; margin-left:6px; min-width:16px; padding:0 5px;
       border-radius:9px; font-size:11px; font-weight:600; line-height:16px; text-align:center;
       background: var(--probable-soft); color: var(--probable); }
-    .cut-export.full { margin-left:8px; background: transparent; color: var(--probable);
-      border:1px solid var(--probable); }
     .status-badge { font-size:11px; font-weight:600; padding:1px 8px; border-radius:10px;
       text-transform:none; letter-spacing:.01em; }
     .status-badge.timeline { background: var(--must-soft); color: var(--must); }
@@ -2325,6 +2792,112 @@ Set model to Sonnet 4.6.`;
     .btn-discard { background: transparent; color: var(--text-muted); border:1px solid var(--border); }
     .btn-discard:hover { color: var(--text); border-color: var(--text-muted); }
     .cuts-view .empty { text-align:center; color: var(--text-muted); padding:48px 16px; }
+
+    /* === M3 top-bar (Save / Open / Export to Final Cut) === */
+    .topbar-actions { position:relative; display:inline-flex; gap:6px; align-items:center; }
+    .tb-btn { background: var(--surface); border:1px solid var(--border-strong); border-radius:6px;
+      padding:5px 12px; font:inherit; font-size:12px; font-weight:500; color: var(--text);
+      cursor:pointer; line-height:1.2; }
+    .tb-btn:hover { background: var(--surface-2); }
+    .tb-btn.active { background: var(--text); color:#fff; border-color: var(--text); }
+    .tb-btn.tb-export { font-weight:600; }
+    .tb-btn.tb-export.active { background: var(--must); border-color: var(--must); }
+    .tb-panel { position:absolute; top:calc(100% + 6px); right:0; z-index:70; min-width:280px;
+      background: var(--surface); border:1px solid var(--border-strong); border-radius:10px;
+      box-shadow:0 12px 32px rgba(0,0,0,.16); padding:14px; text-align:left; }
+    .tb-panel-title { font-size:13px; font-weight:600; color: var(--text); margin-bottom:8px; }
+    .tb-panel-sub { font-size:12px; color: var(--text-muted); margin-bottom:10px; }
+    .tb-panel-sub strong { color: var(--text); }
+    .tb-panel-btn { display:block; width:100%; text-align:center; margin:0; font-size:12px; }
+    .tb-panel-btn + .tb-panel-btn { margin-top:8px; }
+    .tb-panel-btn-secondary { background: transparent; color: var(--probable);
+      border:1px solid var(--probable); }
+    .tb-panel-divider { display:flex; align-items:center; gap:8px; margin:12px 0;
+      color: var(--text-subtle); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+    .tb-panel-divider::before, .tb-panel-divider::after { content:""; flex:1; height:1px; background: var(--border); }
+    .tb-saveas { display:flex; flex-direction:column; gap:8px; }
+    .tb-input { width:100%; box-sizing:border-box; padding:6px 9px; font:inherit; font-size:12px;
+      border:1px solid var(--border-strong); border-radius:6px; color: var(--text); background: var(--surface); }
+    .tb-input:focus { outline:none; border-color: var(--text-muted); }
+    .tb-status { margin-top:10px; font-size:11px; line-height:1.4; }
+    .tb-status.ok { color: var(--must); }
+    .tb-status.warn { color:#b45309; }
+    .tb-status.err { color:#b91c1c; }
+    .tb-empty { font-size:12px; color: var(--text-muted); padding:4px 0; }
+    .tb-cutlist { list-style:none; margin:0; padding:0; max-height:240px; overflow:auto; }
+    .tb-cutlist li { display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:7px 0; border-bottom:1px solid var(--border); }
+    .tb-cutlist li:last-child { border-bottom:none; }
+    .tb-cutlist li.current { }
+    .tb-cutname { font-size:12px; color: var(--text); display:flex; align-items:center; gap:7px; }
+    .tb-current-tag { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+      color: var(--must); background: var(--must-soft); border-radius:8px; padding:1px 6px; }
+    .tb-open-btn { font-size:11px; padding:3px 11px; }
+
+    /* === M3 sub-header (active act · Creative context) === */
+    .hdr-subhead { background: var(--surface); border-bottom:1px solid var(--border); }
+    .hdr-subhead-inner { position:relative; max-width:1100px; margin:0 auto; padding:7px 22px;
+      display:flex; align-items:center; gap:8px; }
+    .subhead-act { font-size:13px; font-weight:600; color: var(--text); }
+    .subhead-dot { color: var(--text-subtle); }
+    .subhead-cc-btn { background:transparent; border:1px solid var(--border-strong); border-radius:6px;
+      padding:3px 10px; font:inherit; font-size:12px; color: var(--text-muted); cursor:pointer; }
+    .subhead-cc-btn:hover { color: var(--text); background: var(--surface-2); }
+    .subhead-cc-btn.active { color: var(--text); border-color: var(--text-muted); }
+    .cc-caret { font-size:10px; }
+    .cc-panel { position:absolute; top:calc(100% + 4px); left:22px; z-index:70; max-width:560px;
+      background: var(--surface); border:1px solid var(--border-strong); border-radius:10px;
+      box-shadow:0 12px 32px rgba(0,0,0,.16); padding:16px 18px; text-align:left; }
+    .cc-block { margin-bottom:12px; }
+    .cc-block:last-of-type { margin-bottom:0; }
+    .cc-block-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+      color: var(--text-subtle); margin-bottom:3px; }
+    .cc-roadmap { margin:0; font-size:13px; line-height:1.55; color: var(--text); }
+    .cc-empty { margin:0; font-size:13px; color: var(--text-muted); font-style:italic; }
+    .cc-source { margin-top:14px; padding-top:10px; border-top:1px solid var(--border);
+      font-size:11px; color: var(--text-subtle); }
+
+    /* === M3 T2 §A — Review | Edit segmented toggle === */
+    .tl-mode-toggle { display:inline-flex; border:1px solid var(--border-strong); border-radius:7px;
+      overflow:hidden; margin-right:10px; }
+    .tl-mode-toggle button { background: var(--surface); border:none; padding:4px 13px; font:inherit;
+      font-size:12px; font-weight:500; color: var(--text-muted); cursor:pointer; line-height:1.3; }
+    .tl-mode-toggle button + button { border-left:1px solid var(--border-strong); }
+    .tl-mode-toggle button:hover { background: var(--surface-2); color: var(--text); }
+    .tl-mode-toggle button.active { background: var(--text); color:#fff; }
+
+    /* === M3 T2 §A — Review-mode read (clean serif read of the cut) === */
+    .timeline-view.review-mode { max-width:760px; margin:0 auto; }
+    .review-act { margin-bottom:30px; }
+    .review-act-header { border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:18px; }
+    .review-act-title { font-size:15px; font-weight:700; letter-spacing:.02em; color: var(--text); }
+    .review-card { margin:0 0 22px; }
+    .review-speaker { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em;
+      color: var(--text-subtle); margin-bottom:5px; }
+    .review-quote { margin:0; font-family: Georgia, "Times New Roman", serif; font-size:19px;
+      line-height:1.6; color: var(--text); }
+    .review-quote.review-ins { font-style:italic; color: var(--text-muted); font-size:17px; }
+    .review-interstitial { margin:0 0 22px; }
+
+    /* === M3 T2 §C/§D — Point at this + Rejoin + Split tag === */
+    .split-tag { font-size:10px; font-weight:600; padding:1px 7px; border-radius:8px;
+      background: var(--probable-soft); color: var(--probable); letter-spacing:.02em; }
+    .btn-point { background: transparent; color: var(--text-muted); border:1px solid var(--border-strong); }
+    .btn-point:hover { color: var(--text); border-color: var(--text-muted); }
+    .btn-rejoin { background: transparent; color: var(--probable); border:1px solid var(--probable); }
+    .btn-rejoin:hover { background: var(--probable-soft); }
+
+    /* === M3 T2 §B — Agent panel staleness cue === */
+    .send-panel.agent-panel.is-stale { box-shadow:0 -2px 0 0 #d97706 inset, 0 -8px 24px rgba(0,0,0,.12); }
+    .sp-stale { display:flex; align-items:center; gap:8px; padding:8px 14px; font-size:12px;
+      border-bottom:1px solid var(--border); }
+    .sp-stale.fresh { color:#15803d; background: rgba(21,128,61,.06); }
+    .sp-stale.dirty { color:#b45309; background: rgba(217,119,6,.10); }
+    .sp-stale-glyph { font-size:14px; line-height:1; }
+    .sp-stale-text { line-height:1.35; }
+    .sp-stale-dot { font-size:12px; margin-left:6px; }
+    .sp-stale-dot.fresh { color:#15803d; }
+    .sp-stale-dot.dirty { color:#b45309; }
   `;
 
   return (

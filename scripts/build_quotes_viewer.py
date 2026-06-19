@@ -170,6 +170,89 @@ def parse_act_structure_md(text: str):
     return project_name, act_labels, speakers
 
 
+def parse_act_roadmaps_md(text: str):
+    """Parse per-act one-liner roadmaps + a project premise from act-structure-v*.md.
+
+    Looks at the "### Structure" section, whose entries look like:
+
+        **Act 2 — "Used Right":** How BizTrack lets Shane and the team actually
+        live that philosophy ...
+
+    The quoted act NAME ("Used Right") equals the canonical Act Label, so the
+    roadmaps key on that name. Returns:
+        (roadmaps {label -> one_line_summary}, premise | "")
+
+    Defensive (SPEC §10): a missing/unparseable section yields ({}, "") — never
+    raises. The caller aligns roadmaps to act_labels and substitutes "" for any
+    label with no match.
+    """
+    roadmaps = {}
+    premise = ""
+    if not text:
+        return roadmaps, premise
+
+    # Isolate the "### Structure" section body (up to the next ### heading).
+    m = re.search(
+        r"^###\s*Structure.*?$(.*?)(?=^###\s|\Z)",
+        text, re.MULTILINE | re.DOTALL,
+    )
+    structure_body = m.group(1) if m else ""
+
+    # Each entry: a bold heading with a label token before the em-dash and a
+    # quoted act name, then a colon, then the one-liner sentence(s):
+    #   **Intro — "Who Is ProTec":** Meet ProTec: a young ...      (label "Intro")
+    #   **Act 1 — "Philosophy":** How Shane believes ...           (label "Philosophy")
+    #   **Act 2 — "Used Right":** ...                              (label "Used Right")
+    # The canonical Act Label equals the QUOTED name for the numbered acts, but
+    # for the Intro the quoted name is a title ("Who Is ProTec") while the label
+    # is the pre-dash token ("Intro"). Key the roadmap under BOTH the quoted name
+    # and the pre-dash token so the caller's `act_roadmaps.get(label)` matches
+    # whichever form the canonical Act Labels list uses.
+    for em in re.finditer(
+        r'\*\*\s*([^—–*"""]+?)\s*[—–]\s*[""]([^""]+)[""]\s*:\*\*\s*(.+?)'
+        r'(?=\n\s*\n|\n\s*\*\*|\Z)',
+        structure_body, re.DOTALL,
+    ):
+        pre = em.group(1).strip()
+        quoted = em.group(2).strip()
+        summary = re.sub(r"\s+", " ", em.group(3).strip())
+        if not summary:
+            continue
+        for key in (quoted, pre):
+            if key and key not in roadmaps:
+                roadmaps[key] = summary
+
+    # Premise: prefer the Intro one-liner if present (concise project framing);
+    # the caller can override from the creative brief. Leave to caller; here we
+    # only return the structure-derived roadmaps + a best-effort premise.
+    premise = roadmaps.get("Intro", "")
+    return roadmaps, premise
+
+
+def parse_premise_md(text: str):
+    """Best-effort project premise from creative-brief-summary-v*.md (1-2 sentences).
+
+    Prefers the "## Central narrative" section's first sentence(s). Defensive
+    (SPEC §10): returns "" if the file/section is missing or unparseable — never
+    raises.
+    """
+    if not text:
+        return ""
+    m = re.search(
+        r"^##\s*Central narrative.*?$(.*?)(?=^##\s|\Z)",
+        text, re.MULTILINE | re.DOTALL,
+    )
+    body = (m.group(1) if m else "").strip()
+    if not body:
+        return ""
+    body = re.sub(r"\s+", " ", body)
+    # Keep it short: first 1-2 sentences. Split on sentence-ending punctuation
+    # followed by a space + capital/quote (avoids splitting "$40M.").
+    sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z\"'])", body)
+    premise = " ".join(sentences[:2]).strip()
+    return premise
+
+
 def derive_speakers_from_quotes(quotes):
     """Distinct {name, slug, role} from the source quote pool (Bug 3).
 
@@ -551,12 +634,56 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         or as_speakers
     )
 
-    # Rounds: prefer editing-versions/v*.json, fallback to trimmed-quotes-v*.json
+    # --- Creative context: per-act roadmaps + project premise (SPEC §3.3) ---
+    # Read the act-structure "### Structure" one-liners and the creative-brief
+    # premise. Defensive (SPEC §10): any missing/unparseable file or section
+    # degrades to "" — never crashes.
+    act_roadmaps, structure_premise = {}, ""
+    if as_path:
+        try:
+            act_roadmaps, structure_premise = parse_act_roadmaps_md(
+                as_path.read_text(errors="ignore"))
+        except Exception as e:
+            print(f"Roadmap parse skipped ({as_path.name}): {e}", file=sys.stderr)
+
+    brief_premise = ""
+    cb_path = latest_versioned(handoffs.glob("creative-brief-summary-v*.md"))
+    if cb_path:
+        try:
+            brief_premise = parse_premise_md(cb_path.read_text(errors="ignore"))
+        except Exception as e:
+            print(f"Premise parse skipped ({cb_path.name}): {e}", file=sys.stderr)
+
+    # premise: creative-brief central-narrative > structure Intro one-liner > "".
+    premise = brief_premise or structure_premise or ""
+
+    # acts: aligned to act_labels (Orphan excluded later in build_data_block),
+    # each {label, roadmap}. Match by quoted act name == label; "" if no match.
+    acts = [
+        {"label": lbl, "roadmap": act_roadmaps.get(lbl, "")}
+        for lbl in act_labels_full
+        if lbl != "Orphan"
+    ]
+
+    # Rounds + named cuts: prefer editing-versions/, fallback to trimmed-quotes.
+    # Numbered rounds are v<N>.json; NAMED deliverables (e.g. social-short.json)
+    # are any other *.json. Globbing only "v*.json" both crashes on names that
+    # match the glob without a v<digit> (e.g. vlog.json) AND hides named saves so
+    # they never reload — so we glob *.json and classify each file.
     rounds = []
+
+    def _round_vnum(name):
+        m = re.fullmatch(r"(?:trimmed-quotes-)?v(\d+)\.json", name)
+        return int(m.group(1)) if m else None
+
     editing_versions_dir = handoffs / "editing-versions"
     if editing_versions_dir.is_dir():
-        round_files = sorted(editing_versions_dir.glob("v*.json"),
-                             key=lambda p: int(re.search(r"v(\d+)", p.name).group(1)))
+        all_ev = list(editing_versions_dir.glob("*.json"))
+        numbered = sorted((p for p in all_ev if _round_vnum(p.name) is not None),
+                          key=lambda p: _round_vnum(p.name))
+        named = sorted((p for p in all_ev if _round_vnum(p.name) is None),
+                       key=lambda p: p.name)
+        round_files = numbered + named
     else:
         # Anchor on trimmed-quotes-v(\d+).json exactly: Tight-window exports
         # (trimmed-quotes-v[N]-tight.json) are window variants of an existing
@@ -573,11 +700,18 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         except Exception as e:
             print(f"Skipping {f.name}: {e}", file=sys.stderr)
             continue
-        round_num = j.get("round", int(re.search(r"v(\d+)", f.name).group(1)))
         entries = j.get("entries", [])
+        vnum = _round_vnum(f.name)
+        if vnum is not None:
+            round_num = j.get("round", vnum)
+            round_label = f"Round {round_num}"
+        else:
+            # Named deliverable (e.g. "Social 30s") — label by its saved cut_name.
+            round_num = j.get("round", 0)
+            round_label = j.get("cut_name") or f.stem
         rounds.append({
             "round_number": round_num,
-            "round_label": f"Round {round_num}",
+            "round_label": round_label,
             "version": f.stem,
             "_raw_entries": entries,
         })
@@ -588,6 +722,8 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         "ssd_root": str(ssd_root),
         "act_labels": act_labels_full,
         "speakers": speakers,
+        "acts": acts,
+        "premise": premise,
         "target_seconds": target_seconds,
         "source_quotes": combined_quotes,
         "rounds": rounds,
@@ -706,6 +842,11 @@ def assemble_data_block(data: dict) -> dict:
         # on quotes, not as an act). Preserve order.
         "act_labels": [a for a in data["act_labels"] if a != "Orphan"],
         "speakers": data["speakers"],
+        # Creative context (SPEC §3.3): per-act narrative roadmaps + premise,
+        # for the act-scoped "Creative context" dropdown. acts is aligned to
+        # act_labels; each {label, roadmap}. Defensive defaults ([] / "").
+        "acts": data.get("acts", []),
+        "premise": data.get("premise", ""),
     }
 
     return {
