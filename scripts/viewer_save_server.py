@@ -93,10 +93,46 @@ class SaveHandler(BaseHTTPRequestHandler):
                              "serving": str(self.serve_file) if self.serve_file else None})
         elif path == "/read":
             self._read_json(parse_qs(parsed.query))
+        elif path == "/list":
+            self._list_cuts(parse_qs(parsed.query))
         elif path in ("", "/index.html") and self.serve_file is not None:
             self._serve_viewer()
         else:
             self._json(404, {"ok": False, "error": "not found"})
+
+    def _list_cuts(self, query):
+        """List the saved-cut JSON files in a sandboxed handoffs/ directory.
+
+        Lets the viewer's Open menu reflect what is actually on disk (named
+        deliverables saved this session, in another tab, or by the pipeline) —
+        not just the cuts baked into the page at build time. Returns a light
+        manifest per file: stem + the labelling fields, parsed best-effort.
+        """
+        rel = (query.get("path") or [""])[0].strip().lstrip("/")
+        if ".." in Path(rel).parts:
+            self._json(403, {"ok": False, "error": "path traversal not allowed"})
+            return
+        allowed = (self.root / "handoffs").resolve()
+        target = (self.root / rel).resolve()
+        if allowed != target and allowed not in target.parents:
+            self._json(403, {"ok": False, "error": "path must be under handoffs/"})
+            return
+        if not target.is_dir():
+            self._json(200, {"ok": True, "cuts": []})  # no dir yet → nothing saved
+            return
+        cuts = []
+        for p in sorted(target.glob("*.json")):
+            stem = p.stem
+            entry = {"stem": stem, "path": (Path(rel) / p.name).as_posix()}
+            try:
+                j = json.loads(p.read_text(encoding="utf-8"))
+                entry["round"] = j.get("round")
+                entry["cut_name"] = j.get("cut_name")
+                entry["entry_count"] = len(j.get("entries", []))
+            except (OSError, ValueError):
+                pass  # still list it, just without metadata
+            cuts.append(entry)
+        self._json(200, {"ok": True, "cuts": cuts})
 
     def _read_json(self, query):
         """Return the contents of a sandboxed handoffs/**.json file.

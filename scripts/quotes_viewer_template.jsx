@@ -703,6 +703,14 @@ export default function QuotesView() {
     setReassigningQuoteNum(null);
   }
 
+  // === Saved cuts (live) ===
+  // `cuts` starts as the rounds baked into the page at build time, but the Open
+  // menu must reflect what's actually ON DISK — named deliverables saved this
+  // session, in another tab, or by the pipeline. refreshDiskCuts() polls the app
+  // server's /list and merges any not already present. Disk-only cuts carry
+  // `_disk:true` and lazy-load their entries on Open.
+  const [cuts, setCuts] = useState(ROUNDS);
+
   // === Per-round working timeline (deep-clone of canonical at first switch) ===
   const [workingByRound, setWorkingByRound] = useState(() => {
     const init = {};
@@ -719,6 +727,38 @@ export default function QuotesView() {
 
   const getTimeline = () => workingByRound[roundIndex] || [];
   const getPendingOps = () => pendingOpsByRound[roundIndex] || [];
+
+  // Fetch the on-disk saved cuts and merge any new ones into `cuts` so the Open
+  // menu is live. Best-effort: if the app server isn't reachable, the baked
+  // list still shows. Called on mount, after a save, and when opening Open.
+  async function refreshDiskCuts() {
+    if (typeof fetch !== "function") return;
+    const rel = `handoffs/${PROJECT_META.slug}/editing-versions`;
+    try {
+      const res = await fetch(`${SAVE_HELPER_URL}/list?path=${encodeURIComponent(rel)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || !data.ok || !Array.isArray(data.cuts)) return;
+      setCuts((prev) => {
+        const known = new Set(prev.map((c) => c.version));
+        const additions = data.cuts
+          .filter((c) => !known.has(c.stem))
+          .map((c) => ({
+            round_number: c.round ?? null,
+            version: c.stem,
+            round_label: c.cut_name || (/^v\d+$/.test(c.stem) ? `Round ${c.round ?? c.stem.slice(1)}` : c.stem),
+            cut_name: c.cut_name || null,
+            timeline: [],          // lazy-loaded on Open
+            _disk: true,
+            _path: c.path,
+            _entryCount: c.entry_count,
+          }));
+        return additions.length ? [...prev, ...additions] : prev;
+      });
+    } catch (_) { /* server down — keep the baked list */ }
+  }
+
+  useEffect(() => { refreshDiskCuts(); /* eslint-disable-next-line */ }, []);
   // Per-round Talk-to-agent batch counter. Each op is tagged with the batch it
   // was made in; Send advances the counter so the panel clears for the next
   // batch while the cumulative log keeps every batch.
@@ -999,7 +1039,7 @@ export default function QuotesView() {
   // arrangement. Keys on ROUNDS[roundIndex].version (the file stem), falling
   // back to v<round_number> for legacy rounds without an explicit version.
   async function saveChangesToCut() {
-    const round = ROUNDS[roundIndex];
+    const round = cuts[roundIndex];
     if (!round) { setSaveStatus({ text: "No cut to save into yet — use Save as new.", cls: "warn" }); return; }
     const stem = round.version || `v${round.round_number}`;
     const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/${stem}.json`;
@@ -1014,22 +1054,41 @@ export default function QuotesView() {
     const stem = slugifyName(name);
     if (!stem) { setSaveStatus({ text: "Type a name for the new cut first.", cls: "warn" }); return; }
     if (/^v\d+$/.test(stem)) { setSaveStatus({ text: "That name is reserved for numbered rounds — pick another.", cls: "warn" }); return; }
-    if (ROUNDS.some((r) => r.version === stem) && !confirm(`A saved cut named “${name}” already exists. Overwrite it?`)) return;
-    const round = ROUNDS[roundIndex];
+    if (cuts.some((r) => r.version === stem) && !confirm(`A saved cut named “${name}” already exists. Overwrite it?`)) return;
+    const round = cuts[roundIndex];
     const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/${stem}.json`;
-    const payload = buildCutPayload(round ? round.round_number : ROUNDS.length + 1, name);
+    const payload = buildCutPayload(round ? round.round_number : cuts.length + 1, name);
     const ok = await persistCut(relPath, `${stem}.json`, payload, `Saved new cut “${name}”`);
-    if (ok) setNewCutName("");
+    if (ok) { setNewCutName(""); refreshDiskCuts(); }
   }
 
-  // Switch the viewer to a saved cut (Open panel). Mirrors the retired round
-  // dropdown's switch path, including the unsynced-tweaks guard.
-  function openCut(nextIndex) {
+  // Switch the viewer to a saved cut (Open panel). Disk-only cuts (saved this
+  // session / in another tab / by the pipeline) lazy-load their entries from the
+  // app server on first open. Keeps the unsynced-tweaks guard.
+  async function openCut(nextIndex) {
     if (nextIndex === roundIndex) { setTopMenu(null); return; }
     if (getPendingOps().length > 0) {
       if (!confirm(`You have ${getPendingOps().length} unsynced tweaks on the current cut. Open another cut anyway? Unsynced tweaks stay scoped to their cut.`)) {
         return;
       }
+    }
+    const cut = cuts[nextIndex];
+    // Lazy-load a disk-only cut's entries the first time it's opened.
+    if (cut && cut._disk && !workingByRound[nextIndex]) {
+      setSaveStatus({ text: `Opening “${cut.round_label}”…`, cls: "" });
+      let entries = null;
+      try {
+        const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent(cut._path)}`);
+        const data = res.ok ? await res.json() : null;
+        if (data && data.ok && data.data) entries = data.data.entries || [];
+      } catch (_) { /* fall through to error */ }
+      if (!entries) {
+        setSaveStatus({ text: `Couldn't load “${cut.round_label}” — is the app server running?`, cls: "err" });
+        return;
+      }
+      setWorkingByRound((prev) => ({ ...prev, [nextIndex]: JSON.parse(JSON.stringify(entries)) }));
+      setPendingOpsByRound((prev) => ({ ...prev, [nextIndex]: prev[nextIndex] || [] }));
+      setSaveStatus({ text: "", cls: "" });
     }
     setRoundIndex(nextIndex);
     setTopMenu(null);
@@ -1045,7 +1104,7 @@ export default function QuotesView() {
   // with no entry, so the agent reconstructs the Library from its baked-in pool
   // plus `source_act_overrides` (Jeff's Library recategorizations).
   function buildLiveState() {
-    const round = ROUNDS[roundIndex];
+    const round = cuts[roundIndex];
     const tl = getTimeline();
     const ops = getPendingOps();
     return {
@@ -1139,7 +1198,7 @@ export default function QuotesView() {
     const label = win === "tight" ? "Timeline" : "Full timeline";
     const filtered = win === "tight" ? tl.filter((e) => membershipOf(e) === "tight") : tl;
     const totalSec = filtered.reduce((a, e) => a + entrySeconds(e), 0);
-    const round = ROUNDS[roundIndex];
+    const round = cuts[roundIndex];
     const filename = `trimmed-quotes-v${round.round_number}${win === "tight" ? "-tight" : ""}.json`;
     const relPath = `handoffs/${PROJECT_META.slug}/${filename}`;
     const payload = {
@@ -1520,7 +1579,7 @@ Set model to Sonnet 4.6.`;
   async function writeTweakLog() {
     const ops = getPendingOps();
     if (ops.length === 0 && !batchNote.trim()) return { ok: false, reason: "nothing to log" };
-    const round = ROUNDS[roundIndex];
+    const round = cuts[roundIndex];
     if (!round) return { ok: false, reason: "no round" };
     const payload = {
       schema_version: 3,
@@ -1625,8 +1684,12 @@ Set model to Sonnet 4.6.`;
   // Active-act label for the sub-header: the current act filter, or "Full
   // timeline" when ACT=All. The Creative-context panel is act-scoped against it.
   const activeActLabel = actFilter === "all" ? "Full timeline" : actFilter;
-  const currentCut = ROUNDS[roundIndex] || null;
-  const toggleTopMenu = (m) => { setSaveStatus({ text: "", cls: "" }); setTopMenu((cur) => (cur === m ? null : m)); };
+  const currentCut = cuts[roundIndex] || null;
+  const toggleTopMenu = (m) => {
+    setSaveStatus({ text: "", cls: "" });
+    if (m === "open") refreshDiskCuts();  // make the Open list reflect disk
+    setTopMenu((cur) => (cur === m ? null : m));
+  };
 
   // Body of the act-scoped Creative-context panel. Reads PROJECT_META.acts
   // ([{ label, roadmap }]) and PROJECT_META.premise — both emitted by the build
@@ -1753,11 +1816,11 @@ Set model to Sonnet 4.6.`;
           {topMenu === "open" && (
             <div className="tb-panel" data-topbar="1">
               <div className="tb-panel-title">Open a saved cut</div>
-              {ROUNDS.length === 0 ? (
+              {cuts.length === 0 ? (
                 <div className="tb-empty">No saved cuts yet.</div>
               ) : (
                 <ul className="tb-cutlist">
-                  {ROUNDS.map((r, i) => (
+                  {cuts.map((r, i) => (
                     <li key={i} className={i === roundIndex ? "current" : ""}>
                       <span className="tb-cutname">
                         {r.round_label || `Round ${r.round_number}`}
