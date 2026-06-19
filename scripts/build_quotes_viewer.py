@@ -352,6 +352,28 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
     if not src:
         return None
 
+    # Already-runtime-shaped entry (saved BY THE VIEWER, e.g. a named cut in
+    # editing-versions): it carries char-range `_editCuts` and has NO old
+    # `segments` list. The segment→char migration below assumes the old shape and
+    # would re-derive cuts from a missing `segments` field — yielding [[0, len]]
+    # (the whole quote cut) and a blank card. Detect and pass it through intact,
+    # only normalising the entry_id + canonical int source num + sub-label.
+    if "segments" not in entry and "_editCuts" in entry:
+        old_id = str(entry.get("entry_id", src["num"]))
+        new_id = str(src["num"]) if old_id.startswith("e_") else old_id
+        return {
+            "entry_id": new_id,
+            "_subLabel": entry.get("_subLabel"),
+            "source_quote_id": src["num"],
+            "type": entry.get("type", "spoken"),
+            "speaker": entry.get("speaker"),
+            "part": entry.get("part"),
+            "runtime_recommendation": entry.get("runtime_recommendation", "probable-keep"),
+            "membership": entry.get("membership"),
+            "_editCuts": entry.get("_editCuts", []),
+            "notes": entry.get("notes", ""),
+        }
+
     # Build full original text (join all segments with single space, matching
     # what the new viewer's fullQuoteText does).
     full_text = " ".join(seg["text"] for seg in src["segments"])
