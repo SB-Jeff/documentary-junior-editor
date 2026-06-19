@@ -1898,9 +1898,6 @@ Set model to Sonnet 4.6.`;
                 onClick={() => setView(m.mode)}
               >
                 {m.label}
-                {m.mode === "cuts" && looseEntries.length > 0 && (
-                  <span className="cuts-count">{looseEntries.length}</span>
-                )}
               </button>
             ))}
           </div>
