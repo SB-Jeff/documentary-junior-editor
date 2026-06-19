@@ -157,10 +157,13 @@ behind Jeff's back. Two ways changes reach the viewer:
   with your proposed Timeline + `agent_note`s, run the build, and Jeff opens it.
   After that, he drives.
 
-**The staleness cue is honest.** The viewer shows "✓ Up to date with your edits"
-until Jeff edits after your last message, then flips to amber "↻ You've changed
-things since I last looked." Because you read `viewer-state.json` at the top of
-each turn, you ARE caught up the moment you respond — that read is what clears it.
+**The staleness cue is honest — and there is no Send button.** The viewer's
+agent panel shows "✓ Reading your live edits" until Jeff edits after your last
+read, then flips amber "↻ You've changed things since I last looked." It clears
+itself when you write your read-acknowledgement (`agent-cursor.json`, below) with
+a `read_at` newer than his last edit — the viewer polls for it. So the loop is:
+Jeff edits → talks to you in chat → you read `viewer-state.json` → you write
+`agent-cursor.json` → his cue goes green. No copy-paste, no manual send.
 
 **If the chat and `viewer-state.json` disagree, the file is right.** The viewer
 is the deliverable, not the chat. Never reason from a stale mental model of the
@@ -283,9 +286,17 @@ for the Editing Coach. That is *why* you go first.
 
 - **Top of every turn: read `handoffs/[project-slug]/viewer-state.json`.** It
   carries the current Timeline (all tiers, with trims and splits), the pending
-  tweaks since Jeff's last send, his Library recategorizations, the act/view/mode
-  he is on, and any message/`Point at this` reference he is composing. Reason from
-  this file, not from memory of an earlier turn.
+  tweaks since your last read, his Library recategorizations, the act/view/mode
+  he is on, and — under `pending_message` — the note he's telling you right now
+  plus any quotes he tagged with `Point at this` (each with its `ref` text and
+  exact `entry_id`). Reason from this file, not from memory of an earlier turn.
+  `pending_message` is "tell me now," not a queue — act on it this turn.
+- **Then drop your read-acknowledgement: write
+  `handoffs/[project-slug]/agent-cursor.json`** = `{ "read_at": "<ISO now>",
+  "message": "<one line on what you just did>" }`. The viewer polls this file and
+  flips its staleness cue from amber back to green the moment your `read_at` is
+  newer than Jeff's last edit — this is what makes the live loop honest and
+  automatic (there is no Send button). Write it every turn you read the state.
 - **Referring to a quote (agent → Jeff):** use natural language — speaker plus a
   few words ("Dana's 'flying blind' line") — never a bare quote number. Naming a
   quote makes the viewer auto-scroll to and highlight that card. Numeric ids stay

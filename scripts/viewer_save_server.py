@@ -29,11 +29,13 @@ POSTs are same-origin, so persistence works with no CORS caveats.
 Security
 --------
 - Binds to 127.0.0.1 only (never reachable off this machine).
-- Only paths *under* ``handoffs/`` are writable, and only ``.json`` files.
+- Only paths *under* ``handoffs/`` are writable (POST /save) or readable
+  (GET /read), and only ``.json`` files.
 - Absolute paths, ``..`` traversal, and symlink escapes are rejected — every
   resolved target must stay inside ``<root>/handoffs``.
 - ``--serve`` exposes exactly ONE file (the built viewer) at ``/``; no
-  directory listing, no arbitrary file reads.
+  directory listing. GET /read is limited to the same handoffs/**.json sandbox
+  (used to poll the Edit Agent's read-acknowledgement).
 
 Usage
 -----
@@ -50,6 +52,7 @@ import json
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse, parse_qs
 
 DEFAULT_PORT = 8765
 MAX_BODY = 16 * 1024 * 1024  # 16 MB — generous for a cut/tweak-log JSON
@@ -82,15 +85,44 @@ class SaveHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):  # noqa: N802
-        path = self.path.split("?", 1)[0].rstrip("/")
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
         if path in ("/ping", "/health"):
             self._json(200, {"ok": True, "service": "viewer-save-server",
                              "root": str(self.root),
                              "serving": str(self.serve_file) if self.serve_file else None})
+        elif path == "/read":
+            self._read_json(parse_qs(parsed.query))
         elif path in ("", "/index.html") and self.serve_file is not None:
             self._serve_viewer()
         else:
             self._json(404, {"ok": False, "error": "not found"})
+
+    def _read_json(self, query):
+        """Return the contents of a sandboxed handoffs/**.json file.
+
+        Lets the viewer poll the Edit Agent's read-acknowledgement
+        (handoffs/<slug>/agent-cursor.json) so the staleness cue can clear itself
+        when the agent has caught up. Same sandbox as writes: handoffs/**.json
+        only. Missing file → 404 {ok:false} (the viewer treats that as
+        "agent hasn't connected yet"), never an error.
+        """
+        rel = (query.get("path") or [""])[0]
+        try:
+            target = self._safe_target(rel)
+        except ValueError as e:
+            self._json(403, {"ok": False, "error": str(e)})
+            return
+        if not target.is_file():
+            self._json(404, {"ok": False, "error": "not found"})
+            return
+        try:
+            content = target.read_text(encoding="utf-8")
+            data = json.loads(content)
+        except (OSError, ValueError) as e:
+            self._json(500, {"ok": False, "error": f"read failed: {e}"})
+            return
+        self._json(200, {"ok": True, "data": data})
 
     def _serve_viewer(self):
         """Serve the single built viewer file at /. No directory access."""

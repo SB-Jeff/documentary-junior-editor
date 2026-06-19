@@ -725,7 +725,6 @@ export default function QuotesView() {
   const [batchByRound, setBatchByRound] = useState(() => {
     const init = {}; ROUNDS.forEach((_, i) => { init[i] = 1; }); return init;
   });
-  const getBatch = () => batchByRound[roundIndex] || 1;
 
   // applyLocalEdit records a structured op alongside the human-readable
   // description. `meta` carries the fields the Editing Coach Agent reads from
@@ -737,9 +736,9 @@ export default function QuotesView() {
       mutator(tl);
       return { ...prev, [roundIndex]: tl };
     });
-    // Staleness (M3 T2 §B): any local edit means the agent's last look is now
-    // out of date. Cleared on Send (sendToAgent).
-    setDirtyByRound((m) => ({ ...m, [roundIndex]: true }));
+    // Staleness (M5): stamp this cut's last-edit time. The cue compares it
+    // against the agent's last read (agent-cursor.json) — no manual Send.
+    setLastEditAtByRound((m) => ({ ...m, [roundIndex]: Date.now() }));
     setPendingOpsByRound((prev) => {
       const list = prev[roundIndex] || [];
       const op = {
@@ -777,24 +776,31 @@ export default function QuotesView() {
   // or `start:${act}` for the head of an act.
   const [addingAfterId, setAddingAfterId] = useState(null);
 
-  // === Send-to-agent panel state ===
+  // === Live-partner agent panel state (M5 redesign) ===
+  // The old clipboard "Send batch" model is gone. The agent reads the viewer's
+  // live state from disk (viewer-state.json) on its turn; Jeff just edits and
+  // talks in chat. This panel is a STATUS surface, not a send surface.
   const [sendPanelOpen, setSendPanelOpen] = useState(false);
-  // Per-round record of sent batches: { batch, note, sent_at }. Travels into the
-  // cumulative tweak log so each batch's reasoning stays with its ops.
-  const [batchNotesByRound, setBatchNotesByRound] = useState(() => {
-    const init = {}; ROUNDS.forEach((_, i) => { init[i] = []; }); return init;
-  });
-  // The intent note for the batch currently being assembled (cleared on Send).
+  // The note Jeff is composing for the agent right now ("tell me now" — it rides
+  // in viewer-state.json and is consumed when the agent next reads). NOT a queue.
   const [batchNote, setBatchNote] = useState("");
-  const [sendStatus, setSendStatus] = useState({ text: "", cls: "" });
-  // Staleness cue (M3 T2 §B). Client-side dirty flag: set true inside
-  // applyLocalEdit the moment Jeff edits, cleared when he Sends. The agent only
-  // reads viewer state on its turn (i.e. on each Send), so between Sends any
-  // edit means "the agent hasn't seen this yet." Honest, not fake real-time.
-  // Staleness is per-cut: editing cut A must not clear/raise the badge for cut B.
-  // Keyed by roundIndex; a derived `dirtySinceSend` keeps all read sites simple.
-  const [dirtyByRound, setDirtyByRound] = useState({});
-  const dirtySinceSend = !!dirtyByRound[roundIndex];
+  // Quotes Jeff tagged with "Point at this" — { entry_id, label }. Travel in the
+  // live state alongside the note; cleared when the agent catches up.
+  const [pointedAt, setPointedAt] = useState([]);
+
+  // Staleness, honest edition (M5). Instead of a flag cleared by a manual Send,
+  // we compare the time of Jeff's last edit (per cut) against the time the Edit
+  // Agent last acknowledged reading the viewer (agent-cursor.json, polled from
+  // disk). Three states: not-connected (agent never looked) / caught-up / behind.
+  const [lastEditAtByRound, setLastEditAtByRound] = useState({});
+  const [agentCursor, setAgentCursor] = useState(null);  // { read_at, message? } | null
+  const lastEditMs = lastEditAtByRound[roundIndex] || 0;
+  const cursorReadMs = (agentCursor && agentCursor.read_at) ? Date.parse(agentCursor.read_at) || 0 : 0;
+  const agentConnected = !!agentCursor;
+  // "behind" = Jeff has edited since the agent last read. Drives the amber cue.
+  const agentBehind = lastEditMs > 0 && lastEditMs > cursorReadMs;
+  // Back-compat alias used across the build sites + buildLiveState.
+  const dirtySinceSend = agentBehind;
   // Export → FCPXML Agent handoff modal. null when closed; otherwise carries the
   // written-file info + the ready-to-paste agent prompt.
   const [exportInfo, setExportInfo] = useState(null);
@@ -1052,15 +1058,24 @@ export default function QuotesView() {
         ? { round_number: round.round_number, version: round.version, label: round.round_label || `Round ${round.round_number}`, cut_name: round.cut_name || null }
         : null,
       focus: { view, mode: timelineMode, act: actFilter, speaker: speakerFilter },
+      // Honest staleness for the agent: has Jeff edited since you last read?
+      agent_behind: agentBehind,
+      agent_last_read: agentCursor ? agentCursor.read_at : null,
       dirty_since_send: dirtySinceSend,
       counts: {
         timeline: tl.filter((e) => membershipOf(e) === "tight").length,
         cuts: tl.filter((e) => membershipOf(e) === "loose").length,
         pending_ops: ops.length,
       },
-      // What Jeff is composing for his next message to the agent (intent note +
-      // any "Point at this" references he tagged in). Empty when nothing pending.
-      pending_message: batchNote.trim() ? { note: batchNote.trim() } : null,
+      // What Jeff is telling the agent right now — a free-text note plus any
+      // quotes he tagged with "Point at this" (exact entry_id handles). This is
+      // "tell me now," consumed when the agent next reads. Null when nothing.
+      pending_message: (batchNote.trim() || pointedAt.length)
+        ? {
+            note: batchNote.trim() || null,
+            pointed_at: pointedAt.map((p) => ({ entry_id: p.entry_id, ref: p.label })),
+          }
+        : null,
       // Library recategorizations Jeff made since this build (entry-less retags).
       source_act_overrides: sourceActOverrides,
       // Uncommitted tweaks since his last Send — the live correction signal.
@@ -1091,10 +1106,14 @@ export default function QuotesView() {
       } else {
         setPersistState({ state: "offline", at: Date.now(), detail: res.detail || "app server not running" });
       }
+      // The old clipboard "Send" used to persist the tweak log (the Editing
+      // Coach's training record). With Send gone, fold it into the autosave so
+      // every correction + Jeff's live note still reach disk. Best-effort.
+      writeTweakLog();
     }, 700);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, batchNote, dirtySinceSend, sourceActOverrides]);
+  }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, batchNote, pointedAt, dirtySinceSend, sourceActOverrides]);
 
   // ====== Export ======
 
@@ -1347,20 +1366,60 @@ Set model to Sonnet 4.6.`;
     );
   }
 
-  // ====== Point at this (M3 T2 §C) ======
+  // ====== Point at this ======
 
-  // Reference an exact entry into the agent compose body without exposing a
+  // Tag an exact entry into the live message to the agent without exposing a
   // visible quote number: speaker + first ~6 kept words + the under-the-hood
-  // entry_id (hover-fallback handle). Appended to the panel's intent note so it
-  // travels with the next Send alongside the pending ops. Opens the panel.
+  // entry_id (the precise handle). Staged as a chip in the agent panel; it
+  // rides in viewer-state.json's pending_message so the agent knows exactly
+  // which quote Jeff means on its next read. Opens the panel.
   function pointAtEntry(entry) {
     const src = findSourceQuote(entry.source_quote_id);
     const speaker = src?.speaker || entry.speaker || "Interstitial";
     const words = trimmedQuoteText(entry).split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
-    const ref = `Pointing at — ${speaker}: "${words}…" [${entry.entry_id}]`;
-    setBatchNote((prev) => (prev.trim() ? prev.replace(/\s*$/, "") + "\n" + ref : ref));
+    const label = `${speaker}: "${words}…"`;
+    setPointedAt((prev) => (prev.some((p) => p.entry_id === entry.entry_id)
+      ? prev
+      : [...prev, { entry_id: entry.entry_id, label }]));
     setSendPanelOpen(true);
   }
+
+  function removePointedAt(entryId) {
+    setPointedAt((prev) => prev.filter((p) => p.entry_id !== entryId));
+  }
+
+  // ====== Agent read-acknowledgement (M5 live loop) ======
+  // The Edit Agent drops handoffs/<slug>/agent-cursor.json each turn after it
+  // reads viewer-state.json (see SKILL-edit). We poll it so the staleness cue
+  // clears itself the moment the agent catches up — the honest version of
+  // "sending a message clears it," with no manual Send.
+  useEffect(() => {
+    if (typeof fetch !== "function") return;
+    let cancelled = false;
+    const rel = `handoffs/${PROJECT_META.slug}/agent-cursor.json`;
+    async function poll() {
+      try {
+        const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent(rel)}`);
+        if (!res.ok) return;  // 404 → agent hasn't connected; leave cursor null
+        const data = await res.json();
+        if (!cancelled && data && data.ok && data.data) setAgentCursor(data.data);
+      } catch (_) { /* server down — leave state as-is */ }
+    }
+    poll();
+    const id = setInterval(poll, 4000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  // When the agent catches up (transition behind → caught-up), consume the
+  // staged note + pointed-at chips — they were "tell me now," and now it knows.
+  const prevBehindRef = useRef(false);
+  useEffect(() => {
+    if (prevBehindRef.current && agentConnected && !agentBehind) {
+      setBatchNote("");
+      setPointedAt([]);
+    }
+    prevBehindRef.current = agentBehind;
+  }, [agentBehind, agentConnected]);
 
   // ====== Interstitial insertion ======
 
@@ -1442,63 +1501,40 @@ Set model to Sonnet 4.6.`;
       );
   }
 
-  // ====== Send-to-agent panel ======
+  // ====== Live-partner agent panel ======
 
-  // Current-batch ops only — the panel and each Send are scoped to one batch.
-  function currentBatchOps() {
-    return getPendingOps().filter((o) => o.batch === getBatch());
-  }
-
-  function composeSendMessage() {
-    const ops = currentBatchOps();
-    const tl = getTimeline();
-    const round = ROUNDS[roundIndex];
-    const lines = [];
-    if (ops.length > 0) {
-      lines.push(`I made these tweaks in the viewer (batch ${getBatch()}):`, "");
-      ops.forEach((o, i) => lines.push(`${i + 1}. ${o.description}`));
-      lines.push("");
-    }
-    if (batchNote.trim()) {
-      lines.push("Why this batch:", "");
-      lines.push(batchNote.trim(), "");
-    }
-    if (ops.length > 0) {
-      lines.push(`Resulting timeline state (${tl.length} entries) — apply canonically and push update_artifact:`, "");
-      lines.push("```json");
-      lines.push(JSON.stringify(tl, null, 2));
-      lines.push("```", "");
-    }
-    lines.push(`Baseline: round ${round.round_number} (${round.version})`);
-    return lines.join("\n");
-  }
-
-  // Persist the round's override log to disk for the Editing Coach Agent.
-  // Writes handoffs/[slug]/tweak-log-v[N].json via callBash; no-ops gracefully
-  // outside Cowork. Called on Send and Export — the points where the session's
-  // tweaks leave the viewer. pendingOps is cumulative (never auto-cleared), so
-  // each write captures the full ordered history, reversal pairs included.
-  // Writes ONE cumulative handoffs/[slug]/tweak-log-v[N].json. Every op carries
-  // its batch number; a top-level `batches` array records each sent batch's
-  // intent note + send time, so Coach reads the whole iteration history from a
-  // single file. `batchesOverride` lets Send include the batch it is sending
-  // right now (React state updates are async).
-  async function writeTweakLog(batchesOverride) {
+  // Edits Jeff has made since the agent last read the viewer — the "what you'll
+  // catch up on" list. When the agent has never connected, show everything
+  // pending this round.
+  function opsSinceAgentRead() {
     const ops = getPendingOps();
-    const batches = batchesOverride || batchNotesByRound[roundIndex] || [];
-    if (ops.length === 0 && batches.length === 0) return { ok: false, reason: "nothing to log" };
+    if (!agentConnected) return ops;
+    return ops.filter((o) => (o.ts || 0) > cursorReadMs);
+  }
+
+  // Persist the round's tweak log to disk for the Editing Coach Agent — the
+  // durable record of every correction (before/after) plus Jeff's live note.
+  // The old clipboard Send used to trigger this; now it rides the autosave, so
+  // the Coach's training signal keeps flowing without a manual Send. Cumulative
+  // (pendingOps is never auto-cleared), best-effort, never forces a download.
+  async function writeTweakLog() {
+    const ops = getPendingOps();
+    if (ops.length === 0 && !batchNote.trim()) return { ok: false, reason: "nothing to log" };
     const round = ROUNDS[roundIndex];
+    if (!round) return { ok: false, reason: "no round" };
     const payload = {
-      schema_version: 2,
+      schema_version: 3,
       project_slug: PROJECT_META.slug,
       round: round.round_number,
       round_version: round.version,
       generated_at: new Date().toISOString(),
       baseline: `round ${round.round_number} (${round.version})`,
-      batches: batches.map((b) => ({ batch: b.batch, note: b.note, sent_at: b.sent_at })),
+      // Jeff's current live note + what he's pointing at (the "why" for the Coach).
+      working_note: batchNote.trim() || null,
+      pointed_at: pointedAt.map((p) => ({ entry_id: p.entry_id, ref: p.label })),
+      agent_last_read: agentCursor ? agentCursor.read_at : null,
       tweaks: ops.map((o) => ({
         seq: o.seq,
-        batch: o.batch,
         entry_id: o.entry_id,
         change_type: o.change_type,
         before: o.before,
@@ -1510,38 +1546,7 @@ Set model to Sonnet 4.6.`;
     };
     const relPath = `handoffs/${PROJECT_META.slug}/tweak-log-v${round.round_number}.json`;
     const json = JSON.stringify(payload, null, 2);
-    // Best-effort: write via Cowork or the local helper, but never force a
-    // download — this fires on every Send and would spam the browser otherwise.
     return await persistFile(relPath, json, { allowDownload: false });
-  }
-
-  // Send the current batch: copy the message, append this batch to the cumulative
-  // log, then advance the batch counter so the panel clears for the next one.
-  // Send-and-keep-working — no viewer rebuild.
-  async function sendToAgent() {
-    if (currentBatchOps().length === 0 && !batchNote.trim()) return;
-    const text = composeSendMessage();
-    let copied = false;
-    try {
-      await navigator.clipboard.writeText(text);
-      copied = true;
-    } catch {
-      setSendStatus({ text: "Auto-copy blocked — copy manually", cls: "warn" });
-    }
-    const b = getBatch();
-    const allBatches = [...(batchNotesByRound[roundIndex] || []), { batch: b, note: batchNote.trim(), sent_at: new Date().toISOString() }];
-    const logResult = await writeTweakLog(allBatches);
-    setBatchNotesByRound((prev) => ({ ...prev, [roundIndex]: allBatches }));
-    setBatchByRound((prev) => ({ ...prev, [roundIndex]: b + 1 }));
-    setBatchNote("");
-    // Staleness (M3 T2 §B): the agent reads viewer state attached to this Send,
-    // so it is now caught up. Clear the dirty flag.
-    setDirtyByRound((m) => ({ ...m, [roundIndex]: false }));
-    if (copied) {
-      const suffix = logResult && logResult.ok ? " · log updated" : "";
-      setSendStatus({ text: `Sent batch ${b} ✓ — paste into chat` + suffix, cls: "ok" });
-      setTimeout(() => setSendStatus({ text: "", cls: "" }), 3500);
-    }
   }
 
   // ====== Filter passes ======
@@ -2855,71 +2860,77 @@ Set model to Sonnet 4.6.`;
     );
   };
 
-  // Staleness cue (M3 T2 §B). The docked agent panel always shows where the
-  // agent stands relative to Jeff's edits: "✓ Up to date with your edits" when
-  // dirtySinceSend is false; an amber "↻ You've changed things since I last
-  // looked — ask me and I'll catch up" the moment he edits after the last Send.
-  const renderStaleness = () => (
-    <div className={`sp-stale${dirtySinceSend ? " dirty" : " fresh"}`}>
-      <span className="sp-stale-glyph">{dirtySinceSend ? "↻" : "✓"}</span>
-      <span className="sp-stale-text">
-        {dirtySinceSend
-          ? "You've changed things since I last looked — ask me and I'll catch up"
-          : "Up to date with your edits"}
-      </span>
-    </div>
-  );
+  // Live-partner sync state (M5). Three honest states driven by comparing Jeff's
+  // last edit time against the agent's last read (polled agent-cursor.json):
+  //   not-connected — the agent hasn't read the viewer yet this session
+  //   caught-up     — it has read since your last edit
+  //   behind        — you've edited since it last looked
+  const syncState = !agentConnected ? "idle" : (agentBehind ? "behind" : "fresh");
+  const syncMap = {
+    idle:   { dot: "#6b7280", glyph: "○", title: "Agent not connected yet",
+              line: "Waiting for the agent to read your viewer. Message it in chat to start." },
+    fresh:  { dot: "#15803d", glyph: "✓", title: "Agent is up to date",
+              line: "Reading your live edits — I'm up to date." },
+    behind: { dot: "#d97706", glyph: "↻", title: "You've edited since the agent last looked",
+              line: "You've changed things since I last looked — just message me and I'll catch up." },
+  };
 
-  const renderSendPanel = () => {
-    const ops = currentBatchOps();
-    const round = ROUNDS[roundIndex];
-    const hasContent = ops.length > 0 || batchNote.trim().length > 0;
-    const sentCount = (batchNotesByRound[roundIndex] || []).length;
+  const renderAgentPanel = () => {
+    const sv = syncMap[syncState];
+    const since = opsSinceAgentRead();
     return (
-      <div className={`send-panel agent-panel${sendPanelOpen ? "" : " collapsed"}${ops.length > 0 ? " has-pending" : ""}${dirtySinceSend ? " is-stale" : ""}`}>
+      <div className={`send-panel agent-panel sync-${syncState}${sendPanelOpen ? "" : " collapsed"}`}>
         <div className="sp-head" onClick={() => setSendPanelOpen(!sendPanelOpen)}>
-          <span className="sp-title">Agent</span>
-          {!sendPanelOpen && (
-            <span className={`sp-stale-dot${dirtySinceSend ? " dirty" : " fresh"}`} title={dirtySinceSend ? "You've changed things since the agent last looked" : "Agent is up to date with your edits"}>{dirtySinceSend ? "↻" : "✓"}</span>
+          <span className="sp-dot" style={{ background: sv.dot }} title={sv.title}></span>
+          <span className="sp-title">Editing agent</span>
+          {!sendPanelOpen && since.length > 0 && (
+            <span className="sp-count" title={`${since.length} edit(s) since the agent last looked`}>{since.length}</span>
           )}
-          <span className={`sp-count${ops.length === 0 ? " zero" : ""}`}>{ops.length}</span>{"" /* current batch */}
           <span className="sp-toggle">{sendPanelOpen ? "▼" : "▲"}</span>
         </div>
         {sendPanelOpen && (
           <>
-            {renderStaleness()}
+            <div className={`sp-stale sync-${syncState}`}>
+              <span className="sp-stale-glyph">{sv.glyph}</span>
+              <span className="sp-stale-text">{sv.line}</span>
+            </div>
             <div className="sp-body">
+              {since.length > 0 && (
+                <div className="sp-section">
+                  <div className="sp-section-head">
+                    <span className="sp-section-title">{agentConnected ? "Since its last reply" : "Pending edits"}</span>
+                  </div>
+                  <ul className="sp-ops">
+                    {since.slice(-8).map((o, i) => <li key={i}>{o.description}</li>)}
+                  </ul>
+                </div>
+              )}
               <div className="sp-section">
                 <div className="sp-section-head">
-                  <span className="sp-section-title">This batch — pending tweaks</span>
-                  {sentCount > 0 && <span className="sp-optional">{sentCount} batch{sentCount === 1 ? "" : "es"} sent</span>}
+                  <span className="sp-section-title">Tell the agent now</span>
+                  <span className="sp-optional">rides with your next message</span>
                 </div>
-                <ul className="sp-ops">
-                  {ops.length === 0 ? (
-                    <li className="empty">No tweaks in this batch yet. Edit in the timeline to start.</li>
-                  ) : (
-                    ops.map((o, i) => <li key={i}>{o.description}</li>)
-                  )}
-                </ul>
-              </div>
-              <div className="sp-section">
-                <div className="sp-section-head">
-                  <span className="sp-section-title">Why this batch?</span>
-                  <span className="sp-optional">per-batch intent note</span>
-                </div>
+                {pointedAt.length > 0 && (
+                  <div className="sp-points">
+                    {pointedAt.map((p) => (
+                      <span className="sp-point-chip" key={p.entry_id}>
+                        <span className="sp-point-glyph" aria-hidden="true">⌖</span> {p.label}
+                        <button className="sp-point-x" aria-label="Remove" onClick={() => removePointedAt(p.entry_id)}>✕</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <textarea
                   id="send-textarea"
                   className="sp-textarea"
-                  placeholder="e.g. Tightening the Act 1 open — these felt redundant once #3 landed."
+                  placeholder="A note for the agent — it reads this next turn. Or just talk to it in chat."
                   value={batchNote}
                   onChange={(e) => setBatchNote(e.target.value)}
                 />
               </div>
             </div>
             <div className="sp-foot">
-              <button className="sp-send" disabled={!hasContent} onClick={sendToAgent}>Send batch</button>
-              {sendStatus.text && <span className={`sp-status ${sendStatus.cls}`}>{sendStatus.text}</span>}
-              <span className="sp-batchnote">Sends &amp; keeps working · clears for next batch</span>
+              <span className="sp-batchnote">No Send button — your edits autosave to disk and the agent reads them when you message it in chat.</span>
             </div>
           </>
         )}
@@ -3110,17 +3121,25 @@ Set model to Sonnet 4.6.`;
     .btn-rejoin { background: transparent; color: var(--probable); border:1px solid var(--probable); }
     .btn-rejoin:hover { background: var(--probable-soft); }
 
-    /* === M3 T2 §B — Agent panel staleness cue === */
-    .send-panel.agent-panel.is-stale { box-shadow:0 -2px 0 0 #d97706 inset, 0 -8px 24px rgba(0,0,0,.12); }
-    .sp-stale { display:flex; align-items:center; gap:8px; padding:8px 14px; font-size:12px;
-      border-bottom:1px solid var(--border); }
-    .sp-stale.fresh { color:#15803d; background: rgba(21,128,61,.06); }
-    .sp-stale.dirty { color:#b45309; background: rgba(217,119,6,.10); }
-    .sp-stale-glyph { font-size:14px; line-height:1; }
-    .sp-stale-text { line-height:1.35; }
-    .sp-stale-dot { font-size:12px; margin-left:6px; }
-    .sp-stale-dot.fresh { color:#15803d; }
-    .sp-stale-dot.dirty { color:#b45309; }
+    /* === M5 — Live-partner agent panel === */
+    .send-panel.agent-panel.sync-behind { box-shadow:0 -2px 0 0 #d97706 inset, 0 -8px 24px rgba(0,0,0,.12); }
+    .sp-dot { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+    .sp-stale { display:flex; align-items:flex-start; gap:8px; padding:9px 14px; font-size:12px;
+      line-height:1.4; border-bottom:1px solid var(--border); }
+    .sp-stale.sync-fresh { color:#15803d; background: rgba(21,128,61,.06); }
+    .sp-stale.sync-behind { color:#b45309; background: rgba(217,119,6,.10); }
+    .sp-stale.sync-idle { color: var(--text-muted); background: var(--surface-2); }
+    .sp-stale-glyph { font-size:14px; line-height:1.2; }
+    .sp-stale-text { line-height:1.4; }
+    /* Point-at-this staged chips */
+    .sp-points { display:flex; flex-direction:column; gap:5px; margin-bottom:8px; }
+    .sp-point-chip { display:inline-flex; align-items:center; gap:6px; font-size:11px;
+      background: var(--surface-2); border:1px solid var(--border); border-radius:999px;
+      padding:3px 6px 3px 10px; color: var(--text-muted); }
+    .sp-point-glyph { color: var(--probable); }
+    .sp-point-x { margin-left:auto; border:none; background:transparent; cursor:pointer;
+      color: var(--text-subtle); font-size:11px; padding:0 4px; line-height:1; }
+    .sp-point-x:hover { color: var(--text); }
   `;
 
   return (
@@ -3132,7 +3151,7 @@ Set model to Sonnet 4.6.`;
         {view === "timeline" && renderTimeline()}
         {view === "cuts" && renderCuts()}
       </main>
-      {renderSendPanel()}
+      {renderAgentPanel()}
       {renderExportModal()}
     </div>
   );
