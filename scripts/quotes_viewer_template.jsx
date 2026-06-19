@@ -2028,7 +2028,10 @@ Set model to Sonnet 4.6.`;
                     after: { entry_id: newId, source_quote_id: q.num, part: addedPart, from_orphan: !!q.is_orphan },
                   }
                 );
-                setView("timeline");
+                // Stay in the Library after adding — Jeff curates a batch of
+                // quotes into the Timeline without losing his place. The button
+                // flips to "✓ In timeline" for feedback; "View in timeline"
+                // (below) is the explicit way to jump over.
               }}
             >
               {status === "timeline" ? "✓ In timeline" : status === "cuts" ? "In Cuts" : `Add #${q.num} to timeline`}
