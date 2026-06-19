@@ -2597,12 +2597,8 @@ Set model to Sonnet 4.6.`;
             </div>
           )}
           <div className="tl-actions">
+            {/* Left group: the disposition actions (Cut / Rejoin / Drop). */}
             {membershipVerb(entry)}
-            <button
-              className="btn btn-point"
-              title="Reference this exact quote into your message to the agent"
-              onClick={() => pointAtEntry(entry)}
-            >⌖ Point at this</button>
             {entry._subLabel && hasRejoinSibling(entry) && (
               <button
                 className="btn btn-rejoin"
@@ -2634,6 +2630,13 @@ Set model to Sonnet 4.6.`;
                 );
               }}
             >Drop <span className="verb-dest">→ Library</span></button>
+            {/* Agent-reference action, set apart on the right (different intent
+                from the disposition buttons — it talks to the agent). */}
+            <button
+              className="btn btn-point tl-action-right"
+              title="Reference this exact quote into your message to the agent"
+              onClick={() => pointAtEntry(entry)}
+            >⌖ Point at this</button>
           </div>
         </div>
       </div>
@@ -3227,6 +3230,9 @@ Set model to Sonnet 4.6.`;
       background: var(--probable-soft); color: var(--probable); letter-spacing:.02em; }
     .btn-point { background: transparent; color: var(--text-muted); border:1px solid var(--border-strong); }
     .btn-point:hover { color: var(--text); border-color: var(--text-muted); }
+    /* Push the agent-reference action to the right edge of the card action row,
+       separating it from the disposition buttons (Cut / Rejoin / Drop). */
+    .tl-actions .tl-action-right { margin-left: auto; }
     .btn-rejoin { background: transparent; color: var(--probable); border:1px solid var(--probable); }
     .btn-rejoin:hover { background: var(--probable-soft); }
 
