@@ -2534,6 +2534,15 @@ Set model to Sonnet 4.6.`;
               </svg>
               split
             </button>
+            {/* Rejoin sits right next to Split — they're the inverse structural
+                pair. Only shown on a split part that still has a sibling. */}
+            {entry._subLabel && hasRejoinSibling(entry) && (
+              <button
+                className="tl-scissors tl-rejoin"
+                title={`Merge the split parts back into one #${entry.source_quote_id}`}
+                onClick={() => rejoinSiblings(entry)}
+              >⤳ Rejoin</button>
+            )}
             <button className="rc-collapse" onClick={() => toggleReveal(entry.entry_id)} title="Collapse to clean read">✕ Done</button>
           </div>
           {!isEditing && (
@@ -2597,15 +2606,9 @@ Set model to Sonnet 4.6.`;
             </div>
           )}
           <div className="tl-actions">
-            {/* Left group: the disposition actions (Cut / Rejoin / Drop). */}
+            {/* Left group: the disposition actions (Cut / Drop). Split + Rejoin
+                live together in the card header (structural pair). */}
             {membershipVerb(entry)}
-            {entry._subLabel && hasRejoinSibling(entry) && (
-              <button
-                className="btn btn-rejoin"
-                title={`Merge the split parts back into one #${entry.source_quote_id}`}
-                onClick={() => rejoinSiblings(entry)}
-              >⤳ Rejoin</button>
-            )}
             <button
               className="btn btn-drop"
               onClick={() => {
@@ -3235,6 +3238,9 @@ Set model to Sonnet 4.6.`;
     .tl-actions .tl-action-right { margin-left: auto; }
     .btn-rejoin { background: transparent; color: var(--probable); border:1px solid var(--probable); }
     .btn-rejoin:hover { background: var(--probable-soft); }
+    /* Rejoin as a header control sitting next to Split (same shape, rejoin tint). */
+    .tl-rejoin { color: var(--probable); border-color: var(--probable); background: transparent; }
+    .tl-rejoin:hover { background: var(--probable-soft); border-color: var(--probable); color: var(--probable); }
 
     /* === M5 — Live-partner agent panel === */
     .send-panel.agent-panel.sync-behind { box-shadow:0 -2px 0 0 #d97706 inset, 0 -8px 24px rgba(0,0,0,.12); }
