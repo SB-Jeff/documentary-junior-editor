@@ -48,6 +48,14 @@ RETIRED = [
     (re.compile(r"cowork-session-guide-restore\.md"), "reference to nonexistent cowork-session-guide-restore.md", set(), False),
     (re.compile(r"runtime_recommendation"), "retired runtime_recommendation field (v5.9 uses membership)",
      {"SKILL-edit-pipeline.md"}, True),  # frozen file may still describe it
+    # Viewer/edit redesign retired the in-Cowork artifact model — the viewer is
+    # now a persistent local app sharing state via viewer-state.json on disk.
+    (re.compile(r"update_artifact|create_artifact"),
+     "retired Cowork artifact push (the redesigned viewer reads viewer-state.json from disk)",
+     {"SKILL-edit-pipeline.md"}, True),
+    (re.compile(r"sendPrompt"),
+     "retired sendPrompt (viewer is a persistent app; the agent reads/writes disk)",
+     {"SKILL-edit-pipeline.md"}, True),
 ]
 
 # Agent-count language: the pipeline is ten agents (v5.5+).

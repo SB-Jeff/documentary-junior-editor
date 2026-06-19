@@ -126,8 +126,10 @@ Synthesis Agent          →  merged tagged-quotes-v[N].json (segments preserved
 │                            entries with segments[]),            │
 │                            edit-handoff-v[N].md,                │
 │                            [project-slug]_quotes_view.html      │
-│                            (live artifact, updated mid-session) │
-│        ↓                                                        │
+│                            (persistent local app; act-by-act    │
+│                            live partner via viewer-state.json)  │
+│        ↓ (Export → export-request.json; Edit Agent launches    │
+│           the FCPXML Agent itself via the Task tool)            │
 │  FCPXML Agent          →  [project-slug]_rough_cut_v[N].fcpxml  │
 │        ↓                                                        │
 │  Jeff watches in FCP. Approves OR appends to review-notes.md    │
@@ -158,8 +160,9 @@ The pipeline pauses and waits for Jeff at these moments:
    from filenames; Jeff confirms or corrects.
 2. **After Creative Context Agent** — discovery candidates presented for ingestion approval;
    act structure proposed and iterated until Jeff approves.
-3. **During Edit Agent** — Jeff works collaboratively with the agent on the live HTML
-   artifact across multiple rounds (Rough Cut → Discussion → Reduction → loop).
+3. **During Edit Agent** — Jeff works collaboratively with the agent **act by act** in
+   the persistent viewer app (the live-partner loop: the agent reads
+   `viewer-state.json` each turn; Jeff edits and talks back), across multiple rounds.
 4. **After each FCPXML Agent run** — Jeff imports and watches the cut. He either approves
    (proceed to Skill Review) or appends notes to `review-notes.md` and re-launches Edit
    for another round.
@@ -740,18 +743,15 @@ Send-to-agent panel, direct-write Export).
   overwrites. `pipeline-state.json` tracks current versions and dependency edges across
   all agents. Stale-state warnings surface in Cowork; n8n consumes the same file
   as a work queue.
-- **Edit Agent built for multi-round iteration.** Indefinite Rough Cut → Discussion →
-  Reduction → FCPXML round → review → next round, with all rounds preserved on disk.
-  Edit and FCPXML stay separate sessions to preserve the model split (Opus / Sonnet);
-  better waypoint signaling reduces orchestration friction.
-- **Live HTML artifact as Edit Agent work surface.** Created at session start, updated
-  via `update_artifact` after every decision, bidirectional via `sendPrompt()`,
-  auto-scrolls to current focus. Full quote text always inlined in chat on first
-  reference. End-of-session, final state saved as `[project-slug]_quotes_view.html`.
-  *(JSX template rewrite flagged as Phase 3 follow-up code change.)*
-- **Wide rough cut + per-quote runtime recommendation.** Rough cut stays wide for
-  visibility; each quote tagged `must-keep / probable-keep / probable-cut / optional`
-  toward 2× target. Viewer toggles between full inventory and recommended-tight view.
+- **Edit Agent built for multi-round iteration.** Indefinite refine → FCPXML round →
+  review → next round, with all rounds preserved on disk. *(v5.0 framed this as
+  Rough Cut → Discussion → Reduction and kept Edit/FCPXML as separate sessions; the
+  later viewer/edit redesign makes it act-by-act and has the Edit Agent launch the
+  FCPXML Agent itself, still on Sonnet — see SKILL-edit.md.)*
+- **Edit Agent work surface (v5.0 model, since superseded).** The old in-Cowork live artifact — pushed via `update_artifact` after every decision and two-way via `sendPrompt()` — is retired; the redesigned viewer is a persistent local app the agent reads from `viewer-state.json` on disk each turn. Full quote text is still inlined in chat on first reference.
+- **Wide rough cut + membership tiers.** Rough cut stays wide for visibility; entries carry
+  `tight`/`loose` membership (surfaced as the Timeline / Cuts tiers) toward ~2× target.
+  *(The v5.0 four-tier `must-keep / probable-keep / probable-cut / optional` vocabulary is retired.)*
 - **Title-card-as-shortener pattern.** Promoted from incidental to a named editorial
   move in `SKILL-edit.md`. Trigger: content reads cleaner on screen than spoken.
 - **Context-beat suggestions.** Edit Agent flags narrative gaps where external context

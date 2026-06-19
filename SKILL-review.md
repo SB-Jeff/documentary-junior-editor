@@ -234,8 +234,10 @@ almost broke, or required workarounds.
   caption-matcher performance issues, parser format mismatches in
   `build_fcpxml.py`, missing resources, broken multicam angle IDs,
   per-segment clip generation errors.
-- **Quote viewer breakage.** Render errors, state-sync issues, Export
-  failures, Send-to-agent panel issues. (Note: viewer UX issues belong
+- **Quote viewer breakage.** Render errors, autosave / `viewer-state.json`
+  write failures, app-server (`viewer_save_server.py`) issues, Export /
+  `export-request.json` failures, agent panel / staleness-cue issues. (Note:
+  viewer UX issues belong
   to Coach's Quote Viewer section, not here. This section is for
   mechanical breakage only.)
 - **Script issues.** `transcribe.py`, `extract_fcpxml.py`,

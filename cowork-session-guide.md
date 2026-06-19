@@ -278,17 +278,15 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 
 **Skill file:** `SKILL-edit.md`
 **Model:** Opus 4.7
-**Session type:** Cowork — deeply collaborative with Jeff
+**Session type:** the redesigned edit step runs as a **persistent local app**, not a Cowork chat artifact — see `EDIT-SESSION-KICKOFF.md`. Today that means a Claude Code session on the `viewer-edit-redesign` branch (future: a standalone app); the upstream pipeline still runs in Cowork.
 
-**What's new in v5.0 (updated through v5.9/v5.10 where noted):**
-- **Quotes are clay; the timeline is the work product.** The data model is segments + timeline entries. The agent never says "split #11 into parts" — it produces new timeline entries when manipulation requires it. Splitting is implicit.
-- **The HTML artifact is the work surface, not the deliverable.** Created at session start, updated via `update_artifact` after every decision, bidirectional via `sendPrompt()`. Auto-scrolls to and highlights current focus quote.
-- **Full quote text always inlined in chat on first reference.** No more "what does that quote actually say?"
-- **Wide rough cut + per-entry membership (v5.9 model).** Every timeline entry carries `membership: "tight"` (the cut breaks without it) or `"loose"` (believed in, but expendable under pressure); non-spoken structural entries are always tight. The full timeline (tight + loose) is the **Loose** cut, running 1.5×–2× target; the **Tight** cut (membership-tight only) is what ultimately ships. The viewer's Tight/Loose window toggle filters the timeline by membership, and Reduction works by membership demotion (**Cut → Loose**) / rescue (**Add Back → Tight**) rather than entry deletion. The viewer has two top-level views: **Edit** (the timeline as read-cards with edit-in-place controls) and **Quote Library** (all source + orphan quotes). The legacy four-tier `must-keep / probable-keep / probable-cut / optional` vocabulary is retired.
-- **Title-card-as-shortener** as a named pattern; agent proposes title cards in the rough cut when content reads cleaner on screen than spoken.
-- **Context-beat suggestions** — agent flags narrative gaps where research-sourced context would land harder; surfaces in `edit-handoff.md` with `(research needed)` tag.
-- **Brief is starting points** — language softened from v4.0 "must stay" to "currently planned to stay."
-- **Three-phase Rough Cut → Discussion → Reduction loops**, not linear. Each round emits a new versioned `trimmed-quotes-v[N].json` and triggers a fresh FCPXML run.
+**What's new — the act-by-act live-partner redesign (supersedes the in-Cowork artifact model of v5.0–v5.10):**
+- **Quotes are clay; the timeline is the work product.** Data model is segments + timeline entries; splitting is implicit (in the viewer, Split breaks #N → #Na/#Nb and Rejoin merges them back verbatim).
+- **Persistent local app, shared via disk — not a chat artifact.** The viewer is served by `viewer_save_server.py` and opened in Chrome; it autosaves the full working state to `handoffs/<slug>/viewer-state.json` on every edit. The Edit Agent reads that file at the top of each turn and writes `handoffs/<slug>/agent-cursor.json` as its read-acknowledgement (drives the staleness cue). The old `update_artifact` / `sendPrompt` / copy-paste paths are retired.
+- **Three tiers: Quote Library → Timeline → Cuts.** Library = every catalogued quote (the categorize surface + rejected-quotes home; each not-used quote carries the agent's `agent_note`). Timeline = the working cut (membership `tight`). Cuts = recoverable bin (membership `loose`). Inside the Timeline view, a **Review | Edit** mode toggle — Review is a clean read with the agent's coherence **seam-flags** inline. Internal membership values stay tight/loose.
+- **Act by act, agent goes first.** Per act the agent presents its categorization (flagging low-confidence tags), builds an over-inclusive Timeline with a visible `agent_note` for every plausible quote it leaves out, then refines with Jeff. No step indicator — the views drive it.
+- **Full quote text inlined in chat on first reference.**
+- **Title-card-as-shortener** and **context-beat suggestions** as before. Title cards are authored: add/edit use one inline card, and removal is **Delete** (not Drop — there's no Library to return an authored card to).
 
 **Inputs:**
 - `handoffs/tagged-quotes-v[N].json` (latest merged, with segments)
@@ -298,22 +296,23 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 - For re-entry rounds: `handoffs/review-notes.md` (your notes from watching the previous FCPXML)
 - Reference examples in `documentary-junior-editor/reference-examples/`
 
-**Session setup — start the viewer save helper.** At session start (the agent will ask), Jeff runs `python3 scripts/viewer_save_server.py` from the SSD project root. The helper listens on `127.0.0.1:8765` so viewer saves (Save-as-new-round, Export, the tweak log) persist to the correct project-relative path even when the Cowork bash bridge is unavailable. If neither Cowork bash nor the helper is running, viewer saves fall back to a browser download — never lost, but landing in Downloads instead of `handoffs/`.
+**Session setup — build + serve the viewer.** Build the viewer with `build_quotes_viewer.py`, then start the app server: `python3 scripts/viewer_save_server.py --serve <handoffs/<slug>/<slug>_quotes_view.html> --root <ssd-root>`, and open `http://127.0.0.1:8765/` in Chrome. The server serves the viewer AND persists everything it writes — saved cuts, the tweak log, and the live `viewer-state.json` the agent reads each turn. The top-bar **● Saved** pill confirms the channel is live (Offline = the server isn't running). Full kickoff in `EDIT-SESSION-KICKOFF.md`.
 
-**Starter prompt — round 1 (set model to Opus 4.7):**
+**Starter prompt — round 1 (set model to Opus 4.7; see `EDIT-SESSION-KICKOFF.md` for the full version):**
 
-> You are the Edit Agent. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly. Read all latest handoff documents from `handoffs/` per `pipeline-state.json` — act structure, creative brief summary, transcript summary, and the merged tagged-quotes (with segments) — plus reference examples in `documentary-junior-editor/reference-examples/`. Build the live HTML artifact at session start (per the v5.0 spec — bidirectional, auto-scroll to focus, full quote text inlined in chat on first reference). Take us through Rough Cut → Discussion → Reduction. Run Cardinal Rule verification before saving. Save `handoffs/edit-handoff-v1.md`, `handoffs/trimmed-quotes-v1.json` (timeline entries with segments), and `handoffs/[project-slug]_quotes_view.html` (final state of the artifact). Update `handoffs/pipeline-state.json`.
+> You are the Edit Agent on the `viewer-edit-redesign` branch. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly — the act-by-act live-partner flow. The viewer is built and served at http://127.0.0.1:8765/. Read the latest handoffs per `pipeline-state.json` (act structure, creative brief, transcript summary, merged tagged-quotes) plus the reference examples. Each turn: read `handoffs/<slug>/viewer-state.json`, then write `handoffs/<slug>/agent-cursor.json`. Work act by act, you first — categorize + flag low-confidence tags, build the over-inclusive Timeline with `agent_note` reasons for what you leave out, then refine with me. Preserve both Cardinal Rules. When I queue an Export (`export-request.json`), launch the FCPXML Agent yourself via the Task tool. Save `handoffs/edit-handoff-v1.md`, `handoffs/trimmed-quotes-v1.json`, and update `pipeline-state.json`. Start with the Intro act.
 
 **Re-entry prompt — round 2+ (after watching FCPXML in FCP):**
 
-> You are the Edit Agent. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly. This is round [N+1]. Read `handoffs/edit-handoff-v[N].md` for context from the previous round, `handoffs/review-notes.md` for my notes from watching the FCPXML cut, the latest `handoffs/trimmed-quotes-v[N].json`, and `handoffs/pipeline-state.json`. Load the live HTML artifact from `handoffs/[project-slug]_quotes_view.html`. Work with me on revisions. Save `handoffs/edit-handoff-v[N+1].md`, `handoffs/trimmed-quotes-v[N+1].json`, and update the artifact. Update `handoffs/pipeline-state.json`.
+> You are the Edit Agent on the `viewer-edit-redesign` branch. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly. This is round [N+1]. Read `handoffs/edit-handoff-v[N].md`, `handoffs/review-notes.md` (my notes from the FCPXML cut), the latest `handoffs/trimmed-quotes-v[N].json`, and `handoffs/pipeline-state.json`. Rebuild + re-serve the viewer (it carries the prior round forward as a saved cut); read `viewer-state.json` / write `agent-cursor.json` each turn as in round 1. Work the revisions act by act. Save `handoffs/edit-handoff-v[N+1].md`, `handoffs/trimmed-quotes-v[N+1].json`, and update `pipeline-state.json`.
 
 **Outputs saved to `handoffs/` per round:**
 - `edit-handoff-v[N].md` — structured handoff for the FCPXML Agent (paper cut state, notes, key files)
-- `trimmed-quotes-v[N].json` — timeline of entries with `segments[]` and `membership`, all editorial decisions. This is the Loose-window (full-timeline) export; a Tight-window export of the same round writes the separate `trimmed-quotes-v[N]-tight.json` — distinct filenames, the two never overwrite each other.
-- `[project-slug]_quotes_view.html` — live artifact's final state for this round (overwrites; same name across rounds)
+- `trimmed-quotes-v[N].json` — timeline of entries with `segments[]` and `membership`, all editorial decisions. This is the full-timeline export; the Timeline-only export of the same round writes the separate `trimmed-quotes-v[N]-tight.json` — distinct filenames, the two never overwrite each other.
+- `[project-slug]_quotes_view.html` — the built viewer served as the app (rebuilt per round; same name across rounds).
+- `viewer-state.json` / `agent-cursor.json` — the live-partner channel (working state ↔ read-acknowledgement). `editing-versions/<name>.json` — named saved cuts.
 
-**Viewer Export behavior (v5.10):** the Export button in the Edit view's window block writes the currently selected window's cut as JSON (Loose → `trimmed-quotes-v[N].json`, Tight → `trimmed-quotes-v[N]-tight.json`) and copies a ready-to-paste FCPXML Agent launch prompt for a new Cowork session — the viewer does **not** build FCPXML itself.
+**Viewer Export behavior (redesign):** Export writes the cut JSON (Timeline → `trimmed-quotes-v[N]-tight.json`, full timeline → `trimmed-quotes-v[N].json`) and **queues** `handoffs/<slug>/export-request.json`. The **Edit Agent fulfils it** — on its turn it reads the request and launches the FCPXML Agent itself via the Task tool, then marks the request `built`. No copy-paste, no new Cowork session; the viewer does **not** build FCPXML itself.
 
 **At project close (once, not per round):**
 - `edit-agent-lessons-v[N].md` — the Edit Agent's own capture of editorial lessons, structural patterns, and schema/tooling gaps from the session (SKILL-edit.md Phase 7, item 5). This is the lightweight, reliable feedback path: the Editing Coach and Skill Review Agents read it as a first-class input, and it stands on its own if neither runs.
@@ -479,11 +478,11 @@ git pull
 
 **Synthesis Agent flags missing files:** Each speaker needs four `-v[N]` files in `handoffs/`. Go back to the Transcript Agent session for the flagged speaker and verify all files were saved at the expected version.
 
-**Edit Agent's first pass is too short / hits target on first try:** The agent is treating the first pass as a draft instead of a rough cut. Remind it of the three-phase workflow — the rough cut (the full Loose window, tight + loose entries) should run 1.5×–2× target. Reduction is a separate, later phase and works by membership demotion (Cut → Loose), not entry deletion. Quotes should be wide-tagged, not pre-trimmed.
+**Edit Agent's first pass is too short / hits target on first try:** The agent is treating the act's first build as a draft instead of an over-inclusive rough cut. Per act, the wide build (Timeline + Cuts) should run ~1.5×–2× target; winnowing happens later by Cutting to the Cuts bin, not by pre-trimming. Quotes should be wide-tagged.
 
-**Edit Agent abbreviates quotes in chat:** v5.0 says full quote text should be inlined on first reference. If the agent is consistently abbreviating, remind it of the live-artifact + first-reference-inlined contract from `SKILL-edit.md`.
+**Edit Agent abbreviates quotes in chat:** full quote text should be inlined on first reference. If the agent is consistently abbreviating, remind it of the first-reference-inlined contract in `SKILL-edit.md`.
 
-**Live HTML artifact doesn't update mid-session:** The agent should call `mcp__cowork__update_artifact` after every editorial decision. If you see chat decisions without artifact updates, the agent has drifted — remind it of the "viewer is the work surface, not the deliverable" framing.
+**Agent seems out of sync with the viewer:** the agent should read `handoffs/<slug>/viewer-state.json` at the top of every turn and write `agent-cursor.json` (which clears the staleness pill). If the pill stays amber after you message it, the agent skipped the read — remind it of the live-partner contract in `SKILL-edit.md`. If the top-bar pill shows **Offline**, the app server isn't running, so the agent can't see edits at all.
 
 **FCPXML Agent generates wrong clip references for a single-clip interview:** Check that `fcpxml-params-v[N].md` has `clip_type: single_clip` for that interview (FCPXML Params Agent should detect this automatically; if it didn't, re-run with explicit instruction). The FCPXML Agent branches on `clip_type` per interview.
 

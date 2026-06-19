@@ -489,19 +489,21 @@ Cowork; the agent completes in a few minutes for typical projects.
 
 ## Next step
 
-- **Next agent:** FCPXML Agent (runs after the Edit Agent has emitted a
+- **Next agent:** FCPXML Agent (runs after the Edit Agent emits a
   `trimmed-quotes-v[N].json` for round N — this Params output is consumed
   alongside that)
 - **Next agent's model:** sonnet-4.6
-- **Next agent's launch prompt** (Jeff launches this once the Edit Agent has
-  emitted; copy into a new Cowork session, set the model to sonnet-4.6 first):
+- **How it's launched (redesign):** the **Edit Agent launches the FCPXML Agent
+  itself** (via the Task tool) when Jeff queues an Export — the viewer writes
+  `handoffs/[slug]/export-request.json` and the Edit Agent fulfils it. No
+  copy-paste into a new Cowork session. The instruction the Edit Agent gives it:
 
 > Read `documentary-junior-editor/SKILL-fcpxml.md` and run the FCPXML Agent
-> for this project. Edit Agent round N has emitted
-> `handoffs/trimmed-quotes-v[N].json` and `handoffs/edit-handoff-v[N].md`.
-> FCPXML Params are at `handoffs/fcpxml-params-v[X].md`. Branch generation
-> per interview clip_type and produce
-> `XML/imports/[ProjectName]_rough_cut_v[N].fcpxml`. Update
+> for this project. The Edit Agent has emitted
+> `handoffs/trimmed-quotes-v[N].json` (the queued cut, per `export-request.json`)
+> and `handoffs/edit-handoff-v[N].md`. FCPXML Params are at
+> `handoffs/fcpxml-params-v[X].md`. Branch generation per interview clip_type and
+> produce the `.fcpxml` named in the export request's `out_fcpxml`. Update
 > `handoffs/pipeline-state.json` on emit.
 
 ---

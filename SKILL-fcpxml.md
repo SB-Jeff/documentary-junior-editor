@@ -80,6 +80,16 @@ in v5.0: **per-interview branching on clip_type**. The same timeline can mix
 multicam and single-clip sources, and the spine generation must produce the
 right element type (`<mc-clip>` vs. `<asset-clip>`) for each entry's source.
 
+**How you're launched (redesign).** You are typically launched **by the Edit
+Agent itself** (via the Task tool) when Jeff queues an Export — it reads
+`handoffs/[slug]/export-request.json` (which names the cut file and the target
+`out_fcpxml`) and runs you. You may also still be launched as a standalone
+session. Either way, build the cut named in the request. When you're a sub-agent
+you can't converse with Jeff directly, so **surface any stale-upstream warning
+or ambiguity back to the Edit Agent** (in your result) rather than blocking on an
+interactive prompt; the Edit Agent relays it. On emit, set the export request's
+`status` to `"built"` so it isn't rebuilt.
+
 ---
 
 ## Required Inputs

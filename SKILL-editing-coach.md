@@ -263,7 +263,7 @@ present:
   or from the log alone — "this looks like the [named Known Pattern]
   from [prior project]")
 - A targeted open question to elicit Jeff's reasoning ("What were you
-  using the Tight window for in this round — conviction or sorting?")
+  keeping in the Timeline this round — conviction or sorting?")
 
 Do not present all clusters at once. Walk through them one at a time.
 The conversation is the agent's primary work — don't compress it into a
@@ -307,10 +307,11 @@ signal in the override log (many promotions were workspace toggles, not
 conviction).
 
 **Resolution: the tight/loose membership redesign IS the prescribed fix,
-and it shipped** (v5.9 viewer). Membership is now a binary window
-assignment — the Tight window is exactly the membership-tight entries,
-the verbs are Cut → Loose / Add Back → Tight, and the retired
-`runtime_recommendation` tiers are dropped at build time. Treat this
+and it shipped** (v5.9 viewer; surfaced as the Timeline/Cuts tiers in the
+later viewer redesign). Membership is a binary tier assignment — the
+**Timeline** tier is exactly the membership-tight entries, the verbs are
+**Cut → Cuts** / **Restore → Timeline** (internally still tight/loose), and
+the retired `runtime_recommendation` tiers are dropped at build time. Treat this
 pattern as historical: it can still appear in legacy tweak logs recorded
 before the redesign, but it should not recur in new sessions. If
 reversal-heavy membership flips DO recur in the redesigned viewer,
