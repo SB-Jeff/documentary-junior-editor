@@ -623,61 +623,6 @@ function SplitPanel({ entry, markers, setMarkers, onSplit, onCancel }) {
 }
 
 // ============================================================================
-// InterstitialAddForm — inline editor for inserting a non-spoken entry
-// (title card / text interstitial / context beat) between timeline entries.
-// Interstitial/title-card text is NOT a verbatim quote, so it is freely
-// editable (Cardinal Rule 1 governs spoken quotes only).
-// ============================================================================
-
-function InterstitialAddForm({ onAdd, onCancel, positions }) {
-  // Default to a title card — the common case (interstitials/context beats are
-  // rare). The act-header "Add title card" button opens this; the type select
-  // still lets you switch. `positions` (when provided) is a list of
-  // { value, label } insertion points so the act-level button can pick WHERE.
-  const [type, setType] = useState("title_card");
-  const [text, setText] = useState("");
-  const [seconds, setSeconds] = useState(3);
-  const [position, setPosition] = useState((positions && positions[0] && positions[0].value) || "start");
-  const isContext = type === "context_beat";
-  return (
-    <div className="ins-add" onClick={(e) => e.stopPropagation()}>
-      <div className="ins-add-row">
-        <select className="ins-add-type" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="title_card">Title card — short on-screen text</option>
-          <option value="interstitial">Interstitial — factual bridge</option>
-          <option value="context_beat">Context beat — research needed</option>
-        </select>
-        <label className="ins-secs">~<input
-          type="number" min="1" max="60" value={seconds}
-          onChange={(e) => setSeconds(Math.max(1, Number(e.target.value) || 1))}
-        />s</label>
-      </div>
-      {positions && positions.length > 0 && (
-        <select className="ins-add-pos" value={position} onChange={(e) => setPosition(e.target.value)}>
-          {positions.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
-      )}
-      <textarea
-        className="ins-add-text"
-        autoFocus
-        placeholder={isContext
-          ? "What context is needed? (the intent — Jeff/research fills the actual content before FCPXML)"
-          : "On-screen / bridge text…"}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <div className="ins-add-actions">
-        <button className="btn btn-primary" disabled={!text.trim()}
-          onClick={() => onAdd({ type, text: text.trim(), seconds, position })}>Add</button>
-        <button className="btn" onClick={onCancel}>Cancel</button>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
 // Main component — QuotesView
 // ============================================================================
 
@@ -699,6 +644,8 @@ export default function QuotesView() {
   // Library/Cuts ignore it.
   const [timelineMode, setTimelineMode] = useState("edit");
   const [revealedIds, setRevealedIds] = useState(() => new Set());
+  // entry_id of a just-added title card, so its text field autofocuses on open.
+  const [justAddedId, setJustAddedId] = useState(null);
   const [speakerFilter, setSpeakerFilter] = useState("all");
   const [actFilter, setActFilter] = useState("all");
   // Quote Library: "Hide quotes already in the current cut" — persisted per project.
@@ -843,9 +790,6 @@ export default function QuotesView() {
   const [splittingEntryId, setSplittingEntryId] = useState(null);
   const [splitMarkers, setSplitMarkers] = useState([]);
   const [reassigningEntryId, setReassigningEntryId] = useState(null);
-  // Insertion slot for a new interstitial: refId of the entry to insert after,
-  // or `start:${act}` for the head of an act.
-  const [addingAfterId, setAddingAfterId] = useState(null);
 
   // === Live-partner agent panel state (M5 redesign) ===
   // The old clipboard "Send batch" model is gone. The agent reads the viewer's
@@ -1533,49 +1477,36 @@ export default function QuotesView() {
     prevBehindRef.current = agentBehind;
   }, [agentBehind, agentConnected]);
 
-  // ====== Interstitial insertion ======
+  // ====== Add a title card ======
 
-  // refId === null inserts at the head of `act`; otherwise after that entry.
-  function insertInterstitial(refId, act, fields) {
+  // "Add title card" creates a blank title card at the head of the act and opens
+  // it in the SAME inline editor used for an existing title card — no separate
+  // form. Jeff types the text, sets the duration, reorders with the handle, and
+  // hits Done. `justAddedId` autofocuses the new card's text field.
+  function addTitleCard(act) {
     const newId = `ic-${Date.now().toString(36)}`;
     const newEntry = {
       entry_id: newId,
       _subLabel: null,
       source_quote_id: null,
-      type: fields.type,
+      type: "title_card",
       part: act,
       membership: "tight",
       _editCuts: [],
       notes: "",
-      estimated_seconds: fields.seconds,
+      estimated_seconds: 3,
+      text: "",
     };
-    if (fields.type === "context_beat") {
-      newEntry.intent = fields.text;
-      newEntry.research_needed = true;
-      newEntry.text = "";
-    } else {
-      newEntry.text = fields.text;
-    }
-    const typeName = fields.type.replace("_", " ");
-    applyLocalEdit("add_interstitial",
+    applyLocalEdit("add_title_card",
       (tl) => {
-        if (refId === null) {
-          const idx = tl.findIndex((e) => entryActOf(e) === act);
-          if (idx < 0) tl.push(newEntry); else tl.splice(idx, 0, newEntry);
-        } else {
-          const idx = tl.findIndex((e) => e.entry_id === refId);
-          if (idx < 0) tl.push(newEntry); else tl.splice(idx + 1, 0, newEntry);
-        }
+        const idx = tl.findIndex((e) => entryActOf(e) === act);
+        if (idx < 0) tl.push(newEntry); else tl.splice(idx, 0, newEntry);
       },
-      `Added ${typeName} "${(fields.text || "").slice(0, 40)}" in ${act}`,
-      {
-        change_type: "add",
-        entry_id: newId,
-        before: null,
-        after: { entry_id: newId, type: fields.type, part: act, text: fields.text },
-      }
+      `Added title card in ${act}`,
+      { change_type: "add", entry_id: newId, before: null, after: { entry_id: newId, type: "title_card", part: act } }
     );
-    setAddingAfterId(null);
+    setRevealedIds((prev) => new Set(prev).add(newId));
+    setJustAddedId(newId);
   }
 
   // ====== Membership verbs (Cut / Add Back) ======
@@ -2349,6 +2280,7 @@ export default function QuotesView() {
               key={`${entry.entry_id}-text-${fieldVal}`}
               className="ins-text"
               defaultValue={fieldVal}
+              autoFocus={entry.entry_id === justAddedId}
               placeholder={isContext
                 ? "Intent — what context is needed (research filled in later)"
                 : "On-screen / bridge text…"}
@@ -2387,72 +2319,35 @@ export default function QuotesView() {
           )}
           <div className="tl-actions">
             {membershipVerb(entry)}
+            {/* Title cards / interstitials are authored (not transcript quotes),
+                so they have no Library to return to — removal is a real Delete. */}
             <button
               className="btn btn-drop"
               onClick={() => {
-                if (!confirm(`Drop ${typeLabel} ${entry.entry_id} back to the Library?`)) return;
-                applyLocalEdit("drop_entry",
+                if (!confirm(`Delete this ${typeLabel.toLowerCase()}?`)) return;
+                applyLocalEdit("delete_entry",
                   (tl) => { const i = tl.findIndex((x) => x.entry_id === entry.entry_id); if (i >= 0) tl.splice(i, 1); },
-                  `Dropped ${typeLabel} ${entry.entry_id}`,
-                  { change_type: "drop", entry_id: entry.entry_id, before: { entry_id: entry.entry_id, type: entry.type, part: entryActOf(entry) }, after: null }
+                  `Deleted ${typeLabel} ${entry.entry_id}`,
+                  { change_type: "delete", entry_id: entry.entry_id, before: { entry_id: entry.entry_id, type: entry.type, part: entryActOf(entry) }, after: null }
                 );
               }}
-            >Drop <span className="verb-dest">→ Library</span></button>
+            >Delete</button>
           </div>
         </div>
       </div>
     );
   };
 
-  // A short preview label for an entry, used in the "Add title card" position
-  // picker ("After: Shane — So technology is not…").
-  const entryPositionLabel = (entry) => {
-    const src = findSourceQuote(entry.source_quote_id);
-    const who = src?.speaker || entry.speaker
-      || ({ title_card: "Title card", interstitial: "Interstitial", context_beat: "Context beat" }[entry.type] || "card");
-    const txt = (trimmedQuoteText(entry) || entry.text || "").trim();
-    const words = txt.split(/\s+/).filter(Boolean).slice(0, 5).join(" ");
-    return `After: ${who}${words ? " — " + words + "…" : ""}`;
-  };
-
-  // Position options for inserting a card into an act: at the start, or after
-  // any existing entry. `entries` is the act's entries in display order.
-  const actInsertPositions = (entries) => [
-    { value: "start", label: "At the start of this act" },
-    ...entries.map((e) => ({ value: e.entry_id, label: entryPositionLabel(e) })),
-  ];
-
-  // Act-header "Add title card" control (option C). One button per act instead
-  // of a "+ interstitial" row between every card. Opens the add form (which
-  // defaults to a title card and includes a position picker) right under the
-  // act header. `addingAfterId` doubles as the open-state key: `actadd:<act>`.
-  const renderActAddControl = (act, entries) => {
-    const slot = `actadd:${act}`;
-    const open = addingAfterId === slot;
-    return (
-      <button
-        className={`act-add-btn${open ? " active" : ""}`}
-        onClick={() => setAddingAfterId(open ? null : slot)}
-        title="Add a title card, interstitial, or context beat to this act"
-      >+ Add title card</button>
-    );
-  };
-
-  const renderActAddForm = (act, entries) => {
-    if (addingAfterId !== `actadd:${act}`) return null;
-    return (
-      <div className="ins-slot" data-topbar="1">
-        <InterstitialAddForm
-          positions={actInsertPositions(entries)}
-          onAdd={(fields) => {
-            const refId = fields.position === "start" ? null : fields.position;
-            insertInterstitial(refId, act, fields);
-          }}
-          onCancel={() => setAddingAfterId(null)}
-        />
-      </div>
-    );
-  };
+  // Act-header "Add title card" control. One button per act; clicking it creates
+  // a blank title card at the head of the act and opens it in the same inline
+  // editor as an existing title card (no separate form).
+  const renderActAddControl = (act) => (
+    <button
+      className="act-add-btn"
+      onClick={() => addTitleCard(act)}
+      title="Add a title card to this act"
+    >+ Add title card</button>
+  );
 
   const renderTimelineCard = (entry) => {
     const src = findSourceQuote(entry.source_quote_id);
@@ -2827,9 +2722,8 @@ export default function QuotesView() {
                 <span className="act-sub">
                   {entries.length} entr{entries.length === 1 ? "y" : "ies"} · ~{fmtSec(sec)}
                 </span>
-                <span className="act-header-actions">{renderActAddControl(act, entries)}</span>
+                <span className="act-header-actions">{renderActAddControl(act)}</span>
               </div>
-              {renderActAddForm(act, entries)}
               {entries.map((entry) => {
                 const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
                 return revealedIds.has(entry.entry_id)
