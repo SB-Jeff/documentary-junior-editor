@@ -1069,7 +1069,9 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
   border-bottom: 1px solid var(--border);
 }
 .hdr-row1-inner {
-  display: flex; align-items: center; gap: 14px;
+  /* Bottom-align so the buttons/tabs sit on the same baseline as the edit name
+     (the headline is the lower line of the two-line identity block). */
+  display: flex; align-items: flex-end; gap: 14px;
   padding: 12px 20px;
   max-width: 1100px;
   margin: 0 auto;
