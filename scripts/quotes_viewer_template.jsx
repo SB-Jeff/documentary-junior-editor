@@ -622,6 +622,19 @@ function SplitPanel({ entry, markers, setMarkers, onSplit, onCancel }) {
   );
 }
 
+// Stopwords stripped from a Library search so a natural-language question
+// ("What did they say about usability or customer support?") reduces to its
+// meaningful terms (usability, customer, support) instead of matching nothing.
+const SEARCH_STOPWORDS = new Set([
+  "a", "an", "and", "or", "the", "of", "to", "in", "on", "for", "at", "by",
+  "is", "are", "was", "were", "be", "been", "being", "do", "does", "did",
+  "i", "we", "you", "they", "he", "she", "it", "them", "us", "my", "our",
+  "your", "their", "this", "that", "these", "those", "with", "about", "as",
+  "so", "if", "then", "than", "what", "when", "where", "why", "how", "who",
+  "say", "said", "says", "tell", "talk", "talked", "mention", "mentioned",
+  "me", "him", "her", "his", "its", "from", "into", "any", "some", "there",
+]);
+
 // ============================================================================
 // Main component — QuotesView
 // ============================================================================
@@ -1994,10 +2007,21 @@ export default function QuotesView() {
   const renderLibrary = () => {
     const realActs = PROJECT_META.act_labels.filter((a) => a !== "Orphan");
     const inCutIds = hideInCut ? sourceIdsInCut() : null;
-    const needle = librarySearch.trim().toLowerCase();
-    const matchesSearch = (q) => !needle
-      || (q.quote || "").toLowerCase().includes(needle)
-      || (q.rationale || "").toLowerCase().includes(needle);
+    // Term-based search over quote text + rationale + agent note. A single word
+    // ("usability") and a natural-language question ("What did they say about
+    // usability or customer support?") both work: the query is tokenized,
+    // stopwords are dropped, and a quote matches if ANY remaining term appears.
+    // Falls back to a raw substring match when the query is only stopwords.
+    const rawNeedle = librarySearch.trim().toLowerCase();
+    const allTerms = rawNeedle.match(/[a-z0-9]+/g) || [];
+    const terms = allTerms.filter((t) => t.length >= 2 && !SEARCH_STOPWORDS.has(t));
+    const matchesSearch = (q) => {
+      if (!rawNeedle) return true;
+      const hay = `${q.quote || ""} ${q.rationale || ""} ${q.agent_note || ""}`.toLowerCase();
+      if (terms.length === 0) return hay.includes(rawNeedle);  // all-stopword query
+      return terms.some((t) => hay.includes(t));
+    };
+    const needle = rawNeedle;  // drives the "N matches" meta + empty-state copy
     const passLib = (q) => passesSourceFilters(q) && (!inCutIds || !inCutIds.has(q.num)) && matchesSearch(q);
     const inScope = SOURCE_QUOTES.filter((q) => !q.is_orphan && passLib(q));
     const orphans = SOURCE_QUOTES.filter((q) => q.is_orphan && passLib(q));
@@ -2137,7 +2161,7 @@ export default function QuotesView() {
           <input
             type="search"
             className="lib-search"
-            placeholder="Search quote text or rationale…"
+            placeholder="Search quotes & rationale — a keyword or a question…"
             value={librarySearch}
             onChange={(e) => setLibrarySearch(e.target.value)}
           />
