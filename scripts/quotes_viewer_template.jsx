@@ -118,6 +118,16 @@ const INITIAL_ROUND_INDEX = 0;
 //   { type: "entry" | "source", id: "1" }
 const INITIAL_FOCUS = null;
 
+// Agent seam-flags (M5 / SPEC §6.6) — narrative-coherence breaks the Edit Agent
+// found when it read the assembled cut. Surfaced inline in Review mode, right
+// before the entry where the read breaks. Populated by the build from the Edit
+// Agent's notes sidecar (edit-agent-notes-v*.json); empty when the agent hasn't
+// run. Shape:
+//   { before_entry_id: "e_007", kind: "orphan-pronoun",
+//     message: "Opens on 'they' with no antecedent.",
+//     suggestion: "Lead with Dana naming the team first." }
+const SEAM_FLAGS = [];
+
 // ============================================================================
 // REACT COMPONENT — Universal UI. Same across all projects.
 // To fix bugs or add features, update this section without touching the data
@@ -2543,8 +2553,36 @@ Set model to Sonnet 4.6.`;
     );
   };
 
+  // Seam-flags (M5 / SPEC §6.6): the Edit Agent's narrative-coherence flags,
+  // keyed by the entry they sit BEFORE. Rendered inline in Review mode only, so
+  // they appear exactly where the read breaks — not as an always-on panel.
+  const seamFlagsByEntry = (() => {
+    const m = {};
+    (typeof SEAM_FLAGS !== "undefined" ? SEAM_FLAGS : []).forEach((f) => {
+      if (!f || !f.before_entry_id) return;
+      (m[f.before_entry_id] = m[f.before_entry_id] || []).push(f);
+    });
+    return m;
+  })();
+
+  const renderSeamFlags = (entryId) => {
+    const flags = seamFlagsByEntry[entryId];
+    if (!flags || flags.length === 0) return null;
+    return flags.map((f, i) => (
+      <div className="seam-flag" key={`${entryId}-seam-${i}`}>
+        <div className="seam-flag-head">
+          <span className="seam-flag-glyph" aria-hidden="true">⚑</span>
+          <span className="seam-flag-kind">{(f.kind || "seam").replace(/[-_]/g, " ")}</span>
+        </div>
+        <div className="seam-flag-msg">{f.message}</div>
+        {f.suggestion && <div className="seam-flag-fix"><span className="seam-flag-fix-label">Try:</span> {f.suggestion}</div>}
+      </div>
+    ));
+  };
+
   // Review mode (M3 T2 §A): the cut read end to end, grouped by titled act, with
   // no editing controls. Shares the act grouping/filter logic with Edit mode.
+  // Agent seam-flags surface inline (M5), right before the entry they flag.
   const renderTimelineReview = (grouped, realActs) => (
     <div className="timeline-view review-mode">
       {realActs.map((act) => {
@@ -2560,7 +2598,12 @@ Set model to Sonnet 4.6.`;
                 {entries.length} entr{entries.length === 1 ? "y" : "ies"} · ~{fmtSec(sec)}
               </span>
             </div>
-            {entries.map((entry) => renderReviewCard(entry))}
+            {entries.map((entry) => (
+              <React.Fragment key={`rev-${entry.entry_id}`}>
+                {renderSeamFlags(entry.entry_id)}
+                {renderReviewCard(entry)}
+              </React.Fragment>
+            ))}
           </section>
         );
       })}
@@ -3003,6 +3046,17 @@ Set model to Sonnet 4.6.`;
       line-height:1.6; color: var(--text); }
     .review-quote.review-ins { font-style:italic; color: var(--text-muted); font-size:17px; }
     .review-interstitial { margin:0 0 22px; }
+
+    /* === M5 — Review-mode seam-flags (Cardinal Rule 2 surface) === */
+    .seam-flag { margin:0 0 18px; padding:10px 13px; border-left:3px solid #d97706;
+      background:rgba(217,119,6,.07); border-radius:0 8px 8px 0; }
+    .seam-flag-head { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+    .seam-flag-glyph { color:#b45309; font-size:12px; }
+    .seam-flag-kind { font-size:10px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.07em; color:#b45309; }
+    .seam-flag-msg { font-size:13px; line-height:1.5; color: var(--text); }
+    .seam-flag-fix { font-size:12px; line-height:1.5; color: var(--text-muted); margin-top:4px; }
+    .seam-flag-fix-label { font-weight:700; color:#b45309; }
 
     /* === M3 T2 §C/§D — Point at this + Rejoin + Split tag === */
     .split-tag { font-size:10px; font-weight:600; padding:1px 7px; border-radius:8px;

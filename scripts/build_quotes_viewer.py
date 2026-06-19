@@ -604,6 +604,29 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         o["is_orphan"] = True
     combined_quotes = list(source_quotes) + list(orphans)
 
+    # Edit-Agent notes sidecar (M5): the Edit Agent records WHY it left a quote
+    # out (agent_note, keyed by quote num → shown on not-used Library cards, the
+    # silent-omissions fix) and the narrative-coherence seam-flags it found when
+    # it read the cut (shown inline in Review mode). Optional; absent = empty.
+    seam_flags = []
+    notes_latest = latest_versioned(handoffs.glob("edit-agent-notes-v*.json"))
+    if notes_latest:
+        try:
+            notes = json.loads(notes_latest.read_text())
+        except (ValueError, OSError) as e:
+            print(f"Warning: could not read {notes_latest.name}: {e}", file=sys.stderr)
+            notes = {}
+        by_num = notes.get("by_num", {}) if isinstance(notes, dict) else {}
+        if by_num:
+            for q in combined_quotes:
+                # JSON object keys are strings; quote nums are ints.
+                note = by_num.get(str(q.get("num"))) or by_num.get(q.get("num"))
+                if note:
+                    q["agent_note"] = note
+        raw_flags = notes.get("seam_flags", []) if isinstance(notes, dict) else []
+        if isinstance(raw_flags, list):
+            seam_flags = [f for f in raw_flags if isinstance(f, dict) and f.get("before_entry_id")]
+
     # --- Metadata: derive from always-present files, args win (Bug 3) ---
     as_path = latest_versioned(handoffs.glob("act-structure-v*.md"))
     as_name, as_labels, as_speakers = None, [], []
@@ -727,6 +750,7 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         "target_seconds": target_seconds,
         "source_quotes": combined_quotes,
         "rounds": rounds,
+        "seam_flags": seam_flags,
     }
 
 
@@ -856,6 +880,7 @@ def assemble_data_block(data: dict) -> dict:
         "ROUNDS": migrated_rounds,
         "INITIAL_ROUND_INDEX": max(0, len(migrated_rounds) - 1),
         "INITIAL_FOCUS": None,
+        "SEAM_FLAGS": data.get("seam_flags", []),
     }
 
 
@@ -923,6 +948,16 @@ def substitute_data_block(template_src: str, data_block: dict) -> str:
     out = re.sub(
         r'^const INITIAL_FOCUS = null;',
         lambda _: f'const INITIAL_FOCUS = {focus_literal};',
+        out,
+        count=1,
+        flags=re.MULTILINE,
+    )
+
+    # SEAM_FLAGS (M5): the Edit Agent's Review-mode coherence flags. Empty list
+    # when the agent hasn't run / no notes sidecar present.
+    out = re.sub(
+        r'^const SEAM_FLAGS = \[\];',
+        lambda _: f'const SEAM_FLAGS = {js_literal(data_block.get("SEAM_FLAGS", []))};',
         out,
         count=1,
         flags=re.MULTILINE,
