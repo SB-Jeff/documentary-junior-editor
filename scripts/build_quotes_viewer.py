@@ -1187,7 +1187,9 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .export-overlay { position: fixed; inset: 0; background: rgba(28,25,23,.45); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .export-modal { background: var(--surface); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,.25); max-width: 620px; width: 100%; padding: 22px 24px; }
 .export-modal h3 { margin: 0 0 4px; font-size: 16px; }
-.export-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }
+.export-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 12px; }
+.export-sub code, .export-next code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+.export-next { font-size: 13px; line-height: 1.55; color: var(--text); margin: 0 0 16px; }
 .export-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
 .export-num { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .export-step-body { font-size: 13px; line-height: 1.5; }

@@ -876,6 +876,10 @@ export default function QuotesView() {
   // written-file info + the ready-to-paste agent prompt.
   const [exportInfo, setExportInfo] = useState(null);
   const [exportCopied, setExportCopied] = useState(false);
+  // The export the viewer has queued for the Edit Agent (it launches the FCPXML
+  // Agent itself — no copy-paste, no new session). Surfaced in viewer-state.json
+  // and written to export-request.json; the agent owns its lifecycle.
+  const [pendingExport, setPendingExport] = useState(null);
 
   // === Top-bar Save / Open / Export-to-Final-Cut menus (M3 §5 redesign) ===
   // The legacy "Round N" <select> is replaced by three header buttons, each
@@ -1166,6 +1170,9 @@ export default function QuotesView() {
             pointed_at: pointedAt.map((p) => ({ entry_id: p.entry_id, ref: p.label })),
           }
         : null,
+      // A Final Cut export Jeff queued — the agent launches the FCPXML Agent for
+      // it (authority is export-request.json; this mirrors it for visibility).
+      pending_export: pendingExport,
       // Library recategorizations Jeff made since this build (entry-less retags).
       source_act_overrides: sourceActOverrides,
       // Uncommitted tweaks since his last Send — the live correction signal.
@@ -1203,7 +1210,7 @@ export default function QuotesView() {
     }, 700);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, batchNote, pointedAt, dirtySinceSend, sourceActOverrides]);
+  }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, batchNote, pointedAt, dirtySinceSend, sourceActOverrides, pendingExport]);
 
   // ====== Export ======
 
@@ -1241,23 +1248,36 @@ export default function QuotesView() {
       entries: filtered,
     };
     const json = JSON.stringify(payload, null, 2);
-    const prompt =
-`You are the FCPXML Agent. Read documentary-junior-editor/SKILL-fcpxml-params.md and documentary-junior-editor/SKILL-fcpxml.md and follow them exactly. The project folder is mounted.
-
-Build the ${label.toUpperCase()} cut for ${PROJECT_META.slug}. Read ${relPath} (just written from the viewer — ${win} window, ${filtered.length} entries) plus the project's handoff context (fcpxml-params, edit-handoff, act-structure) per handoffs/pipeline-state.json.
-
-Cross-reference timecodes against the captioned FCPXMLs in XML/exports/, branch generation by per-interview clip_type, and emit one clip per source segment per timeline entry. Save to XML/imports/${PROJECT_META.slug}_${win}_cut_v${round.round_number}.fcpxml. Update handoffs/${PROJECT_META.slug}/pipeline-state.json.
-
-Set model to Sonnet 4.6.`;
-    setExportCopied(false);
+    const outFcpxml = `XML/imports/${PROJECT_META.slug}_${win}_cut_v${round.round_number}.fcpxml`;
     const res = await persistFile(relPath, json, { downloadName: filename });
-    // Modal copy distinguishes only "written to disk" vs "downloaded" vs "fail".
     const wrote = res.method === "download" ? "download"
       : res.ok ? "disk" : "fail";
+    let queued = false;
     if (res.ok && res.method !== "download") {
       await writeTweakLog();  // best-effort: persist the override log alongside the cut
+      // Queue the export for the Edit Agent. It reads export-request.json on its
+      // turn and launches the FCPXML Agent itself (Task tool + SKILL-fcpxml) —
+      // no copy-paste, no new session. The agent owns the status lifecycle
+      // (requested → built), so it never rebuilds an already-built request.
+      const request = {
+        schema_version: 1,
+        kind: "export-request",
+        requested_at: new Date().toISOString(),
+        status: "requested",
+        window: win,
+        label,
+        round: round.round_number,
+        cut_name: round.cut_name || round.round_label || `Round ${round.round_number}`,
+        cut_file: relPath,
+        out_fcpxml: outFcpxml,
+        entry_count: filtered.length,
+      };
+      const rres = await persistFile(`handoffs/${PROJECT_META.slug}/export-request.json`,
+        JSON.stringify(request, null, 2), { allowDownload: false });
+      queued = !!(rres && rres.ok);
+      if (queued) setPendingExport(request);
     }
-    setExportInfo({ win, label, count: filtered.length, time: fmtSec(totalSec), file: relPath, filename, prompt, wrote });
+    setExportInfo({ win, label, count: filtered.length, time: fmtSec(totalSec), file: relPath, filename, outFcpxml, wrote, queued });
   }
 
   // ====== Move + reorder helpers ======
@@ -2934,37 +2954,27 @@ Set model to Sonnet 4.6.`;
 
   const renderExportModal = () => {
     if (!exportInfo) return null;
-    const { win, label, count, time, file, filename, prompt, wrote } = exportInfo;
-    const step1 = wrote === "disk"
-      ? <><span className="export-ok">✓ Done</span> — wrote <code>{file}</code> (the {label} cut: {count} entries · {time}).</>
-      : wrote === "download"
-      ? <><span className="export-ok">✓ Downloaded</span> <code>{filename}</code> (the {label} cut: {count} entries · {time}). Drop it in at <code>{file}</code> in the project.</>
-      : <span className="export-warn">⚠ Could not write the cut file automatically — paste the prompt and have the agent re-derive, or write {file} by hand.</span>;
-    const copyPrompt = () => {
-      const ta = document.getElementById("export-prompt-ta");
-      if (ta) ta.select();
-      try { navigator.clipboard.writeText(prompt); } catch (_) {}
-      setExportCopied(true);
-    };
+    const { win, label, count, time, file, filename, outFcpxml, wrote, queued } = exportInfo;
     return (
       <div className="export-overlay" onClick={() => setExportInfo(null)}>
         <div className="export-modal" onClick={(e) => e.stopPropagation()}>
-          <h3>Send the <span className={`export-win ${win}`}>{label}</span> cut to the FCPXML Agent</h3>
-          <p className="export-sub">The viewer writes the cut to disk, then hands the build to the FCPXML Agent — the tool built to caption-match, branch by clip type, and handle FCP import issues. (The viewer doesn't build the XML itself; that step is failure-prone without the agent around it.)</p>
-          <div className="export-step">
-            <span className="export-num">1</span>
-            <div className="export-step-body">{step1}</div>
-          </div>
-          <div className="export-step">
-            <span className="export-num">2</span>
-            <div className="export-step-body">
-              Open a new Cowork task and paste this FCPXML Agent prompt:
-              <div className="export-promptbox">
-                <textarea className="export-prompt" id="export-prompt-ta" readOnly value={prompt} />
-                <button className="export-copy" onClick={copyPrompt}>{exportCopied ? "Copied ✓" : "Copy"}</button>
-              </div>
-            </div>
-          </div>
+          <h3>Export the <span className={`export-win ${win}`}>{label}</span> cut to Final Cut</h3>
+          {wrote === "disk" && queued ? (
+            <>
+              <p className="export-sub">
+                <span className="export-ok">✓ Queued</span> the {label} cut ({count} entries · {time}). The cut is on disk at <code>{file}</code>.
+              </p>
+              <p className="export-next">
+                Just tell the editing agent <strong>"build the export"</strong> — it already has the request, so it'll launch the FCPXML Agent itself and save <code>{outFcpxml}</code>. No copy-paste, no new session.
+              </p>
+            </>
+          ) : wrote === "download" ? (
+            <p className="export-sub">
+              <span className="export-ok">✓ Downloaded</span> <code>{filename}</code> ({count} entries · {time}). The app server isn't running, so move it to <code>{file}</code> and start the server, then tell the agent to build the export.
+            </p>
+          ) : (
+            <p className="export-sub export-warn">⚠ Couldn't write the cut file — start the app server (so the agent can read it) and try again.</p>
+          )}
           <div className="export-actions">
             <button className="btn" onClick={() => setExportInfo(null)}>Close</button>
           </div>

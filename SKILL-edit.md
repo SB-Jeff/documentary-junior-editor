@@ -870,16 +870,41 @@ to the viewer just to know which quote you mean.
   cut" (overwrite the open one) and "save as new" (name a new deliverable);
   **Open** lists saved cuts to reopen. Each is a snapshot of the Timeline
   arrangement + trims + tier assignments in `editing-versions/<name>.json`.
-- **Export to Final Cut** packages the current Timeline and hands it to the
-  FCPXML Agent — it copies a ready-to-paste launch prompt and writes the cut JSON
-  (`trimmed-quotes-v[N]-tight.json` for the Timeline window;
-  `trimmed-quotes-v[N].json` for the full timeline — separate filenames so the
-  two never overwrite each other). The viewer does **not** invoke
-  `build_fcpxml.py` or generate XML itself; the FCPXML Agent builds the `.fcpxml`
-  from the media reference ids extracted earlier by FCPXML Params.
+- **Export to Final Cut** writes the cut JSON (`trimmed-quotes-v[N]-tight.json`
+  for the Timeline window; `trimmed-quotes-v[N].json` for the full timeline —
+  separate filenames so the two never overwrite each other) and **queues an
+  export request on disk** — `handoffs/[slug]/export-request.json` — for YOU to
+  fulfil. No copy-paste, no new Cowork session (that old flow is gone). The
+  viewer does **not** generate XML itself; you launch the FCPXML Agent. See
+  "Fulfilling an export request" below.
 
 The `[project-slug]_quotes_view.html` build itself is the offline-accessible
 record of the latest round; Jeff can open it in any browser at any time.
+
+### Fulfilling an export request (you launch the FCPXML Agent)
+
+When Jeff clicks **Export to Final Cut**, the viewer writes
+`handoffs/[slug]/export-request.json` and mirrors it in `viewer-state.json`
+(`pending_export`). On your turn — when Jeff says "build the export" or you
+notice the request while reading state — **you run the FCPXML build yourself**,
+the same way the Orchestrator launches downstream agents:
+
+1. Read `handoffs/[slug]/export-request.json`. Shape:
+   `{ status, window, label, round, cut_name, cut_file, out_fcpxml, entry_count }`.
+   Act **only when `status == "requested"`** — if it's already `"built"`, do
+   nothing (this is what prevents rebuilding the same export every turn).
+2. **Launch the FCPXML Agent via the Task tool** (subagent), instructing it to
+   read `SKILL-fcpxml-params.md` + `SKILL-fcpxml.md` and follow them exactly:
+   build the `{window}` cut for `[slug]` from `cut_file` plus the project's
+   handoff context (fcpxml-params, edit-handoff, act-structure per
+   `pipeline-state.json`), and save to `out_fcpxml`. (Set its model to Sonnet.)
+3. When it finishes, **rewrite `export-request.json` with `status: "built"`**
+   (add `built_at` and the final `out_fcpxml`), update `pipeline-state.json`,
+   and tell Jeff in chat where the `.fcpxml` landed so he can import it.
+
+This keeps the FCPXML Agent's specialised skill intact while removing the
+copy-paste / new-session step — Export now rides the same disk channel as the
+rest of the live-partner loop.
 
 ---
 
