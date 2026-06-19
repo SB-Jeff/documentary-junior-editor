@@ -1495,6 +1495,8 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .split-marker:hover { background: var(--probable-soft); color: var(--probable); }
 .split-marker.active { background: var(--probable); color: white; font-weight: 700; }
+/* Words already trimmed away — shown struck so the split lands on what plays. */
+.split-word-cut { text-decoration: line-through; color: var(--text-subtle); opacity: 0.55; }
 .split-counter { font-size: 11px; color: var(--text-subtle); margin: 8px 0; }
 
 /* === Review === */

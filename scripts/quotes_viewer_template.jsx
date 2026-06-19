@@ -321,6 +321,29 @@ function isTrimmed(entry) {
   return (entry._editCuts || []).length > 0;
 }
 
+// Kept ranges = the complement of `cuts` over [0, len] (the spans that play).
+function keptRangesOf(cuts, len) {
+  const sorted = (cuts || []).map((r) => [r[0], r[1]]).sort((a, b) => a[0] - b[0]);
+  const kept = [];
+  let pos = 0;
+  for (const [s, e] of sorted) {
+    if (s > pos) kept.push([pos, Math.min(s, len)]);
+    pos = Math.max(pos, e);
+  }
+  if (pos < len) kept.push([pos, len]);
+  return kept;
+}
+
+// Clip ranges to [a, b], dropping anything outside.
+function clipRanges(ranges, a, b) {
+  const out = [];
+  for (const [s, e] of ranges) {
+    const ns = Math.max(s, a), ne = Math.min(e, b);
+    if (ne > ns) out.push([ns, ne]);
+  }
+  return out;
+}
+
 // Estimated runtime in seconds — proportional to kept tokens.
 function entrySeconds(entry) {
   if (entry.type === "title_card" || entry.type === "interstitial" || entry.type === "context_beat") {
@@ -532,11 +555,15 @@ function EditPanel({ entry, editCuts, setEditCuts, onSave, onCancel }) {
 
 function SplitPanel({ entry, markers, setMarkers, onSplit, onCancel }) {
   const original = fullQuoteText(entry);
+  // Words already trimmed away show struck-through here, so a split is placed
+  // against what actually plays — not text that was cut.
+  const cuts = entry._editCuts || [];
+  const isCut = (start, end) => cuts.some(([s, e]) => s <= start && end <= e);
   const words = [];
   const re = /(\S+)(\s*)/g;
   let m;
   while ((m = re.exec(original)) !== null) {
-    words.push({ word: m[1], boundaryAfter: m.index + m[0].length });
+    words.push({ word: m[1], boundaryAfter: m.index + m[0].length, cut: isCut(m.index, m.index + m[1].length) });
   }
   const sorted = [...markers].sort((a, b) => a - b);
 
@@ -556,7 +583,7 @@ function SplitPanel({ entry, markers, setMarkers, onSplit, onCancel }) {
           const active = sorted.includes(w.boundaryAfter);
           return (
             <span key={i}>
-              <span>{w.word}</span>
+              <span className={w.cut ? "split-word-cut" : undefined}>{w.word}</span>
               {i < words.length - 1 && (
                 <>
                   <span
@@ -1286,26 +1313,28 @@ Set model to Sonnet 4.6.`;
     if (sorted.length === 0) return;
     const boundaries = [0, ...sorted, original.length];
     const letters = "abcdefghijklmnopqrstuvwxyz";
+    // Preserve any trims already applied: the kept set of the source entry is the
+    // complement of its _editCuts. Each sub-quote keeps only the portion of THAT
+    // kept set inside its split span — so a split never resurrects trimmed text.
+    const keptRanges = keptRangesOf(entry._editCuts || [], original.length);
     const subEntries = [];
     for (let i = 0; i < boundaries.length - 1; i++) {
       const keepStart = boundaries[i];
       const keepEnd = boundaries[i + 1];
-      const subText = original.slice(keepStart, keepEnd).trim();
-      if (!subText) continue;
-      const sub = letters[i];
+      // What still plays in this span = (already-kept) ∩ [keepStart, keepEnd].
+      const subKept = clipRanges(keptRanges, keepStart, keepEnd);
+      if (subKept.length === 0) continue;  // wholly-trimmed span → no sub-quote
+      const sub = letters[subEntries.length];
       const newId = `${entry.source_quote_id}${sub}`;
-      // Partition, don't clone: keep only this sub-quote's character span by
-      // cutting everything before keepStart and everything after keepEnd. The
-      // verbatim text is untouched — only trim ranges differ per half.
-      const subCuts = [];
-      if (keepStart > 0) subCuts.push([0, keepStart]);
-      if (keepEnd < original.length) subCuts.push([keepEnd, original.length]);
+      // Cuts = complement of the surviving kept ranges (covers both the split
+      // boundaries AND the original trims). Verbatim text is untouched.
+      const subCuts = keptRangesOf(subKept, original.length);
       subEntries.push({
         ...entry,
         entry_id: newId,
         _subLabel: sub,
         _editCuts: subCuts,
-        notes: (entry.notes ? entry.notes + " " : "") + `(split ${sub} of ${boundaries.length - 1})`,
+        notes: (entry.notes ? entry.notes + " " : "") + `(split ${sub})`,
       });
     }
     applyLocalEdit("split_entry",
