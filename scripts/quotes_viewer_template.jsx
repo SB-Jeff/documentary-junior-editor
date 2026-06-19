@@ -1800,26 +1800,6 @@ Set model to Sonnet 4.6.`;
         {renderPersistIndicator()}
        </div>
       </div>
-      {/* SUB-HEADER (M3 §5): active act inline with the Creative-context toggle.
-          "<ActLabel> · Creative context". The panel is ACT-SCOPED — a single act
-          shows only that act's roadmap; All shows the premise + every roadmap.
-          Sourced from the Creative Context agent; graceful empty states. */}
-      <div className="hdr-subhead">
-       <div className="hdr-subhead-inner" data-topbar="1">
-        <span className="subhead-act">{activeActLabel}</span>
-        <span className="subhead-dot">·</span>
-        <button
-          className={`subhead-cc-btn${creativeOpen ? " active" : ""}`}
-          onClick={() => setCreativeOpen((v) => !v)}
-        >Creative context <span className="cc-caret">{creativeOpen ? "▴" : "▾"}</span></button>
-        {creativeOpen && (
-          <div className="cc-panel">
-            {renderCreativeContext()}
-            <div className="cc-source">from Creative Context agent</div>
-          </div>
-        )}
-       </div>
-      </div>
       {(
         <div className="hdr-row2">
          <div className="hdr-row2-inner">
@@ -1841,6 +1821,25 @@ Set model to Sonnet 4.6.`;
                   {label}
                 </button>
               ))}
+              {/* Creative context (act-scoped) — a compact "?" affordance tucked
+                  INSIDE the Act bubble (after a hairline) so it reads as part of
+                  the same unit. Panel anchors to this wrapper; data-topbar keeps
+                  the outside-click close working. */}
+              <span className="cc-divider" aria-hidden="true"></span>
+              <div className="cc-inline" data-topbar="1">
+                <button
+                  className={`cc-help-btn${creativeOpen ? " active" : ""}`}
+                  onClick={() => setCreativeOpen((v) => !v)}
+                  aria-label={`Creative context — ${activeActLabel}`}
+                  title={`Creative context — ${activeActLabel}`}
+                >?</button>
+                {creativeOpen && (
+                  <div className="cc-panel">
+                    {renderCreativeContext()}
+                    <div className="cc-source">from Creative Context agent</div>
+                  </div>
+                )}
+              </div>
             </div>
             {/* Timeline metric (Timeline view only), right-aligned on the Act
                 line. Export moved to the top-bar "Export to Final Cut" menu
@@ -3006,17 +3005,18 @@ Set model to Sonnet 4.6.`;
     .tb-open-btn { font-size:11px; padding:3px 11px; }
 
     /* === M3 sub-header (active act · Creative context) === */
-    .hdr-subhead { background: var(--surface); border-bottom:1px solid var(--border); }
-    .hdr-subhead-inner { position:relative; max-width:1100px; margin:0 auto; padding:7px 22px;
-      display:flex; align-items:center; gap:8px; }
-    .subhead-act { font-size:13px; font-weight:600; color: var(--text); }
-    .subhead-dot { color: var(--text-subtle); }
-    .subhead-cc-btn { background:transparent; border:1px solid var(--border-strong); border-radius:6px;
-      padding:3px 10px; font:inherit; font-size:12px; color: var(--text-muted); cursor:pointer; }
-    .subhead-cc-btn:hover { color: var(--text); background: var(--surface-2); }
-    .subhead-cc-btn.active { color: var(--text); border-color: var(--text-muted); }
+    /* Creative-context control — a compact "?" affordance tucked inside the Act
+       bubble (after a hairline divider) so it reads as part of that unit. */
+    .cc-inline { position:relative; display:inline-flex; align-items:center; }
+    .cc-divider { width:1px; align-self:stretch; background: var(--border-strong); margin:1px 6px 1px 4px; }
+    .cc-help-btn { display:inline-flex; align-items:center; justify-content:center;
+      width:20px; height:20px; padding:0; border:1px solid var(--border-strong); border-radius:999px;
+      background:transparent; font:inherit; font-size:12px; font-weight:600; line-height:1;
+      color: var(--text-subtle); cursor:pointer; }
+    .cc-help-btn:hover { color: var(--text); background: var(--surface-2); border-color: var(--text-muted); }
+    .cc-help-btn.active { color:#fff; background: var(--text); border-color: var(--text); }
     .cc-caret { font-size:10px; }
-    .cc-panel { position:absolute; top:calc(100% + 4px); left:22px; z-index:70; max-width:560px;
+    .cc-panel { position:absolute; top:calc(100% + 6px); left:0; z-index:70; max-width:560px; min-width:320px;
       background: var(--surface); border:1px solid var(--border-strong); border-radius:10px;
       box-shadow:0 12px 32px rgba(0,0,0,.16); padding:16px 18px; text-align:left; }
     .cc-block { margin-bottom:12px; }
