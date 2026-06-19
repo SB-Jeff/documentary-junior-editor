@@ -510,7 +510,9 @@ def resolve_handoffs_dir(slug: str, ssd_root: Path) -> Path:
 
 def load_project_data_from_handoffs(slug: str, ssd_root: Path,
                                      title_override: str = None,
-                                     act_labels_override=None) -> dict:
+                                     act_labels_override=None,
+                                     client_override: str = None,
+                                     project_override: str = None) -> dict:
     """Auto-discover project data files in the handoffs folder.
 
     Project metadata (title, act labels, speakers) is derived from files that
@@ -640,6 +642,14 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         or (ps.get("project_name") if ps.get("project_name") not in (None, "", slug) else None)
         or slug
     )
+    # Header identity split (eyebrow "Client · Project" + edit name as headline).
+    # No reliable upstream client field today, so: --client > a forward-compatible
+    # "## Client:" line in act-structure > blank. project: --project > the derived
+    # title. The template falls back to PROJECT_TITLE when both are blank.
+    as_text = as_path.read_text(errors="ignore") if as_path else ""
+    cm = re.search(r"^##\s*Client:\s*(.+?)\s*$", as_text, re.MULTILINE)
+    client_name = (client_override or (cm.group(1).strip() if cm else "") or "").strip()
+    project_label = (project_override or project_name or "").strip()
     # act labels: --act-labels > act-structure > pipeline-state.
     # NO silent ["Act 1","Act 2","Act 3"] default — a missing/empty result is a
     # hard failure in validate_project_metadata (kickoff brief P2). The old
@@ -741,6 +751,8 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
 
     return {
         "project_name": project_name,
+        "client": client_name,
+        "project": project_label,
         "slug": slug,
         "ssd_root": str(ssd_root),
         "act_labels": act_labels_full,
@@ -861,6 +873,10 @@ def assemble_data_block(data: dict) -> dict:
     project_meta = {
         "slug": data["slug"],
         "ssd_root": data["ssd_root"],
+        # Header identity (option 2): eyebrow "Client · Project", edit name as the
+        # headline. Both optional; the template falls back to PROJECT_TITLE.
+        "client": data.get("client", ""),
+        "project": data.get("project", "") or data["project_name"],
         "target_seconds": data["target_seconds"],
         # Keep only real act labels (Orphan filtered out — orphans live as flag
         # on quotes, not as an act). Preserve order.
@@ -1052,6 +1068,9 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
   display: flex; align-items: center; gap: 14px;
   flex-wrap: wrap;
 }
+.hdr-identity { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.hdr-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hdr-title { font-size: 15px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .round-select {
   background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
@@ -1714,6 +1733,11 @@ def main():
     p.add_argument("--output", help="Output HTML path")
     p.add_argument("--title", default=None,
                    help="Override the project title (else derived from act-structure-v*.md)")
+    p.add_argument("--client", default=None,
+                   help="Client name for the header eyebrow (else from a '## Client:' "
+                        "line in act-structure-v*.md, else blank)")
+    p.add_argument("--project", default=None,
+                   help="Project name for the header eyebrow (else the derived title)")
     p.add_argument("--act-labels", default=None,
                    help="Override act labels, comma-separated (else from act-structure-v*.md)")
     args = p.parse_args()
@@ -1746,6 +1770,7 @@ def main():
         raw = load_project_data_from_handoffs(
             args.slug, Path(args.ssd_root),
             title_override=args.title, act_labels_override=act_labels_override,
+            client_override=args.client, project_override=args.project,
         )
         data_block = assemble_data_block(raw)
         slug = raw["slug"]

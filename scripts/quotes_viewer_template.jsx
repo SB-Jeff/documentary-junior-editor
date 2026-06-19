@@ -50,6 +50,10 @@ const PROJECT_TITLE = "Subject Name — Project Name";
 const PROJECT_META = {
   slug: "project-slug",
   ssd_root: "/Volumes/PROJECT_SSD",  // for callMcpTool save/export paths
+  // Header identity (option 2): eyebrow "Client · Project" over the edit name.
+  // Both optional; the header falls back to PROJECT_TITLE when blank.
+  client: "",
+  project: "",
   target_seconds: 120,
   // Order matters — drives section ordering. "Orphan" should not appear here.
   act_labels: ["Act 1", "Act 2", "Act 3"],
@@ -1765,7 +1769,20 @@ Set model to Sonnet 4.6.`;
     <div className="hdr">
       <div className="hdr-row1">
        <div className="hdr-row1-inner">
-        <h1 className="hdr-title">{PROJECT_TITLE}</h1>
+        {/* Header identity (option 2): eyebrow "Client · Project" over the edit
+            name (the open cut). Eyebrow falls back to PROJECT_TITLE when client/
+            project aren't set; the headline names whichever cut is open so a
+            window is identifiable when several deliverables share a project. */}
+        <div className="hdr-identity">
+          <div className="hdr-eyebrow">
+            {[PROJECT_META.client, PROJECT_META.project].filter(Boolean).join(" · ") || PROJECT_TITLE}
+          </div>
+          <h1 className="hdr-title">
+            {currentCut
+              ? (currentCut.cut_name || currentCut.round_label || `Round ${currentCut.round_number}`)
+              : PROJECT_TITLE}
+          </h1>
+        </div>
         {/* Top-bar actions (M3 §5): Save · Open · Export to Final Cut. Replaces
             the legacy Round <select> — its load/save jobs move to Open/Save. */}
         <div className="topbar-actions" data-topbar="1">
