@@ -790,6 +790,19 @@ export default function QuotesView() {
   const [newCutName, setNewCutName] = useState("");  // typed name for "Save as new"
   const [saveStatus, setSaveStatus] = useState({ text: "", cls: "" });
 
+  // === Live autosave / persistence status (M4 — persistent app shell) ===
+  // The viewer is no longer a throwaway chat artifact: it runs as a persistent
+  // local app and shares its working state with the Edit Agent through a single
+  // file on disk, handoffs/<slug>/viewer-state.json, autosaved (debounced) on
+  // every edit. SKILL-edit reads that file at the top of each of its turns to
+  // see the current cut — no copy-paste, no PDF-print. `persistState` drives the
+  // top-bar indicator: "saved" (written to disk via the app server / Cowork),
+  // "saving", "offline" (no writer reachable — the app server isn't running), or
+  // "error". It is the honest signal that disk-sharing with the agent is live.
+  const [persistState, setPersistState] = useState({ state: "idle", at: null, detail: "" });
+  const autosaveTimer = useRef(null);
+  const autosaveSeq = useRef(0);
+
   // Sub-header "Creative context" inline panel (M3 §5). Act-scoped: a single
   // act shows only PROJECT_META.acts[that].roadmap; All shows premise + every
   // act's roadmap. Sourced from the Creative Context agent.
@@ -993,6 +1006,73 @@ export default function QuotesView() {
     setRoundIndex(nextIndex);
     setTopMenu(null);
   }
+
+  // ====== Live autosave → viewer-state.json (M4) ======
+
+  // The single agent-readable snapshot of the viewer's current working state.
+  // Shape is deliberately flat and self-describing so SKILL-edit can read the
+  // whole cut, what is in/out, what Jeff just changed, and where his attention
+  // is — from ONE file, on each of its turns. Membership lives on each entry
+  // (tight = Timeline, loose = Cuts); not-used Library quotes are SOURCE_QUOTES
+  // with no entry, so the agent reconstructs the Library from its baked-in pool
+  // plus `source_act_overrides` (Jeff's Library recategorizations).
+  function buildLiveState() {
+    const round = ROUNDS[roundIndex];
+    const tl = getTimeline();
+    const ops = getPendingOps();
+    return {
+      schema_version: 1,
+      kind: "viewer-live-state",
+      project_slug: PROJECT_META.slug,
+      project_title: PROJECT_TITLE,
+      generated_at: new Date().toISOString(),
+      open_cut: round
+        ? { round_number: round.round_number, version: round.version, label: round.round_label || `Round ${round.round_number}`, cut_name: round.cut_name || null }
+        : null,
+      focus: { view, mode: timelineMode, act: actFilter, speaker: speakerFilter },
+      dirty_since_send: dirtySinceSend,
+      counts: {
+        timeline: tl.filter((e) => membershipOf(e) === "tight").length,
+        cuts: tl.filter((e) => membershipOf(e) === "loose").length,
+        pending_ops: ops.length,
+      },
+      // What Jeff is composing for his next message to the agent (intent note +
+      // any "Point at this" references he tagged in). Empty when nothing pending.
+      pending_message: batchNote.trim() ? { note: batchNote.trim() } : null,
+      // Library recategorizations Jeff made since this build (entry-less retags).
+      source_act_overrides: sourceActOverrides,
+      // Uncommitted tweaks since his last Send — the live correction signal.
+      pending_ops: ops.map((o) => ({
+        seq: o.seq, batch: o.batch, entry_id: o.entry_id,
+        change_type: o.change_type, description: o.description,
+      })),
+      // The full working timeline (all tiers), canonical order.
+      entries: tl,
+    };
+  }
+
+  // Debounced write of the live state on every meaningful change. Best-effort
+  // and download-suppressed (never spams the browser): if no writer is reachable
+  // the indicator simply shows "offline". The autosaveSeq guard drops a stale
+  // in-flight write if a newer change already superseded it.
+  useEffect(() => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(async () => {
+      const seq = ++autosaveSeq.current;
+      setPersistState((p) => ({ ...p, state: "saving" }));
+      const relPath = `handoffs/${PROJECT_META.slug}/viewer-state.json`;
+      const json = JSON.stringify(buildLiveState(), null, 2);
+      const res = await persistFile(relPath, json, { allowDownload: false });
+      if (seq !== autosaveSeq.current) return;  // a newer write is already queued
+      if (res.ok && (res.method === "cowork" || res.method === "helper")) {
+        setPersistState({ state: "saved", at: Date.now(), detail: res.detail || relPath });
+      } else {
+        setPersistState({ state: "offline", at: Date.now(), detail: res.detail || "app server not running" });
+      }
+    }, 700);
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, batchNote, dirtySinceSend, sourceActOverrides]);
 
   // ====== Export ======
 
@@ -1524,6 +1604,34 @@ Set model to Sonnet 4.6.`;
   // Body of the act-scoped Creative-context panel. Reads PROJECT_META.acts
   // ([{ label, roadmap }]) and PROJECT_META.premise — both emitted by the build
   // script from the Creative Context handoffs (degrade to "" when absent).
+  // M4 persistence indicator. Honest about whether the agent can see edits:
+  // "saved" (green) = viewer-state.json written to disk; "saving" (amber pulse);
+  // "offline" (grey) = no app server reachable, so the agent is blind to edits
+  // until you start scripts/viewer_save_server.py; "error" (red) = a write tried
+  // and failed.
+  const renderPersistIndicator = () => {
+    const s = persistState.state;
+    const map = {
+      idle:    { cls: "idle",    glyph: "○", text: "Live state" },
+      saving:  { cls: "saving",  glyph: "◌", text: "Saving…" },
+      saved:   { cls: "saved",   glyph: "●", text: "Saved to disk" },
+      offline: { cls: "offline", glyph: "○", text: "Offline — start app server" },
+      error:   { cls: "error",   glyph: "▲", text: "Save failed" },
+    };
+    const v = map[s] || map.idle;
+    const tip = s === "offline"
+      ? "The viewer can't reach the app server, so the Edit Agent can't see your edits. Run: python3 scripts/viewer_save_server.py --serve <built index.html> --root <project root>"
+      : s === "saved"
+        ? `Working state autosaved to ${persistState.detail || "viewer-state.json"} — the Edit Agent reads it each turn.`
+        : "Your working state is shared with the Edit Agent via viewer-state.json on disk.";
+    return (
+      <div className={`persist-ind ${v.cls}`} title={tip}>
+        <span className="persist-glyph" aria-hidden="true">{v.glyph}</span>
+        <span className="persist-text">{v.text}</span>
+      </div>
+    );
+  };
+
   const renderCreativeContext = () => {
     const acts = PROJECT_META.acts || [];
     if (actFilter !== "all") {
@@ -1676,6 +1784,10 @@ Set model to Sonnet 4.6.`;
             </button>
           ))}
         </div>
+        {/* M4 persistence indicator — the honest "is the agent seeing my edits?"
+            signal. Saved = viewer-state.json is on disk for SKILL-edit to read;
+            Offline = the app server isn't running, so the agent can't see edits. */}
+        {renderPersistIndicator()}
        </div>
       </div>
       {/* SUB-HEADER (M3 §5): active act inline with the Creative-context toggle.
@@ -2792,6 +2904,19 @@ Set model to Sonnet 4.6.`;
     .btn-discard { background: transparent; color: var(--text-muted); border:1px solid var(--border); }
     .btn-discard:hover { color: var(--text); border-color: var(--text-muted); }
     .cuts-view .empty { text-align:center; color: var(--text-muted); padding:48px 16px; }
+
+    /* === M4 persistence indicator === */
+    .persist-ind { display:inline-flex; align-items:center; gap:5px; margin-left:14px;
+      padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600;
+      letter-spacing:.01em; white-space:nowrap; border:1px solid transparent; cursor:default; }
+    .persist-glyph { font-size:10px; line-height:1; }
+    .persist-ind.saved   { color:#15803d; background:rgba(22,163,74,.10);  border-color:rgba(22,163,74,.25); }
+    .persist-ind.saving  { color:#b45309; background:rgba(217,119,6,.10);  border-color:rgba(217,119,6,.22); }
+    .persist-ind.offline { color:#6b7280; background:rgba(107,114,128,.10); border-color:rgba(107,114,128,.22); }
+    .persist-ind.error   { color:#b91c1c; background:rgba(220,38,38,.10);  border-color:rgba(220,38,38,.28); }
+    .persist-ind.idle    { color:#6b7280; background:rgba(107,114,128,.08); border-color:rgba(107,114,128,.16); }
+    .persist-ind.saving .persist-glyph { animation:persist-spin 1s linear infinite; display:inline-block; }
+    @keyframes persist-spin { to { transform:rotate(360deg); } }
 
     /* === M3 top-bar (Save / Open / Export to Final Cut) === */
     .topbar-actions { position:relative; display:inline-flex; gap:6px; align-items:center; }

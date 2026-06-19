@@ -1,18 +1,30 @@
 #!/usr/bin/env python3
-"""viewer_save_server.py — tiny localhost helper that lets the quote viewer
-persist files when it is opened in a plain browser tab (outside Cowork).
+"""viewer_save_server.py — the quote viewer's persistent local app shell.
 
 Why this exists
 ---------------
-The viewer runs browser-first (see the kickoff brief). Inside Cowork it writes
-files via ``window.cowork.callMcpTool``; that path is dead in a normal browser
-tab, so working-round saves and the tweak log used to silently evaporate.
+The viewer runs browser-first. It used to live as a throwaway Cowork chat
+artifact: ephemeral (gone on task-switch), ``sendPrompt`` unavailable, and
+persistence was a brittle fallback. The redesign (SPEC §7) moves it to a
+**persistent local app served in Chrome that shares state with the Edit Agent
+through files on disk**. This one process is that shell.
 
-This helper is the robust persistence tier: run it once from the project (or
-SSD) root, and the viewer POSTs ``{path, content}`` to it. It writes the file
-to the correct location automatically — no manual file placement, no Downloads
-clutter, works in every browser. If the helper is NOT running, the viewer
-degrades to a plain download, so a save is never lost either way.
+What it does (M4 — persistent app shell)
+----------------------------------------
+1. **Serves the built viewer** at ``/`` (pass ``--serve path/to/index.html``).
+   Open ``http://127.0.0.1:<port>/`` once in Chrome; the tab survives
+   task-switching like any web app — no chat artifact to lose.
+2. **Persists files** the viewer POSTs to ``/save`` (``{path, content}``):
+   named saved cuts (``editing-versions/<name>.json``), the tweak log, exports,
+   and — new in M4 — the viewer's **live working state**, autosaved on every
+   edit to ``handoffs/<slug>/viewer-state.json``. That file is the channel the
+   Edit Agent reads on each of its turns to see the current cut (no copy-paste,
+   no PDF-printing — see SKILL-edit.md).
+   If the helper is NOT running, the viewer degrades to a plain download, so a
+   save is never lost either way.
+
+Same-origin bonus: when the viewer is *served* by this process, its ``/save``
+POSTs are same-origin, so persistence works with no CORS caveats.
 
 Security
 --------
@@ -20,13 +32,17 @@ Security
 - Only paths *under* ``handoffs/`` are writable, and only ``.json`` files.
 - Absolute paths, ``..`` traversal, and symlink escapes are rejected — every
   resolved target must stay inside ``<root>/handoffs``.
+- ``--serve`` exposes exactly ONE file (the built viewer) at ``/``; no
+  directory listing, no arbitrary file reads.
 
 Usage
 -----
-    python3 scripts/viewer_save_server.py [--root DIR] [--port 8765]
+    python3 scripts/viewer_save_server.py [--root DIR] [--serve INDEX_HTML] [--port 8765]
 
 ``--root`` defaults to the current working directory; run it from the directory
 that contains ``handoffs/`` (the project / SSD root the viewer was built for).
+``--serve`` is the path to the built ``index.html`` to serve at ``/``; omit it
+to run save-only (the viewer is served some other way, e.g. another tab).
 """
 
 import argparse
@@ -42,6 +58,8 @@ MAX_BODY = 16 * 1024 * 1024  # 16 MB — generous for a cut/tweak-log JSON
 class SaveHandler(BaseHTTPRequestHandler):
     # Set on the server instance in main(); the resolved, allowed root.
     root: Path = Path.cwd().resolve()
+    # Optional: path to the built viewer index.html served at "/". None = save-only.
+    serve_file: Path = None
 
     # --- CORS / preflight -------------------------------------------------
     def _cors(self):
@@ -64,11 +82,31 @@ class SaveHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):  # noqa: N802
-        if self.path.rstrip("/") in ("/ping", "/health"):
+        path = self.path.split("?", 1)[0].rstrip("/")
+        if path in ("/ping", "/health"):
             self._json(200, {"ok": True, "service": "viewer-save-server",
-                             "root": str(self.root)})
+                             "root": str(self.root),
+                             "serving": str(self.serve_file) if self.serve_file else None})
+        elif path in ("", "/index.html") and self.serve_file is not None:
+            self._serve_viewer()
         else:
             self._json(404, {"ok": False, "error": "not found"})
+
+    def _serve_viewer(self):
+        """Serve the single built viewer file at /. No directory access."""
+        try:
+            body = self.serve_file.read_bytes()
+        except OSError as e:
+            self._json(500, {"ok": False, "error": f"cannot read viewer: {e}"})
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        # Always fetch the freshest build (the file is rewritten by the build script).
+        self.send_header("Cache-Control", "no-store")
+        self._cors()
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_POST(self):  # noqa: N802
         if self.path.rstrip("/") != "/save":
@@ -139,6 +177,9 @@ def main(argv=None):
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", default=".",
                     help="project/SSD root containing handoffs/ (default: cwd)")
+    ap.add_argument("--serve", default=None, metavar="INDEX_HTML",
+                    help="path to the built viewer index.html to serve at / "
+                         "(omit to run save-only)")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT,
                     help=f"port to listen on (default: {DEFAULT_PORT})")
     args = ap.parse_args(argv)
@@ -149,12 +190,28 @@ def main(argv=None):
             f"warning: {root}/handoffs does not exist yet — it will be created "
             f"on first save. Make sure --root is the project/SSD root.\n")
 
+    serve_file = None
+    if args.serve:
+        serve_file = Path(args.serve).resolve()
+        if not serve_file.is_file():
+            sys.stderr.write(f"error: --serve file not found: {serve_file}\n")
+            return 2
+
     SaveHandler.root = root
+    SaveHandler.serve_file = serve_file
     server = ThreadingHTTPServer(("127.0.0.1", args.port), SaveHandler)
     sys.stderr.write(
         f"[viewer-save-server] listening on http://127.0.0.1:{args.port}\n"
         f"[viewer-save-server] root: {root}\n"
-        f"[viewer-save-server] writable sandbox: {root}/handoffs/**.json\n"
+        f"[viewer-save-server] writable sandbox: {root}/handoffs/**.json\n")
+    if serve_file is not None:
+        sys.stderr.write(
+            f"[viewer-save-server] serving viewer: {serve_file}\n"
+            f"[viewer-save-server] OPEN IN CHROME: http://127.0.0.1:{args.port}/\n")
+    else:
+        sys.stderr.write(
+            "[viewer-save-server] save-only (no --serve); open the viewer separately\n")
+    sys.stderr.write(
         f"[viewer-save-server] leave this running while you work in the viewer; "
         f"Ctrl-C to stop.\n")
     try:
@@ -165,4 +222,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)
