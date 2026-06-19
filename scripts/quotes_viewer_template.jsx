@@ -2319,9 +2319,7 @@ Set model to Sonnet 4.6.`;
                     ))}
                 </div>
               )}
-            </span>
-            <span className={`mship-badge ${mship}`}>{membershipLabel(mship)}</span>
-            <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
+            </span>            <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             <button className="rc-collapse" onClick={() => toggleReveal(entry.entry_id)} title="Collapse to clean read">✕ Done</button>
           </div>
           <div className="ins-edit-row">
@@ -2512,9 +2510,7 @@ Set model to Sonnet 4.6.`;
               <span className="split-tag" title={`Split sub-quote of source #${entry.source_quote_id}`}>
                 Split of #{entry.source_quote_id}
               </span>
-            )}
-            <span className={`mship-badge ${mship}`}>{membershipLabel(mship)}</span>
-            <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
+            )}            <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             <button
               className="tl-scissors"
               onClick={() => {
