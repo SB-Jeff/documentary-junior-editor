@@ -122,14 +122,37 @@ def parse_act_structure_md(text: str):
         )
         return m.group(1) if m else ""
 
+    # Act labels: PREFER the explicit canonical "### Act Labels" bullet list
+    # (the list downstream agents are told to tag against). Keep its order and
+    # include every bullet line — including a trailing "Orphan" bullet, which a
+    # downstream step filters out (the viewer's act_labels at build time drops
+    # "Orphan"). Only fall back to deriving labels from the act headings when
+    # that explicit section is absent; the heading scan yields bare names like
+    # "Act 1".."Act 4", which is exactly why the explicit list is preferred.
     act_labels = []
-    for line in section_body(r"Act Labels").splitlines():
-        lm = re.match(r"\s*[-*]\s+(.+?)\s*$", line)
-        if lm:
-            label = re.sub(r"^\[|\]$", "", lm.group(1).strip()).strip()
-            # Drop the "Orphan (...)" bookkeeping bullet and unfilled template
-            # placeholders like "[Label 1]". Orphan is a quote flag, not an act.
-            if label and not re.match(r"^(Label \d|Orphan\b)", label, re.I):
+    labels_body = section_body(r"Act Labels")
+    if labels_body.strip():
+        for line in labels_body.splitlines():
+            lm = re.match(r"\s*[-*]\s+(.+?)\s*$", line)
+            if lm:
+                label = re.sub(r"^\[|\]$", "", lm.group(1).strip()).strip()
+                # Strip any parenthetical gloss (e.g. "Orphan (for quotes that
+                # don't fit any act)") down to the bare label, and skip unfilled
+                # template placeholders like "[Label 1]".
+                label = re.sub(r"\s*\(.*\)\s*$", "", label).strip()
+                if label and not re.match(r"^Label \d", label, re.I):
+                    act_labels.append(label)
+    else:
+        # Fallback only: derive from act headings such as
+        #   ### Act 1 — "Philosophy"   or   **Act 2 — "Used Right":**   or   ## Act 1
+        # Yields bare "Act N" names when no descriptive title is present.
+        seen = set()
+        for hm in re.finditer(
+            r"^(?:#{2,4}\s*|\*{2}\s*)Act\s+(\d+)\b", text, re.MULTILINE
+        ):
+            label = f"Act {hm.group(1)}"
+            if label not in seen:
+                seen.add(label)
                 act_labels.append(label)
 
     speakers = []
@@ -375,6 +398,33 @@ def migrate_membership(entries):
     return out
 
 
+def resolve_handoffs_dir(slug: str, ssd_root: Path) -> Path:
+    """Resolve the handoffs directory for a project, tolerating two layouts.
+
+    Standard (multi-project) layout::
+        <ssd_root>/handoffs/<slug>/tagged-quotes-v*.json
+
+    Flat (single-project) layout — what SKILL-edit documents and what the
+    Epicor ProTec project ships::
+        <ssd_root>/handoffs/tagged-quotes-v*.json   (no per-slug subdir)
+
+    Prefers the slugged subdir when it exists. Otherwise, if the bare
+    ``handoffs`` dir exists AND directly contains tagged-quotes-v*.json, use it
+    (the flat single-project layout). Raises SystemExit only when neither
+    layout resolves, so no symlink is required for flat projects.
+    """
+    slugged = ssd_root / "handoffs" / slug
+    if slugged.is_dir():
+        return slugged
+    flat = ssd_root / "handoffs"
+    if flat.is_dir() and any(flat.glob("tagged-quotes-v*.json")):
+        return flat
+    raise SystemExit(
+        f"Handoffs folder not found: {slugged} "
+        f"(and no flat {flat}/tagged-quotes-v*.json fallback)"
+    )
+
+
 def load_project_data_from_handoffs(slug: str, ssd_root: Path,
                                      title_override: str = None,
                                      act_labels_override=None) -> dict:
@@ -387,9 +437,7 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
 
     Returns the assembled project data dict in the shape the new template expects.
     """
-    handoffs = ssd_root / "handoffs" / slug
-    if not handoffs.is_dir():
-        raise SystemExit(f"Handoffs folder not found: {handoffs}")
+    handoffs = resolve_handoffs_dir(slug, ssd_root)
 
     # pipeline-state.json is a fallback source only — not required, and not
     # depended on for title/act_labels/speakers (those frequently aren't written
@@ -1520,7 +1568,11 @@ def main():
         if not ssd_root:
             print("Cannot infer output path; provide --output", file=sys.stderr)
             return 1
-        out_path = Path(ssd_root) / "handoffs" / slug / f"{slug}_quotes_view.html"
+        # Default the output into whichever handoffs layout the project uses, so
+        # a flat single-project layout (handoffs/ holding tagged-quotes-v*.json
+        # directly, no per-slug subdir) lands the html in that flat dir rather
+        # than a nonexistent handoffs/<slug>/.
+        out_path = resolve_handoffs_dir(slug, Path(ssd_root)) / f"{slug}_quotes_view.html"
 
     # Substitute data, strip module syntax, wrap
     substituted = substitute_data_block(template_src, data_block)

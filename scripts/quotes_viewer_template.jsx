@@ -14,13 +14,19 @@ import { useState, useCallback, useRef, useEffect } from "react";
 //   2. REACT COMPONENT — universal, identical across projects. Bug fixes and
 //      feature changes happen here.
 //
-// Architecture (v5.0):
-//   - Two top-level views: Edit (timeline) / Quote Library
-//   - Quote Library shows every source quote + orphans; segments backend-only
-//   - Edit view uses v4.0.1-style quote-block cards with character-range trim,
-//     scissors split, drag, ↑/↓, and per-entry Cut/Add Back membership verbs
-//   - Tight/Loose Window toggle filters the Edit view by membership (Tight shows
-//     tight only; Loose shows tight ∪ loose); Export is contextual to the window
+// Architecture (v5.0 + M2 view redesign):
+//   - Three top-level views, in workflow order: Quote Library / Timeline / Cuts
+//   - Quote Library shows every source quote + orphans (segments backend-only),
+//     a per-quote status badge (In timeline / In cuts / Not used), and any
+//     agent_note inline
+//   - Timeline view = the working cut (entries with membership "tight"); uses
+//     v4.0.1-style quote-block cards with character-range trim, scissors split,
+//     drag, ↑/↓, and per-entry Cut/Add Back membership verbs
+//   - Cuts view = entries cut from the Timeline (membership "loose"), as read
+//     cards with Restore → Timeline / Discard actions; replaces the old
+//     Tight/Loose window toggle
+//   - Internal membership values stay "tight"/"loose" (data/logic + export
+//     filename suffix); only the UI labels are Timeline/Cuts
 //   - Round dropdown loads from baked-in rounds; "Save as new round" writes
 //     directly to disk via window.cowork.callMcpTool (graceful no-op outside
 //     Cowork)
@@ -28,10 +34,11 @@ import { useState, useCallback, useRef, useEffect } from "react";
 //     Send copies the batch to chat and appends it to the cumulative tweak log
 //   - "Talk to agent" sends iteratively — each Send is one batch, then the panel
 //     clears for the next while the cumulative log keeps every batch
-//   - Export hands the selected window's cut to the FCPXML Agent: the Loose
-//     (full-timeline) window writes trimmed-quotes-v[N].json, the Tight window
-//     writes trimmed-quotes-v[N]-tight.json (so the two never overwrite each
-//     other), plus a ready-to-paste agent launch prompt naming that exact file
+//   - Export is offered from the Timeline view: the default button writes the
+//     working (tight) cut to trimmed-quotes-v[N]-tight.json; a secondary "Full
+//     timeline" button writes the full cut (tight ∪ loose) to
+//     trimmed-quotes-v[N].json (so the two never overwrite each other), each
+//     with a ready-to-paste agent launch prompt naming that exact file
 //
 // ============================================================================
 // DATA BLOCK — Replaced per-project by build_quotes_viewer.py at build time.
@@ -132,6 +139,12 @@ function membershipOf(entry) {
   if (!isSpoken) return "tight";
   const rec = entry.runtime_recommendation;
   return rec === "must-keep" || rec === "tight-candidate" ? "tight" : "loose";
+}
+
+// User-facing label for an internal membership value. Internal data/logic keeps
+// "tight"/"loose" everywhere; the UI shows "Timeline"/"Cuts".
+function membershipLabel(m) {
+  return m === "tight" ? "Timeline" : "Cuts";
 }
 
 // Speaker color palette — assigned in order of appearance.
@@ -611,9 +624,15 @@ function InterstitialAddForm({ onAdd, onCancel }) {
 export default function QuotesView() {
   // === Round + view state ===
   const [roundIndex, setRoundIndex] = useState(INITIAL_ROUND_INDEX);
+  // Three top-level views, in workflow order: Quote Library → Timeline → Cuts.
+  //   library  — every source quote, grouped by act + orphans, with a status badge.
+  //   timeline — the working cut: entries where membershipOf(e) === "tight".
+  //   cuts     — entries where membershipOf(e) === "loose" (cut from the Timeline).
+  // This replaces the former two-view (timeline/library) switch AND the old
+  // Tight/Loose window toggle — the Timeline vs Cuts views now do that job.
+  // Internal membership values stay "tight"/"loose"; only the labels changed.
   const [view, setView] = useState("timeline");
   const [revealedIds, setRevealedIds] = useState(() => new Set());
-  const [windowMode, setWindowMode] = useState("tight");
   const [speakerFilter, setSpeakerFilter] = useState("all");
   const [actFilter, setActFilter] = useState("all");
   // Quote Library: "Hide quotes already in the current cut" — persisted per project.
@@ -887,10 +906,17 @@ export default function QuotesView() {
   // prompt — the viewer does NOT build the XML itself (failure-prone without
   // the agent around it). In Cowork the file is written to disk; in a plain
   // browser it degrades to a download. The prompt copy always works.
-  async function exportToFCPXML() {
+  // Export is offered from the Timeline view. By default it exports the working
+  // cut (tight entries only) to trimmed-quotes-v[N]-tight.json. Passing
+  // `full = true` exports the full timeline (tight ∪ loose) to the non-suffixed
+  // trimmed-quotes-v[N].json. The window toggle is gone, so the choice is driven
+  // by which export button the user clicks rather than windowMode. Internal
+  // `win` values stay "tight"/"loose" so the filename suffix and the downstream
+  // window detection are unchanged.
+  async function exportToFCPXML(full) {
     const tl = getTimeline();
-    const win = windowMode;
-    const label = win === "tight" ? "Tight" : "Loose";
+    const win = full ? "loose" : "tight";
+    const label = win === "tight" ? "Timeline" : "Full timeline";
     const filtered = win === "tight" ? tl.filter((e) => membershipOf(e) === "tight") : tl;
     const totalSec = filtered.reduce((a, e) => a + entrySeconds(e), 0);
     const round = ROUNDS[roundIndex];
@@ -1076,23 +1102,24 @@ Set model to Sonnet 4.6.`;
     );
   }
 
-  // The single membership-changing button in a card's action row. Tight entries
-  // get Cut → Loose; Loose entries get Add Back → Tight.
+  // The single membership-changing button in a card's action row. Timeline
+  // (tight) entries get Cut → Cuts; Cuts (loose) entries get Add Back → Timeline.
+  // Internal membership values stay "tight"/"loose".
   function membershipVerb(entry) {
     return membershipOf(entry) === "tight"
       ? (
         <button
           className="btn btn-cut"
           onClick={() => setMembership(entry, "loose")}
-          title="Cut to the Loose window — stays in play, not dropped"
-        >Cut <span className="verb-dest">→ Loose</span></button>
+          title="Cut to Cuts — stays recoverable, not dropped"
+        >Cut <span className="verb-dest">→ Cuts</span></button>
       )
       : (
         <button
           className="btn btn-add"
           onClick={() => setMembership(entry, "tight")}
-          title="Add back to the Tight cut"
-        >Add Back <span className="verb-dest">→ Tight</span></button>
+          title="Add back to the Timeline"
+        >Add Back <span className="verb-dest">→ Timeline</span></button>
       );
   }
 
@@ -1202,11 +1229,13 @@ Set model to Sonnet 4.6.`;
     if (actFilter !== "all" && quoteActOf(q) !== actFilter) return false;
     return true;
   }
-  // Single source of truth for "is this entry in the active window" — Tight shows
-  // only tight-membership entries; Loose shows everything (tight ∪ loose). Reused
-  // by the timeline filter, export, runtime totals, and Library hide-in-cut.
+  // Single source of truth for "is this entry in the Timeline (working cut)" —
+  // i.e. tight-membership only. The old Tight/Loose window toggle is gone; the
+  // Timeline view always shows the tight cut, and the Cuts view renders loose
+  // entries through its own path (renderCuts). Reused by the timeline filter,
+  // runtime totals, and the Library hide-in-cut filter.
   function inActiveWindow(e) {
-    return windowMode === "loose" ? true : membershipOf(e) === "tight";
+    return membershipOf(e) === "tight";
   }
   // source_quote_ids present in the current cut (active round, respecting the
   // active window). Used by the Library "Hide quotes in current cut" filter.
@@ -1219,12 +1248,18 @@ Set model to Sonnet 4.6.`;
     }
     return ids;
   }
-  function passesTimelineFilters(e) {
+  // Speaker/act filters only — no membership filter. Used by the Cuts view,
+  // where every entry is loose by construction.
+  function passesTimelineFiltersIgnoringWindow(e) {
     if (speakerFilter !== "all") {
       const src = findSourceQuote(e.source_quote_id);
       if (!src || src.speakerSlug !== speakerFilter) return false;
     }
     if (actFilter !== "all" && entryActOf(e) !== actFilter) return false;
+    return true;
+  }
+  function passesTimelineFilters(e) {
+    if (!passesTimelineFiltersIgnoringWindow(e)) return false;
     if (!inActiveWindow(e)) return false;
     return true;
   }
@@ -1232,10 +1267,13 @@ Set model to Sonnet 4.6.`;
   // ====== Runtime totals ======
   const allEntries = getTimeline();
   const tightEntries = allEntries.filter((e) => membershipOf(e) === "tight");
-  const looseSec = allEntries.reduce((a, e) => a + entrySeconds(e), 0);
+  const looseEntries = allEntries.filter((e) => membershipOf(e) === "loose");
+  const fullSec = allEntries.reduce((a, e) => a + entrySeconds(e), 0);
   const tightSec = tightEntries.reduce((a, e) => a + entrySeconds(e), 0);
-  const activeEntries = windowMode === "tight" ? tightEntries.length : allEntries.length;
-  const activeSec = windowMode === "tight" ? tightSec : looseSec;
+  const looseSec = looseEntries.reduce((a, e) => a + entrySeconds(e), 0);
+  // Timeline header metric = the working (tight) cut.
+  const activeEntries = tightEntries.length;
+  const activeSec = tightSec;
 
   // ====== Per-card reveal (unified Edit page) ======
   // Default is a clean read; each card flips to edit-in-place independently.
@@ -1288,8 +1326,9 @@ Set model to Sonnet 4.6.`;
         </select>
         <div className="mode-toggle">
           {[
-            { mode: "timeline", label: "Edit" },
             { mode: "library", label: "Quote Library" },
+            { mode: "timeline", label: "Timeline" },
+            { mode: "cuts", label: "Cuts" },
           ].map((m) => (
             <button
               key={m.mode}
@@ -1297,6 +1336,9 @@ Set model to Sonnet 4.6.`;
               onClick={() => setView(m.mode)}
             >
               {m.label}
+              {m.mode === "cuts" && looseEntries.length > 0 && (
+                <span className="cuts-count">{looseEntries.length}</span>
+              )}
             </button>
           ))}
         </div>
@@ -1320,28 +1362,28 @@ Set model to Sonnet 4.6.`;
                   onClick={() => setActFilter(label)}
                   title={label}
                 >
-                  Act {i + 1}
+                  {label}
                 </button>
               ))}
             </div>
-            {/* Window block (Edit view only) — shares the Act line, right-aligned */}
+            {/* Timeline metric + export (Timeline view only) — shares the Act
+                line, right-aligned. The window toggle is gone; the Timeline vs
+                Cuts views replace it. Export defaults to the working (tight)
+                cut → -tight file; the secondary button exports the full
+                timeline (tight ∪ loose) → non-suffixed file. */}
             {view === "timeline" && (
               <div className="win-block">
-                <span className="group-label">Window</span>
-                <div className="win-toggle">
-                  <button
-                    className={windowMode === "tight" ? "active tight" : "tight"}
-                    onClick={() => setWindowMode("tight")}
-                  >Tight</button>
-                  <button
-                    className={windowMode === "loose" ? "active loose" : "loose"}
-                    onClick={() => setWindowMode("loose")}
-                  >Loose</button>
-                </div>
-                <span className={`win-metric ${windowMode}`}>
+                <span className="win-metric tight">
                   <span className="val">{activeEntries}</span> entries · <span className="val">{fmtSec(activeSec)}</span>
                 </span>
-                <button className="cut-export" onClick={exportToFCPXML}>→ Send to FCPXML Agent</button>
+                <button className="cut-export" onClick={() => exportToFCPXML(false)}>→ Send Timeline to FCPXML Agent</button>
+                {looseEntries.length > 0 && (
+                  <button
+                    className="cut-export full"
+                    onClick={() => exportToFCPXML(true)}
+                    title="Export the full timeline including cut quotes (Timeline + Cuts)"
+                  >Full timeline ({allEntries.length} · {fmtSec(fullSec)})</button>
+                )}
               </div>
             )}
           </div>
@@ -1402,8 +1444,22 @@ Set model to Sonnet 4.6.`;
     })).filter((a) => a.list.length > 0);
 
     const renderQuoteCard = (q) => {
-      const useCount = getTimeline().filter((e) => e.source_quote_id === q.num).length;
-      const inTimeline = useCount > 0;
+      const srcEntries = getTimeline().filter((e) => e.source_quote_id === q.num);
+      const tightCount = srcEntries.filter((e) => membershipOf(e) === "tight").length;
+      const looseCount = srcEntries.filter((e) => membershipOf(e) === "loose").length;
+      // Status badge: a tight entry means it's in the Timeline; otherwise a loose
+      // entry means it's in Cuts; no entry means Not used.
+      const status = tightCount > 0 ? "timeline" : looseCount > 0 ? "cuts" : "none";
+      const statusLabel = status === "timeline" ? "In timeline" : status === "cuts" ? "In cuts" : "Not used";
+      // "Add to timeline" is disabled only when the quote is already in the
+      // Timeline (a tight entry exists). A quote sitting only in Cuts can be
+      // re-added here (it lands as a new tight entry).
+      const inTimeline = tightCount > 0;
+      // Gate the Library "Add" button on ANY existing entry (tight OR loose):
+      // a quote sitting in Cuts is re-added via the Cuts view's "Restore", not
+      // here — re-adding here would push a duplicate entry_id (= source num).
+      const hasEntry = tightCount > 0 || looseCount > 0;
+      const useCount = tightCount;
       const speakerC = speakerColors[q.speakerSlug] || { bg: COLORS.surface2, fg: COLORS.textMuted };
       return (
         <div key={q.num} id={`q-${q.num}`} className={`lib-card${q.is_orphan ? " orphan" : ""}${inTimeline ? " in-tl" : ""}`}>
@@ -1438,10 +1494,15 @@ Set model to Sonnet 4.6.`;
               </span>
             )}
             <span className="tc">{tcFmt(q.startTC, q.endTC)}</span>
-            {inTimeline && <span className="in-tl-pill">in timeline{useCount > 1 ? ` ×${useCount}` : ""}</span>}
+            <span className={`status-badge ${status}`}>{statusLabel}{status === "timeline" && tightCount > 1 ? ` ×${tightCount}` : ""}</span>
             {q.is_orphan && <span className="orphan-pill">orphan</span>}
           </div>
           <p className="quote-text">{q.quote}</p>
+          {q.agent_note && (
+            <div className="agent-note">
+              <span className="agent-note-glyph" aria-hidden="true">🤖</span> {q.agent_note}
+            </div>
+          )}
           {q.rationale && (
             <div className="rationale">
               <span className="rationale-label">Why:</span> {q.rationale}
@@ -1450,9 +1511,9 @@ Set model to Sonnet 4.6.`;
           <div className="lib-actions">
             <button
               className="btn btn-primary"
-              disabled={inTimeline}
+              disabled={hasEntry}
               onClick={() => {
-                if (inTimeline) return;
+                if (hasEntry) return;
                 const newId = String(q.num);
                 const addedPart = q.part === "Orphan" ? (PROJECT_META.act_labels[0] || "Act 1") : q.part;
                 applyLocalEdit("add_entry",
@@ -1480,7 +1541,7 @@ Set model to Sonnet 4.6.`;
                 setView("timeline");
               }}
             >
-              {inTimeline ? "✓ In timeline" : `Add #${q.num} to timeline`}
+              {status === "timeline" ? "✓ In timeline" : status === "cuts" ? "In Cuts" : `Add #${q.num} to timeline`}
             </button>
             {inTimeline && (
               <button
@@ -1641,7 +1702,7 @@ Set model to Sonnet 4.6.`;
                 </div>
               )}
             </span>
-            <span className={`mship-badge ${mship}`}>{mship}</span>
+            <span className={`mship-badge ${mship}`}>{membershipLabel(mship)}</span>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             <button className="rc-collapse" onClick={() => toggleReveal(entry.entry_id)} title="Collapse to clean read">✕ Done</button>
           </div>
@@ -1797,7 +1858,7 @@ Set model to Sonnet 4.6.`;
                 </div>
               )}
             </span>
-            <span className={`mship-badge ${mship}`}>{mship}</span>
+            <span className={`mship-badge ${mship}`}>{membershipLabel(mship)}</span>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             <button
               className="tl-scissors"
@@ -1912,16 +1973,17 @@ Set model to Sonnet 4.6.`;
     );
   };
 
-  // Clean read card (the unified Edit page's default state). Shows ONLY ✎ Edit;
-  // Cut / Add Back / Drop live inside the revealed edit card. The membership chip
-  // and colored edge appear only in the Loose window (where Tight/Loose mixing
-  // matters), matching the approved mockup.
+  // Clean read card (the Timeline view's default state). Shows ONLY ✎ Edit;
+  // Cut / Add Back / Drop live inside the revealed edit card. In the Timeline
+  // view every entry is tight, so no membership chip is shown; the chip/edge is
+  // only meaningful where memberships mix, which no longer happens in a single
+  // view after the window toggle was removed.
   const renderCleanCard = (entry) => {
     const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
     const mship = membershipOf(entry);
-    const showChip = windowMode === "loose";
+    const showChip = false;
     const markCls = showChip ? (mship === "loose" ? " loose-mark" : " tight-mark") : "";
-    const chip = showChip ? <span className={`mship-chip ${mship}`}>{mship}</span> : null;
+    const chip = showChip ? <span className={`mship-chip ${mship}`}>{membershipLabel(mship)}</span> : null;
     const editBtn = (
       <span className="rc-tools">
         <button className="rc-tool edit" onClick={() => toggleReveal(entry.entry_id)}>✎ Edit</button>
@@ -2001,6 +2063,111 @@ Set model to Sonnet 4.6.`;
                 els.push(renderInsertControl(entry.entry_id, act, `ins-after-${entry.entry_id}`));
                 return els;
               })}
+            </section>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // Cuts view — entries cut from the Timeline (membership "loose"), grouped by
+  // act, rendered as read cards. Restore → Timeline (back to tight); Discard →
+  // removes the entry (the source quote then shows as Not used in the Library).
+  // Discard is NOT destructive: the source quote stays in the Library and can be
+  // re-added. Per spec, no confirm dialogs.
+  // ============================================================================
+
+  // Restore a cut entry to the working Timeline (loose → tight).
+  function restoreEntry(entry) {
+    setMembership(entry, "tight");
+  }
+  // Discard a cut entry — drop it from the timeline entirely. The source quote
+  // remains in the Library (Not used), recoverable via "Add to timeline".
+  function discardEntry(entry) {
+    applyLocalEdit("drop_entry",
+      (tl) => {
+        const i = tl.findIndex((x) => x.entry_id === entry.entry_id);
+        if (i >= 0) tl.splice(i, 1);
+      },
+      `Discarded ${entry.entry_id} (#${entry.source_quote_id}) from Cuts`,
+      {
+        change_type: "drop",
+        entry_id: entry.entry_id,
+        before: {
+          entry_id: entry.entry_id,
+          source_quote_id: entry.source_quote_id,
+          part: entryActOf(entry),
+          membership: membershipOf(entry),
+        },
+        after: null,
+      }
+    );
+  }
+
+  const renderCutCard = (entry) => {
+    const isSpoken = entry.type === "spoken" || entry.source_quote_id != null;
+    const src = findSourceQuote(entry.source_quote_id);
+    const speakerC = (src && speakerColors[src.speakerSlug]) || { bg: COLORS.surface2, fg: COLORS.textMuted };
+    const speakerLabel = src?.speaker || entry.speaker || "?";
+    const typeLabel = { title_card: "Title card", interstitial: "Interstitial", context_beat: "Context beat" }[entry.type] || "Interstitial";
+    const insText = entry.type === "context_beat" ? `[${entry.intent || "context needed"}]` : (entry.text || "");
+    return (
+      <div className="read-card cut-card" id={entry.entry_id} key={entry.entry_id}>
+        <div className="rc-head">
+          {isSpoken ? (
+            <span className="speaker-tag" style={{ background: speakerC.bg, color: speakerC.fg }}>{speakerLabel}</span>
+          ) : (
+            <span className="ins-type-badge">{typeLabel}</span>
+          )}
+          <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
+        </div>
+        <p className={`rc-quote${isSpoken ? "" : " rc-interstitial"}`}>
+          {isSpoken ? `"${trimmedQuoteText(entry)}"` : insText}
+        </p>
+        <div className="cut-actions">
+          <button className="btn btn-add" onClick={() => restoreEntry(entry)}>Restore <span className="verb-dest">→ Timeline</span></button>
+          <button className="btn btn-discard" onClick={() => discardEntry(entry)} title="Remove from Cuts — the source quote stays in the Library">Discard</button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCuts = () => {
+    const tl = getTimeline();
+    const cutEntries = tl.filter((e) => membershipOf(e) === "loose");
+    if (cutEntries.length === 0) {
+      return (
+        <div className="cuts-view">
+          <div className="empty">
+            <p>Cuts is empty — quotes you cut from the Timeline land here, recoverable.</p>
+          </div>
+        </div>
+      );
+    }
+    const realActs = PROJECT_META.act_labels.filter((a) => a !== "Orphan");
+    const grouped = {};
+    for (const e of cutEntries) {
+      const act = entryActOf(e);
+      grouped[act] = grouped[act] || [];
+      grouped[act].push(e);
+    }
+    return (
+      <div className="cuts-view">
+        {realActs.map((act) => {
+          if (actFilter !== "all" && act !== actFilter) return null;
+          const entries = (grouped[act] || []).filter(passesTimelineFiltersIgnoringWindow);
+          if (entries.length === 0) return null;
+          const sec = entries.reduce((a, e) => a + entrySeconds(e), 0);
+          return (
+            <section key={act} className="act-section">
+              <div className="act-header">
+                <h2 className="act-title">{act}</h2>
+                <span className="act-sub">
+                  {entries.length} cut{entries.length === 1 ? "" : "s"} · ~{fmtSec(sec)}
+                </span>
+              </div>
+              {entries.map(renderCutCard)}
             </section>
           );
         })}
@@ -2136,12 +2303,38 @@ Set model to Sonnet 4.6.`;
     return () => document.removeEventListener("click", onDoc);
   }, [reassigningQuoteNum]);
 
+  // Styles for the Milestone-2 view-redesign classes. The shared stylesheet
+  // lives in build_quotes_viewer.py (not editable from this template), so the
+  // new classes introduced here ship their own scoped CSS. Reuses the existing
+  // CSS custom properties (--must, --probable, --border, etc.) for theme parity.
+  const m2Styles = `
+    .mode-toggle .cuts-count { display:inline-block; margin-left:6px; min-width:16px; padding:0 5px;
+      border-radius:9px; font-size:11px; font-weight:600; line-height:16px; text-align:center;
+      background: var(--probable-soft); color: var(--probable); }
+    .cut-export.full { margin-left:8px; background: transparent; color: var(--probable);
+      border:1px solid var(--probable); }
+    .status-badge { font-size:11px; font-weight:600; padding:1px 8px; border-radius:10px;
+      text-transform:none; letter-spacing:.01em; }
+    .status-badge.timeline { background: var(--must-soft); color: var(--must); }
+    .status-badge.cuts { background: var(--probable-soft); color: var(--probable); }
+    .status-badge.none { background: var(--surface-2); color: var(--text-muted); }
+    .agent-note { margin:6px 0 0; font-size:13px; color: var(--text-muted); font-style:italic;
+      display:flex; gap:6px; align-items:flex-start; }
+    .agent-note-glyph { font-style:normal; opacity:.8; }
+    .cut-card .cut-actions { display:flex; gap:8px; margin-top:10px; }
+    .btn-discard { background: transparent; color: var(--text-muted); border:1px solid var(--border); }
+    .btn-discard:hover { color: var(--text); border-color: var(--text-muted); }
+    .cuts-view .empty { text-align:center; color: var(--text-muted); padding:48px 16px; }
+  `;
+
   return (
     <div className="viewer">
+      <style>{m2Styles}</style>
       {renderHeader()}
       <main className="main">
         {view === "library" && renderLibrary()}
         {view === "timeline" && renderTimeline()}
+        {view === "cuts" && renderCuts()}
       </main>
       {renderSendPanel()}
       {renderExportModal()}
