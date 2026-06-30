@@ -132,6 +132,12 @@ const INITIAL_FOCUS = null;
 //     suggestion: "Lead with Dana naming the team first." }
 const SEAM_FLAGS = [];
 
+// Dedicated tags that live in act_labels but are NOT narrative acts. They are
+// held out of the three-act nav and rendered after a divider as set-apart
+// filter chips (the approved structure calls Safety Lines "a dedicated tag, not
+// an act"). "Orphan" is filtered separately everywhere it appears.
+const NAV_TAG_LABELS = ["Safety Lines"];
+
 // ============================================================================
 // REACT COMPONENT — Universal UI. Same across all projects.
 // To fix bugs or add features, update this section without touching the data
@@ -282,14 +288,18 @@ function buildRenderSegments(original, cuts) {
 
 function buildKeptText(original, cuts) {
   if (cuts.length === 0) return original;
-  let result = "";
+  // Collect the kept slices and join with a single space. Cuts always snap to
+  // word boundaries, so two kept slices flanking a cut are whole words that must
+  // stay space-separated — concatenating raw would run them together (a dropped
+  // middle segment rendered "right?So data" instead of "right? So data").
+  const parts = [];
   let pos = 0;
   for (const [s, e] of cuts) {
-    result += original.slice(pos, s);
+    parts.push(original.slice(pos, s));
     pos = e;
   }
-  result += original.slice(pos);
-  return result.replace(/\s+/g, " ").trim();
+  parts.push(original.slice(pos));
+  return parts.map((p) => p.trim()).filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
 }
 
 // ============================================================================
@@ -867,6 +877,10 @@ export default function QuotesView() {
   // act shows only PROJECT_META.acts[that].roadmap; All shows premise + every
   // act's roadmap. Sourced from the Creative Context agent.
   const [creativeOpen, setCreativeOpen] = useState(false);
+
+  // Speaker-context ("who's who") panel — mirrors creativeOpen. Speaker-scoped:
+  // All shows every voice's summary; one speaker selected shows just theirs.
+  const [speakerCtxOpen, setSpeakerCtxOpen] = useState(false);
 
   // === Drag-to-reorder state (pointer-events based) ===
   // Native HTML5 drag-and-drop is unreliable inside Cowork's sandboxed artifact
@@ -1457,6 +1471,22 @@ export default function QuotesView() {
     setPointedAt((prev) => prev.filter((p) => p.entry_id !== entryId));
   }
 
+  // Point at a SOURCE quote from the Quote Library (one that may not be in the
+  // timeline at all). Same mechanism as pointAtEntry, but the handle is the
+  // source quote num, prefixed "q-" so the agent can tell a Library reference
+  // from a timeline entry_id. Lets Jeff point at not-used / Cuts quotes during
+  // the categorize + off-timeline review steps.
+  function pointAtSource(q) {
+    const id = `q-${q.num}`;
+    const speaker = q.speaker || "Quote";
+    const words = (q.quote || "").split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
+    const label = `${speaker}: "${words}…"`;
+    setPointedAt((prev) => (prev.some((p) => p.entry_id === id)
+      ? prev
+      : [...prev, { entry_id: id, label }]));
+    setSendPanelOpen(true);
+  }
+
   // ====== Agent read-acknowledgement (M5 live loop) ======
   // The Edit Agent drops handoffs/<slug>/agent-cursor.json each turn after it
   // reads viewer-state.json (see SKILL-edit). We poll it so the staleness cue
@@ -1555,6 +1585,31 @@ export default function QuotesView() {
           title="Add back to the Timeline"
         >Add Back <span className="verb-dest">→ Timeline</span></button>
       );
+  }
+
+  // Drop an entry back to the Library (removes the timeline entry; the source
+  // quote stays). Shared by the working card and the collapsed clean card so
+  // Drop behaves identically wherever it's offered.
+  function dropEntry(entry) {
+    if (!confirm(`Drop entry ${entry.entry_id} (#${entry.source_quote_id}) back to the Library? The source quote stays in the Library and can be re-added.`)) return;
+    applyLocalEdit("drop_entry",
+      (tl) => {
+        const i = tl.findIndex((x) => x.entry_id === entry.entry_id);
+        if (i >= 0) tl.splice(i, 1);
+      },
+      `Dropped ${entry.entry_id} (#${entry.source_quote_id})`,
+      {
+        change_type: "drop",
+        entry_id: entry.entry_id,
+        before: {
+          entry_id: entry.entry_id,
+          source_quote_id: entry.source_quote_id,
+          part: entryActOf(entry),
+          membership: membershipOf(entry),
+        },
+        after: null,
+      }
+    );
   }
 
   // ====== Live-partner agent panel ======
@@ -1681,6 +1736,9 @@ export default function QuotesView() {
   // Active-act label for the sub-header: the current act filter, or "Full
   // timeline" when ACT=All. The Creative-context panel is act-scoped against it.
   const activeActLabel = actFilter === "all" ? "Full timeline" : actFilter;
+  const activeSpeakerLabel = speakerFilter === "all"
+    ? "All speakers"
+    : ((PROJECT_META.speakers || []).find((s) => s.slug === speakerFilter)?.name || "Speaker");
   const currentCut = cuts[roundIndex] || null;
   const toggleTopMenu = (m) => {
     setSaveStatus({ text: "", cls: "" });
@@ -1752,6 +1810,33 @@ export default function QuotesView() {
           <div className="cc-block" key={a.label}>
             <div className="cc-block-label">{a.label}</div>
             <p className="cc-roadmap">{a.roadmap}</p>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // "Who's who" — speaker summaries, scoped by the Speaker filter exactly like
+  // renderCreativeContext is scoped by the Act filter. All speakers selected →
+  // every voice; one speaker selected → just theirs.
+  const renderSpeakerContext = () => {
+    const speakers = (PROJECT_META.speakers || []).filter((s) => s.summary);
+    if (speakers.length === 0) {
+      return <p className="cc-empty">No speaker summaries available yet.</p>;
+    }
+    const shown = speakerFilter === "all"
+      ? speakers
+      : speakers.filter((s) => s.slug === speakerFilter);
+    if (shown.length === 0) {
+      const sel = (PROJECT_META.speakers || []).find((s) => s.slug === speakerFilter);
+      return <p className="cc-empty">No summary yet for {sel ? sel.name : "this speaker"}.</p>;
+    }
+    return (
+      <div>
+        {shown.map((s) => (
+          <div className="cc-block" key={s.slug}>
+            <div className="cc-block-label">{s.name}</div>
+            <p className="cc-roadmap">{s.summary}</p>
           </div>
         ))}
       </div>
@@ -1903,12 +1988,33 @@ export default function QuotesView() {
                 className={`chip${actFilter === "all" ? " active" : ""}`}
                 onClick={() => setActFilter("all")}
               >All</button>
-              {PROJECT_META.act_labels.filter((a) => a !== "Orphan").map((label, i) => (
+              {/* Three narrative acts (from the approved structure). "Safety
+                  Lines" is a dedicated tag, not an act, so it is held out here
+                  and rendered after a divider as a set-apart filter chip; the
+                  same for any future non-act tags. "Orphan" never appears. */}
+              {PROJECT_META.act_labels
+                .filter((a) => a !== "Orphan" && !NAV_TAG_LABELS.includes(a))
+                .map((label) => (
                 <button
                   key={label}
                   className={`chip${actFilter === label ? " active" : ""}`}
                   onClick={() => setActFilter(label)}
                   title={label}
+                >
+                  {label}
+                </button>
+              ))}
+              {PROJECT_META.act_labels.some((a) => NAV_TAG_LABELS.includes(a)) && (
+                <span className="nav-tag-divider" aria-hidden="true"></span>
+              )}
+              {PROJECT_META.act_labels
+                .filter((a) => NAV_TAG_LABELS.includes(a))
+                .map((label) => (
+                <button
+                  key={label}
+                  className={`chip chip-tag${actFilter === label ? " active" : ""}`}
+                  onClick={() => setActFilter(label)}
+                  title={`${label} — scripted reads (not a narrative act)`}
                 >
                   {label}
                 </button>
@@ -1962,6 +2068,29 @@ export default function QuotesView() {
                   {s.name}
                 </button>
               ))}
+              {/* "Who's who" — a compact "?" mirroring the Creative-context
+                  affordance on the Act line. Speaker-scoped: All shows every
+                  voice, one speaker shows just theirs. data-topbar keeps the
+                  outside-click close working. */}
+              {(PROJECT_META.speakers || []).some((s) => s.summary) && (
+                <>
+                  <span className="cc-divider" aria-hidden="true"></span>
+                  <div className="cc-inline" data-topbar="1">
+                    <button
+                      className={`cc-help-btn${speakerCtxOpen ? " active" : ""}`}
+                      onClick={() => setSpeakerCtxOpen((v) => !v)}
+                      aria-label={`Who's who — ${activeSpeakerLabel}`}
+                      title={`Who's who — ${activeSpeakerLabel}`}
+                    >?</button>
+                    {speakerCtxOpen && (
+                      <div className="cc-panel cc-panel-right">
+                        {renderSpeakerContext()}
+                        <div className="cc-source">from Creative Context agent</div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
             {view === "timeline" && (
               <div className="reveal-block">
@@ -2150,6 +2279,14 @@ export default function QuotesView() {
                 }}
               >View in timeline</button>
             )}
+            {/* Agent-reference action, set apart on the right — lets Jeff point
+                the agent at this exact Library quote (categorize/off-timeline
+                review) without typing a quote number. */}
+            <button
+              className="btn btn-point lib-action-right"
+              title="Reference this exact quote into your message to the agent"
+              onClick={() => pointAtSource(q)}
+            >⌖ Point at this</button>
           </div>
         </div>
       );
@@ -2548,27 +2685,7 @@ export default function QuotesView() {
             {membershipVerb(entry)}
             <button
               className="btn btn-drop"
-              onClick={() => {
-                if (!confirm(`Drop entry ${entry.entry_id} (#${entry.source_quote_id}) back to the Library? The source quote stays in the Library and can be re-added.`)) return;
-                applyLocalEdit("drop_entry",
-                  (tl) => {
-                    const i = tl.findIndex((x) => x.entry_id === entry.entry_id);
-                    if (i >= 0) tl.splice(i, 1);
-                  },
-                  `Dropped ${entry.entry_id} (#${entry.source_quote_id})`,
-                  {
-                    change_type: "drop",
-                    entry_id: entry.entry_id,
-                    before: {
-                      entry_id: entry.entry_id,
-                      source_quote_id: entry.source_quote_id,
-                      part: entryActOf(entry),
-                      membership: membershipOf(entry),
-                    },
-                    after: null,
-                  }
-                );
-              }}
+              onClick={() => dropEntry(entry)}
             >Drop <span className="verb-dest">→ Library</span></button>
             {/* Agent-reference action, set apart on the right (different intent
                 from the disposition buttons — it talks to the agent). */}
@@ -2594,9 +2711,40 @@ export default function QuotesView() {
     const showChip = false;
     const markCls = showChip ? (mship === "loose" ? " loose-mark" : " tight-mark") : "";
     const chip = showChip ? <span className={`mship-chip ${mship}`}>{membershipLabel(mship)}</span> : null;
-    const editBtn = (
+    const mb = canMoveEntry(entry);
+    // Reorder (↑/↓ within the act) — available directly on the collapsed card, no
+    // need to expand. ✎ Trim is the ONLY thing the expand is for now.
+    const moveBtns = (
+      <div className="tl-move-btns">
+        <button className="tl-move-btn" disabled={!mb.up}
+          onClick={() => moveEntry(entry.entry_id, -1)} title="Move up within act">↑</button>
+        <button className="tl-move-btn" disabled={!mb.down}
+          onClick={() => moveEntry(entry.entry_id, 1)} title="Move down within act">↓</button>
+      </div>
+    );
+    // All three quick actions sit compact in the upper-right (Cut · Drop · Trim)
+    // so the card stays short — no separate action row. Cut keeps the entry
+    // recoverable in Cuts; Drop removes the timeline entry (source stays in the
+    // Library); ✎ Trim opens the trim editor in one click.
+    const tools = (
       <span className="rc-tools">
-        <button className="rc-tool edit" onClick={() => toggleReveal(entry.entry_id)}>✎ Edit</button>
+        {mship === "tight" ? (
+          <button className="rc-tool cut" onClick={() => setMembership(entry, "loose")}
+            title="Cut to Cuts — stays recoverable">Cut</button>
+        ) : (
+          <button className="rc-tool" onClick={() => setMembership(entry, "tight")}
+            title="Add back to the Timeline">Add Back</button>
+        )}
+        <button className="rc-tool drop" onClick={() => dropEntry(entry)}
+          title="Drop back to the Library — the source quote stays">Drop</button>
+        <button className="rc-tool edit"
+          onClick={() => {
+            toggleReveal(entry.entry_id);
+            setEditingEntryId(entry.entry_id);
+            setEditCuts((entry._editCuts || []).map((r) => [...r]));
+            setSplittingEntryId(null);
+          }}
+          title="Open the trim editor">✎ Trim</button>
       </span>
     );
     if (!isSpoken) {
@@ -2605,10 +2753,11 @@ export default function QuotesView() {
       return (
         <div className={`read-card${markCls}`} id={entry.entry_id} key={entry.entry_id}>
           <div className="rc-head">
+            {moveBtns}
             <span className="ins-type-badge">{typeLabel}</span>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             {chip}
-            {editBtn}
+            {tools}
           </div>
           <p className="rc-quote rc-interstitial">{insText}</p>
         </div>
@@ -2620,10 +2769,11 @@ export default function QuotesView() {
     return (
       <div className={`read-card${markCls}`} id={entry.entry_id} key={entry.entry_id}>
         <div className="rc-head">
+          {moveBtns}
           <span className="speaker-tag" style={{ background: speakerC.bg, color: speakerC.fg }}>{speakerLabel}</span>
           <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
           {chip}
-          {editBtn}
+          {tools}
         </div>
         <p className="rc-quote">"{trimmedQuoteText(entry)}"</p>
       </div>
@@ -2816,6 +2966,11 @@ export default function QuotesView() {
         <p className={`rc-quote${isSpoken ? "" : " rc-interstitial"}`}>
           {isSpoken ? `"${trimmedQuoteText(entry)}"` : insText}
         </p>
+        {entry.notes && (
+          <div className="agent-note">
+            <span className="agent-note-glyph" aria-hidden="true">🤖</span> {entry.notes}
+          </div>
+        )}
         <div className="cut-actions">
           <button className="btn btn-add" onClick={() => restoreEntry(entry)}>Restore <span className="verb-dest">→ Timeline</span></button>
           <button className="btn btn-discard" onClick={() => discardEntry(entry)} title="Remove from Cuts — the source quote stays in the Library">Discard</button>
@@ -3012,15 +3167,16 @@ export default function QuotesView() {
   // Close the top-bar Save/Open/Export menus and the Creative-context panel on
   // an outside click. Elements that belong to either carry data-topbar="1".
   useEffect(() => {
-    if (topMenu === null && !creativeOpen) return;
+    if (topMenu === null && !creativeOpen && !speakerCtxOpen) return;
     const onDoc = (e) => {
       if (e.target.closest && e.target.closest('[data-topbar="1"]')) return;
       setTopMenu(null);
       setCreativeOpen(false);
+      setSpeakerCtxOpen(false);
     };
     document.addEventListener("click", onDoc);
     return () => document.removeEventListener("click", onDoc);
-  }, [topMenu, creativeOpen]);
+  }, [topMenu, creativeOpen, speakerCtxOpen]);
 
   // Styles for the Milestone-2 view-redesign classes. The shared stylesheet
   // lives in build_quotes_viewer.py (not editable from this template), so the
@@ -3120,6 +3276,9 @@ export default function QuotesView() {
     .cc-panel { position:absolute; top:calc(100% + 6px); left:0; z-index:70; max-width:560px; min-width:320px;
       background: var(--surface); border:1px solid var(--border-strong); border-radius:10px;
       box-shadow:0 12px 32px rgba(0,0,0,.16); padding:16px 18px; text-align:left; }
+    /* Right-anchored variant — for a "?" that sits far right (the Speaker line),
+       so the panel opens leftward and stays on-screen instead of clipping. */
+    .cc-panel.cc-panel-right { left:auto; right:0; }
     .cc-block { margin-bottom:12px; }
     .cc-block:last-of-type { margin-bottom:0; }
     .cc-block-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
@@ -3170,6 +3329,7 @@ export default function QuotesView() {
     /* Push the agent-reference action to the right edge of the card action row,
        separating it from the disposition buttons (Cut / Rejoin / Drop). */
     .tl-actions .tl-action-right { margin-left: auto; }
+    .lib-actions .lib-action-right { margin-left: auto; }
     .btn-rejoin { background: transparent; color: var(--probable); border:1px solid var(--probable); }
     .btn-rejoin:hover { background: var(--probable-soft); }
     /* Rejoin as a header control sitting next to Split (same shape, rejoin tint). */

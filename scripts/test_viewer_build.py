@@ -118,13 +118,79 @@ def check_validate_unit(_tmp):
         raise AssertionError(f"validate_project_metadata did not reject {bad!r}")
 
 
+def check_act_labels_stop_at_block(_tmp):
+    # The "### Act Labels" parser must capture ONLY the first contiguous bullet
+    # block. Explanatory prose after it (e.g. a "Safety Lines is a dedicated
+    # tag…" paragraph) often carries its own sub-bullets — the scripted line
+    # texts — which are NOT act labels. Regression: those leaked into the nav as
+    # spurious act chips (H+S IBEW 2026).
+    md = (
+        "### Act Labels (currently planned)\n"
+        "Use exactly these labels for quote tagging:\n"
+        "- Jobs\n- Done Right\n- Community Benefits\n- Safety Lines\n- Orphan\n"
+        "\n"
+        "**Safety Lines** is a dedicated tag, not an act:\n"
+        '- "Thousands of construction jobs"\n'
+        '- "Millions for schools, roads, public safety"\n'
+        '- "We do it differently in Minnesota"\n'
+        "\n"
+        "**Orphan** — anything that fits no act.\n"
+    )
+    _name, labels, _spk = bqv.parse_act_structure_md(md)
+    assert labels == ["Jobs", "Done Right", "Community Benefits",
+                      "Safety Lines", "Orphan"], \
+        f"parser swept trailing sub-bullets into act_labels: {labels!r}"
+
+
+def check_roadmaps_quoted_and_unquoted(_tmp):
+    # The "### Structure" roadmap parser must handle BOTH heading forms:
+    #   quoted   — **Act 2 — "Used Right":** summary   (key "Used Right")
+    #   unquoted — **Act 1 — Jobs** *(gloss)*: summary  (key "Jobs")
+    # The unquoted form (H+S IBEW 2026) used to yield no roadmaps, leaving the
+    # Creative-context panel empty for every act.
+    md = (
+        "### Structure\n"
+        "Intro prose.\n\n"
+        '**Act 1 — Jobs** *(elements 1 + 2)*: A ton of safe union jobs.\n\n'
+        '**Act 2 — "Used Right":** How the team lives the philosophy.\n\n'
+        "### Narrative Roadmaps\n"
+    )
+    roadmaps, _premise = bqv.parse_act_roadmaps_md(md)
+    assert roadmaps.get("Jobs") == "A ton of safe union jobs.", \
+        f"unquoted act heading not parsed: {roadmaps!r}"
+    assert roadmaps.get("Used Right") == "How the team lives the philosophy.", \
+        f"quoted act heading regressed: {roadmaps!r}"
+
+
+def check_speaker_summaries(_tmp):
+    # The "### Speakers" parser must strip markdown bold from the name and keep
+    # the full "role — blurb" description as `summary`, which feeds the viewer's
+    # speaker-context ("who's who") panel.
+    md = (
+        "### Speakers\n"
+        "- **Andrew Colvard** — Contractor / authority (Hunt) — carries the case. Primary Act 2.\n"
+        "- **Gavin Jenkins-Lopez** — Young electrician (26) — candid voice. Acts 1 and 2.\n"
+        "\n### Structure\n"
+    )
+    _name, _labels, spk = bqv.parse_act_structure_md(md)
+    by = {s["name"]: s for s in spk}
+    assert "Andrew Colvard" in by, f"bold not stripped from name: {[s['name'] for s in spk]}"
+    assert by["Andrew Colvard"]["summary"].startswith("Contractor / authority"), \
+        f"summary missing role: {by['Andrew Colvard']!r}"
+    assert "carries the case" in by["Andrew Colvard"]["summary"], \
+        f"summary dropped the blurb: {by['Andrew Colvard']!r}"
+
+
 CHECKS = [
     ("good fixture builds + mounts", check_good_fixture),
+    ("roadmaps parse (quoted + unquoted)", check_roadmaps_quoted_and_unquoted),
+    ("speaker summaries parse (bold + blurb)", check_speaker_summaries),
     ("missing act_labels fails loud", check_missing_act_labels),
     ("string speakers fails loud", check_string_speakers),
     ("empty orphan pool ships empty-state", check_empty_orphans),
     ("string source_quote_id is coerced", check_string_source_quote_id),
     ("validate_project_metadata contract", check_validate_unit),
+    ("act_labels stop at first bullet block", check_act_labels_stop_at_block),
 ]
 
 

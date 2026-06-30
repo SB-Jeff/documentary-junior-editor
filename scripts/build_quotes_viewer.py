@@ -132,9 +132,17 @@ def parse_act_structure_md(text: str):
     act_labels = []
     labels_body = section_body(r"Act Labels")
     if labels_body.strip():
+        # Capture ONLY the first contiguous bullet block — the canonical label
+        # list. Explanatory prose after the list (e.g. a "Safety Lines is a
+        # dedicated tag…" paragraph) often carries its OWN sub-bullets (the six
+        # scripted line texts), which are NOT act labels. So: skip leading
+        # non-bullet lines (the "Use exactly these labels:" intro), then once
+        # bullets begin, stop at the first blank or non-bullet line.
+        started = False
         for line in labels_body.splitlines():
             lm = re.match(r"\s*[-*]\s+(.+?)\s*$", line)
             if lm:
+                started = True
                 label = re.sub(r"^\[|\]$", "", lm.group(1).strip()).strip()
                 # Strip any parenthetical gloss (e.g. "Orphan (for quotes that
                 # don't fit any act)") down to the bare label, and skip unfilled
@@ -142,6 +150,10 @@ def parse_act_structure_md(text: str):
                 label = re.sub(r"\s*\(.*\)\s*$", "", label).strip()
                 if label and not re.match(r"^Label \d", label, re.I):
                     act_labels.append(label)
+            elif started:
+                # First non-bullet line after the block ended — stop before any
+                # trailing explanatory bullets get swept in.
+                break
     else:
         # Fallback only: derive from act headings such as
         #   ### Act 1 — "Philosophy"   or   **Act 2 — "Used Right":**   or   ## Act 1
@@ -162,10 +174,15 @@ def parse_act_structure_md(text: str):
             # "Name — Role — description"; split on em/en dash only so hyphenated
             # names survive.
             parts = re.split(r"\s+[—–]\s+", lm.group(1).strip())
-            name = re.sub(r"^\[|\]$", "", parts[0]).strip()
+            # Strip markdown bold (**Name**) and template brackets from the name.
+            name = re.sub(r"^\[|\]$", "", parts[0].strip().strip("*").strip()).strip()
             role = parts[1].strip() if len(parts) > 1 else ""
+            # summary: the whole description after the name (role + any blurb),
+            # rejoined with em-dashes — feeds the viewer's speaker-context panel.
+            summary = " — ".join(p.strip() for p in parts[1:]) if len(parts) > 1 else ""
             if name and not name.startswith("Speaker Name"):
-                speakers.append({"name": name, "slug": slugify(name), "role": role})
+                speakers.append({"name": name, "slug": slugify(name),
+                                 "role": role, "summary": summary})
 
     return project_name, act_labels, speakers
 
@@ -219,6 +236,32 @@ def parse_act_roadmaps_md(text: str):
         if not summary:
             continue
         for key in (quoted, pre):
+            if key and key not in roadmaps:
+                roadmaps[key] = summary
+
+    # Supplemental pass: UNQUOTED act headings, where the act name is the
+    # post-dash token rather than a quoted string. Seen in H+S IBEW 2026:
+    #   **Act 1 — Jobs** *(elements 1 + 2)*: A ton of safe, high-paying ...
+    #   **Act 2 — Done Right** *(elements 3 + 5)*: Minnesota builds these ...
+    # The quoted-name pass above misses these (no quotes). Key on the WHOLE
+    # heading and on the parts either side of the em/en dash ("Act 1", "Jobs")
+    # so the caller's act_roadmaps.get(label) matches whichever the canonical
+    # Act Labels list uses. `key not in roadmaps` keeps the quoted pass winning.
+    for em in re.finditer(
+        r'\*\*\s*([^*]+?)\s*\*\*\s*(?:\*\([^)]*\)\*\s*)?:\s*(.+?)'
+        r'(?=\n\s*\n|\n\s*\*\*|\Z)',
+        structure_body, re.DOTALL,
+    ):
+        heading = em.group(1).strip().rstrip(":").strip()
+        summary = re.sub(r"\s+", " ", em.group(2).strip())
+        if not summary:
+            continue
+        keys = [heading]
+        parts = re.split(r"\s+[—–]\s+", heading)
+        if len(parts) > 1:
+            keys.append(parts[0].strip())
+            keys.append(parts[-1].strip())
+        for key in keys:
             if key and key not in roadmaps:
                 roadmaps[key] = summary
 
@@ -513,20 +556,24 @@ def resolve_handoffs_dir(slug: str, ssd_root: Path) -> Path:
     Epicor ProTec project ships::
         <ssd_root>/handoffs/tagged-quotes-v*.json   (no per-slug subdir)
 
-    Prefers the slugged subdir when it exists. Otherwise, if the bare
-    ``handoffs`` dir exists AND directly contains tagged-quotes-v*.json, use it
-    (the flat single-project layout). Raises SystemExit only when neither
+    Prefers the slugged subdir when it actually holds the inputs
+    (tagged-quotes-v*.json). A bare slugged subdir that exists only to hold the
+    viewer's own runtime state (viewer-state.json, agent-cursor.json,
+    editing-versions/) for a FLAT project must NOT shadow the flat input dir —
+    so existence alone is not enough; the inputs must be present. Otherwise, if
+    the bare ``handoffs`` dir exists AND directly contains tagged-quotes-v*.json,
+    use it (the flat single-project layout). Raises SystemExit only when neither
     layout resolves, so no symlink is required for flat projects.
     """
     slugged = ssd_root / "handoffs" / slug
-    if slugged.is_dir():
+    if slugged.is_dir() and any(slugged.glob("tagged-quotes-v*.json")):
         return slugged
     flat = ssd_root / "handoffs"
     if flat.is_dir() and any(flat.glob("tagged-quotes-v*.json")):
         return flat
     raise SystemExit(
-        f"Handoffs folder not found: {slugged} "
-        f"(and no flat {flat}/tagged-quotes-v*.json fallback)"
+        f"Handoffs folder not found: no tagged-quotes-v*.json in {slugged} "
+        f"or flat {flat}"
     )
 
 
@@ -688,6 +735,20 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         or cc.get("speakers")
         or as_speakers
     )
+    # Attach act-structure "who's who" summaries to the displayed speakers
+    # (the pool-derived list carries name/slug/role but no blurb). Match on slug
+    # first, then on slugified name, so the viewer's speaker-context panel can
+    # show "why this voice matters" per the approved Speakers section.
+    as_summary = {}
+    for s in as_speakers:
+        if s.get("summary"):
+            as_summary[s.get("slug")] = s["summary"]
+            as_summary[slugify(s.get("name", ""))] = s["summary"]
+    for s in speakers:
+        if not s.get("summary"):
+            blurb = as_summary.get(s.get("slug")) or as_summary.get(slugify(s.get("name", "")))
+            if blurb:
+                s["summary"] = blurb
 
     # --- Creative context: per-act roadmaps + project premise (SPEC §3.3) ---
     # Read the act-structure "### Structure" one-liners and the creative-brief
@@ -731,9 +792,23 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         m = re.fullmatch(r"(?:trimmed-quotes-)?v(\d+)\.json", name)
         return int(m.group(1)) if m else None
 
-    editing_versions_dir = handoffs / "editing-versions"
-    if editing_versions_dir.is_dir():
-        all_ev = list(editing_versions_dir.glob("*.json"))
+    # Scan editing-versions in BOTH the resolved handoffs dir AND the viewer's
+    # own runtime folder (ssd_root/handoffs/<slug>/editing-versions). On a flat
+    # project those differ: the pipeline/agent writes rounds to the flat
+    # handoffs/editing-versions/, while the VIEWER saves named cuts under the
+    # slug subfolder. Reading only the resolved dir made viewer-saved cuts
+    # invisible to rebuilds (the Open menu re-found them via the server's /list,
+    # but a rebuild dropped them from the baked rounds). Union both, dedup by
+    # stem with the slug-subfolder (the viewer's authoritative save) winning.
+    ev_dirs = [handoffs / "editing-versions",
+               ssd_root / "handoffs" / slug / "editing-versions"]
+    ev_by_stem = {}
+    for d in ev_dirs:
+        if d.is_dir():
+            for p in d.glob("*.json"):
+                ev_by_stem[p.stem] = p  # later dir wins on stem collision
+    if ev_by_stem:
+        all_ev = list(ev_by_stem.values())
         numbered = sorted((p for p in all_ev if _round_vnum(p.name) is not None),
                           key=lambda p: _round_vnum(p.name))
         named = sorted((p for p in all_ev if _round_vnum(p.name) is None),
@@ -1153,6 +1228,14 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .chip:hover { background: var(--surface-2); color: var(--text); }
 .chip.active { background: var(--text); color: white; border-color: var(--text); }
+/* Set-apart filter chip for dedicated tags (e.g. Safety Lines) that are not
+   one of the three narrative acts. Dashed outline + a small leading divider
+   read it as "separate from the acts." */
+.nav-tag-divider { display:inline-block; width:1px; height:16px; vertical-align:middle;
+  background: var(--border-strong); margin:0 8px 0 4px; }
+.chip-tag { border:1px dashed var(--border-strong); color: var(--text-subtle); }
+.chip-tag:hover { border-style:dashed; }
+.chip-tag.active { background: var(--text-subtle); color: white; border-color: var(--text-subtle); border-style:solid; }
 
 /* Window block */
 .win-block {
@@ -1404,6 +1487,10 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .read-card:hover .rc-tool, .read-card:focus-within .rc-tool { opacity: 1; }
 .rc-tool:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
 .rc-tool.edit:hover { background: var(--surface-2); color: var(--accent); border-color: var(--accent); }
+/* Cut (recoverable, blue) / Drop (destructive-ish, red) tint on hover — match
+   the full buttons' intent without widening the compact corner. */
+.rc-tool.cut:hover { background: var(--probable); color: white; border-color: var(--probable); }
+.rc-tool.drop:hover { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
 .rc-collapse { margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--text-subtle); font-size: 12px; padding: 3px 9px; border-radius: 6px; cursor: pointer; }
 .rc-collapse:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
 .reveal-block { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--border-strong); border-radius: 8px; margin-left: auto; }
