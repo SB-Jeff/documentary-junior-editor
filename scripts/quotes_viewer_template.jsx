@@ -938,7 +938,9 @@ export default function QuotesView() {
           setDragId(entry.entry_id);
         }
         const el = document.elementFromPoint(e.clientX, e.clientY);
-        const card = el && el.closest ? el.closest(".tl-card") : null;
+        // Collapsed cards (.read-card) are drop targets too, not just expanded
+        // .tl-card — so drag-reorder works in the default Edit view.
+        const card = el && el.closest ? el.closest(".tl-card, .read-card") : null;
         if (!card || !card.id) return;
         const tl = getTimeline();
         const de = tl.find((x) => x.entry_id === dragIdRef.current);
@@ -2712,8 +2714,17 @@ export default function QuotesView() {
     const markCls = showChip ? (mship === "loose" ? " loose-mark" : " tight-mark") : "";
     const chip = showChip ? <span className={`mship-chip ${mship}`}>{membershipLabel(mship)}</span> : null;
     const mb = canMoveEntry(entry);
-    // Reorder (↑/↓ within the act) — available directly on the collapsed card, no
-    // need to expand. ✎ Trim is the ONLY thing the expand is for now.
+    // Reorder: drag the grip (primary, fast) OR nudge with ↑/↓ (precise single
+    // step). Both work right on the collapsed card — no need to expand.
+    const dragHandle = (
+      <div className="rc-drag" title="Drag to reorder within the act" aria-hidden="true">
+        <svg width="10" height="20" viewBox="0 0 10 20" fill="currentColor">
+          <circle cx="2" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/>
+          <circle cx="2" cy="10" r="1.4"/><circle cx="8" cy="10" r="1.4"/>
+          <circle cx="2" cy="17" r="1.4"/><circle cx="8" cy="17" r="1.4"/>
+        </svg>
+      </div>
+    );
     const moveBtns = (
       <div className="tl-move-btns">
         <button className="tl-move-btn" disabled={!mb.up}
@@ -2722,6 +2733,7 @@ export default function QuotesView() {
           onClick={() => moveEntry(entry.entry_id, 1)} title="Move down within act">↓</button>
       </div>
     );
+    const dragCls = `${dragId === entry.entry_id ? " dragging" : ""}${dragOverId === entry.entry_id && dragId !== entry.entry_id ? " drag-over" : ""}`;
     // All three quick actions sit compact in the upper-right (Cut · Drop · Trim)
     // so the card stays short — no separate action row. Cut keeps the entry
     // recoverable in Cuts; Drop removes the timeline entry (source stays in the
@@ -2751,7 +2763,9 @@ export default function QuotesView() {
       const typeLabel = { title_card: "Title card", interstitial: "Interstitial", context_beat: "Context beat" }[entry.type] || "Interstitial";
       const insText = entry.type === "context_beat" ? `[${entry.intent || "context needed"}]` : (entry.text || "");
       return (
-        <div className={`read-card${markCls}`} id={entry.entry_id} key={entry.entry_id}>
+        <div className={`read-card rc-draggable${markCls}${dragCls}`} id={entry.entry_id} key={entry.entry_id}
+          {...cardDragHandlers(entry)}>
+          {dragHandle}
           <div className="rc-head">
             {moveBtns}
             <span className="ins-type-badge">{typeLabel}</span>
@@ -2767,7 +2781,9 @@ export default function QuotesView() {
     const speakerC = (src && speakerColors[src.speakerSlug]) || { bg: COLORS.surface2, fg: COLORS.textMuted };
     const speakerLabel = src?.speaker || entry.speaker || "?";
     return (
-      <div className={`read-card${markCls}`} id={entry.entry_id} key={entry.entry_id}>
+      <div className={`read-card rc-draggable${markCls}${dragCls}`} id={entry.entry_id} key={entry.entry_id}
+        {...cardDragHandlers(entry)}>
+        {dragHandle}
         <div className="rc-head">
           {moveBtns}
           <span className="speaker-tag" style={{ background: speakerC.bg, color: speakerC.fg }}>{speakerLabel}</span>

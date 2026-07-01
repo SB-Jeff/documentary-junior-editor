@@ -1476,6 +1476,17 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .read-card { padding: 10px 14px 14px 16px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; position: relative; }
 .read-card.tight-mark { border-left-color: var(--must); }
 .read-card.loose-mark { border-left-color: var(--probable); background: rgba(37,99,235,0.035); }
+/* Drag-to-reorder grip on the collapsed Edit card — a vertical strip on the
+   left edge. Drag from the grip (or anywhere non-interactive) to reorder within
+   the act; the ↑↓ buttons remain for precise single-step nudges. */
+.read-card.rc-draggable { padding-left: 26px; touch-action: none; }
+.rc-drag { position: absolute; left: 0; top: 0; bottom: 0; width: 20px; display: flex;
+  align-items: center; justify-content: center; cursor: grab; color: var(--text-subtle);
+  background: var(--surface-2); border-right: 1px solid var(--border); user-select: none; opacity: .65; }
+.rc-drag:hover { opacity: 1; color: var(--text); }
+.read-card.rc-draggable:active .rc-drag { cursor: grabbing; }
+.read-card.rc-draggable.dragging { opacity: 0.45; }
+.read-card.rc-draggable.drag-over { box-shadow: 0 -3px 0 0 var(--accent); }
 .rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
 .rc-quote { font-size: 15px; line-height: 1.6; margin: 2px 0 0; color: var(--text); }
 .rc-quote.rc-interstitial { font-style: italic; color: var(--text-muted); }
