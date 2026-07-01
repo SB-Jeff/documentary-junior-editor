@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"documentary-junior-editor re-entry contract: START-HERE.md at the repo root is the canonical you-are-here doc. (1) If the user is returning or asks where things stand, read START-HERE.md plus the project memory and give the current state and the single next action. (2) Before wrapping up any session in which you made changes or decisions, UPDATE START-HERE.md so its Where-we-are section and the one Next-action line are current, and refresh the project memory. Jeff has ADHD and returns after long gaps, so this doc must never go stale.\"}}'",
+            "statusMessage": "Loading project re-entry contract"
+          }
+        ]
+      }
+    ]
+  }
+}
