@@ -38,6 +38,7 @@ Everything else waits behind this choice.
 - `quotes-viewer-roadmap.md` — the viewer roadmap.
 - `cowork-session-guide.md` — how to run a full editing session start to finish.
 - `CHANGELOG.md` — version history.
+- `session-hardening-2026-07-02.md` — the issues-and-fixes register from the Epicor edit session (TC gate + export-conversion fixes done; remaining items tasked).
 - `memory/` — Claude's persistent project memory (auto-loads each session).
 
 ## How to get un-lost in 30 seconds
