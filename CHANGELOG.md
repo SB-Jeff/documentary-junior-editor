@@ -1,5 +1,45 @@
 # Documentary Junior Editor — Changelog
 
+## Durable Edit→FCPXML export conversion — 2026-07-02 (`viewer-edit-redesign` branch)
+
+Makes the viewer-export → FCPXML handoff durable. The viewer's **Export**
+writes char-range `_editCuts` in `trimmed-quotes-v[N]-tight.json`, but
+`build_fcpxml.py` builds clips from v5 `segments[]` + `head_trim_words` /
+`tail_trim_words`. The two shapes never met, so on every export the Edit Agent
+hand-converted `_editCuts` → segment shape before the FCPXML build — fragile and
+undocumented, and seen to break on two projects (h-s-ibew-2026,
+epicor-rf-fager). Fixed with a canonical, tested converter in the export path
+(chosen over teaching `build_fcpxml.py` to read `_editCuts` directly, which would
+bury the mid-segment approximation and destroy the per-entry verbatim
+re-check checkpoint).
+
+- **New converter `scripts/editcuts_to_segments.py`** (importable + CLI). The
+  exact inverse of `build_quotes_viewer.migrate_entry_trims`: reconstructs full
+  text from the source pool, complements `_editCuts` into kept ranges, and emits
+  per-segment `{source_segment_idx, head_trim_words, tail_trim_words}`. Idempotent
+  (passes through entries that already have `segments[]` and non-spoken entries),
+  drops fully-cut entries loudly, and its output is consumed unchanged by
+  `build_fcpxml.py`.
+- **Mid-segment interior cuts (the v5.7 limitation)** — cuts that leave disjoint
+  kept pieces in one segment can't be expressed as head/tail word-trims. The
+  converter keeps the **widest contiguous span** (retaining the interior cut
+  words, so the clip "plays slightly wider" — the documented, accepted behavior)
+  and emits a **per-entry fidelity note** naming the retained words (e.g. epicor
+  #68/#130), printed as a report and writable with `--report`.
+- **`build_fcpxml.py` guard.** A raw `_editCuts`-only export now fails with an
+  actionable error pointing at the converter, instead of the old cryptic
+  "produced zero kept segments after applying trims."
+- **New regression suite `scripts/test_editcuts_to_segments.py`** (8 checks, all
+  pass). Load-bearing test is the round trip `segments[] → _editCuts → segments[]`
+  preserving verbatim text; also pins the mid-segment approximation + note,
+  idempotency, the fully-cut drop, end-to-end `build_fcpxml` consumption, and the
+  clear-error guard.
+- **`SKILL-edit.md`** — "Fulfilling an export request" now documents that
+  `cut_file` is char-range data requiring conversion (new step 2, with the exact
+  command) plus a per-entry verbatim (Cardinal Rule 1) re-check of the fidelity
+  report before handoff; the Data Model `_editCuts` note and the mid-segment
+  limitation section cross-reference the converter.
+
 ## Timecode-sanity gate — 2026-07-02 (`viewer-edit-redesign` branch)
 
 Prevention guardrail for the epicor-rf-fager collapsed-timecode bug (see memory

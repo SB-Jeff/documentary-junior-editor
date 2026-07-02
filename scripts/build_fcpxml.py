@@ -560,6 +560,22 @@ def _v5_entry_to_segment_quotes(
     part = entry.get("part") or source.get("part", "")
     entry_id = entry.get("entry_id", "")
 
+    # Guard: a raw viewer export carries char-range `_editCuts` and no
+    # `segments[]`. This script builds clips from `segments[]`, so such a file
+    # must be converted first. Fail with an actionable message rather than the
+    # cryptic "produced zero kept segments" error the empty loop would raise.
+    entry_segments = entry.get("segments")
+    if (not entry_segments) and entry.get("_editCuts") is not None:
+        raise ValueError(
+            f"Entry {entry_id!r} carries char-range `_editCuts` but no "
+            "`segments[]`. This is a raw viewer export; convert it first with "
+            "scripts/editcuts_to_segments.py "
+            "(python3 scripts/editcuts_to_segments.py <cut_file> "
+            "--source-pool <tagged-quotes-v[N].json> -o <converted.json>), "
+            "then build from the converted file. See SKILL-edit.md "
+            "\"Fulfilling an export request\"."
+        )
+
     out = []
     for seg_ref in entry.get("segments", []):
         idx = seg_ref.get("source_segment_idx")
