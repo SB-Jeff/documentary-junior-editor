@@ -10,8 +10,8 @@ description: |
   or curates — catalogs everything.
 
   One instance runs per interview subject, all in parallel after Creative Context
-  has emitted. Start this agent when `handoffs/act-structure-v[N].md`,
-  `handoffs/creative-brief-summary-v[N].md`, and the assigned transcript are
+  has emitted. Start this agent when `handoffs/[project-slug]/act-structure-v[N].md`,
+  `handoffs/[project-slug]/creative-brief-summary-v[N].md`, and the assigned transcript are
   present, and `pipeline-state.json` reports the upstream Creative Context
   version this run will be based on.
 model: sonnet-4.6
@@ -81,20 +81,49 @@ speaker in parallel from a single Cowork session. The Orchestrator composes your
 prompt and validates your outputs.
 
 This skill file is what you read when launched, whether by the Orchestrator or by
-Jeff manually starting a one-off Cowork session for a single speaker. The
-instructions are identical either way. Standalone manual launches remain valid for
+Jeff manually starting a one-off Cowork session for a single speaker. The editorial
+instructions are the same either way, but the interactive pause points differ by
+mode — see "Invocation Mode" below. Standalone manual launches remain valid for
 surgical re-runs of a single speaker.
 
 ---
 
 ## Required Inputs
 
+### Handoff directory resolution
+
+The Transcript Agent operates inside a project-specific handoff directory. A single
+SSD/repo can hold more than one project's handoff set (e.g., the 2026 Crisis Nursery
+shoot produces both a main testimonial and a tribute video, each in its own slugged
+subfolder). Every handoff path in this skill is relative to `handoffs/[project-slug]/`.
+
+Resolve the handoff directory ONCE at launch, before reading anything else:
+
+1. **In orchestrated mode**, the Orchestrator's launch prompt supplies the resolved
+   path (its prompt template already passes `handoffs/[project-slug]/`). Use it
+   directly.
+2. **If the kickoff prompt names a project slug or handoff path**, use it directly
+   (e.g., `crisis-nursery-testimonial` → `handoffs/crisis-nursery-testimonial/`).
+3. **If the kickoff prompt does not specify**, glob `handoffs/*/act-structure-v*.md`.
+   If exactly one match is found, use it. If multiple are found, stop and ask Jeff
+   which project this speaker belongs to. Do not guess.
+4. **Legacy fallback:** if no slugged subfolder is present but `handoffs/act-structure-v*.md`
+   exists at the flat root, use `handoffs/` as the handoff directory.
+
+Throughout the rest of this skill, `handoffs/[project-slug]/` is the canonical handoff
+directory — it applies to ALL four output files and to `pipeline-state.json`, not just
+some of them. Substitute the resolved project slug for `[project-slug]` wherever it
+appears below. If operating in the legacy flat layout, substitute an empty project
+slug.
+
+### Input files
+
 Before starting, confirm the following exist in the project folder.
 
 **Handoff documents from Creative Context Agent — must exist before starting:**
-- `handoffs/act-structure-v[N].md` — Jeff-approved act structure, exact act labels,
+- `handoffs/[project-slug]/act-structure-v[N].md` — Jeff-approved act structure, exact act labels,
   and narrative roadmaps. Read the highest-numbered version.
-- `handoffs/creative-brief-summary-v[N].md` — editorial context, priorities, and key
+- `handoffs/[project-slug]/creative-brief-summary-v[N].md` — editorial context, priorities, and key
   moments flagged. Read the highest-numbered version.
 
 If either is missing, stop immediately. The Creative Context Agent session must be
@@ -108,10 +137,39 @@ is empty entirely, that suggests the Transcription Agent never ran — tell Jeff
 
 ---
 
+## Invocation Mode
+
+Determine your invocation mode before starting. It changes how the interactive
+steps below behave.
+
+**MANUAL mode** — Jeff launched you directly in your own Cowork session. All
+interactive steps apply as written: the stale-state confirmation, the
+speaker-identity confirmation, and the in-chat full tagged-list review.
+
+**ORCHESTRATED mode** — you were launched as an Orchestrator sub-agent via the
+Task tool (the launch prompt says so explicitly). You cannot pause for user
+input — nobody is watching your chat. In this mode:
+
+- **Stale-state issues are recorded, not blocking.** If the pipeline-state check
+  finds stale or inconsistent state, record the issue in your summary output and
+  in your final report back to the Orchestrator, then proceed.
+- **Speaker identity is taken as given** from the Orchestrator's launch prompt —
+  it was confirmed upstream at transcription time. Do not try to re-confirm it.
+- **The in-chat full-list review is skipped.** The four output files are the
+  deliverable; the Synthesis Agent's validation and the Orchestrator's Phase 3
+  validation are the review.
+- **The reference-examples reading step is skipped** (see Reference Examples).
+- **Do not write `pipeline-state.json`** — report your entry data back to the
+  Orchestrator instead (see "Update pipeline-state.json").
+
+If the launch prompt doesn't state a mode, assume MANUAL.
+
+---
+
 ## Pipeline State on Launch
 
-Read `handoffs/pipeline-state.json` (or
-`handoffs/[project-slug]/pipeline-state.json` for multi-project SSDs).
+Read `handoffs/[project-slug]/pipeline-state.json` (the resolved handoff
+directory — see "Handoff directory resolution" under Required Inputs).
 
 1. Find this agent's entry under `agents.transcript.[speaker-slug]`. If the entry
    exists, read its `current_version` and `based_on.creative-context`.
@@ -122,10 +180,13 @@ Read `handoffs/pipeline-state.json` (or
    > (Creative Context current v[X]; previous Transcript Agent run for this speaker
    > based on v[Y]). Re-running will re-tag quotes against the new act labels and
    > may change segment decomposition. Proceed with re-tag, or skip?
-4. Wait for Jeff's confirmation before proceeding.
-5. On emit, increment this speaker's `current_version`, record
+4. Wait for Jeff's confirmation before proceeding (manual mode only — see
+   Invocation Mode; in orchestrated mode, do not block: record the stale-state
+   issue in your summary output and your final report, then proceed).
+5. On emit (manual mode), increment this speaker's `current_version`, record
    `based_on.creative-context` as the version actually consumed this run, set
-   `last_run`.
+   `last_run`. In orchestrated mode, report these values back instead of writing
+   them — see "Update pipeline-state.json".
 
 If `pipeline-state.json` does not exist yet on this project (e.g., Jeff is running
 the agents manually without the orchestrator having seeded it), create the
@@ -135,6 +196,10 @@ the agents manually without the orchestrator having seeded it), create the
 
 ## Reference Examples
 
+**Manual mode only — skip this section entirely in orchestrated mode.** (N parallel
+sub-agents each re-reading every reference project is pure token cost for a
+cataloguing task; the calibration below is a nice-to-have, not a dependency.)
+
 Before processing the transcript, read the reference examples in:
 `documentary-junior-editor/reference-examples/`
 
@@ -143,17 +208,19 @@ For each completed project, review:
   how they were ordered, how they were trimmed
 - `lessons-learned.md` — editorial patterns and rules that emerged from that project
 
-Use these examples to calibrate your understanding of what "good quote selection" looks
-like for Storyboard Films projects before you begin cataloguing.
+Use these examples to calibrate TAGGING GRANULARITY and SEGMENT BOUNDARIES — what a
+useful, complete catalog looks like for Storyboard Films projects. They are NOT a
+guide to selection taste: selection belongs to the Edit Agent downstream, and your
+job is to catalog everything, not curate (see Phase 2's Fundamental Rule).
 
 ---
 
 ## Phase 0: Review Context
 
 1. **Read project context from Creative Context Agent handoffs:**
-   - Read `handoffs/act-structure-v[N].md` (highest version) to confirm the approved
+   - Read `handoffs/[project-slug]/act-structure-v[N].md` (highest version) to confirm the approved
      act labels and narrative roadmaps
-   - Read `handoffs/creative-brief-summary-v[N].md` (highest version) to understand
+   - Read `handoffs/[project-slug]/creative-brief-summary-v[N].md` (highest version) to understand
      editorial priorities. Treat any "currently planned to stay" / "load-bearing in
      current structure" / "tentatively committed" / "current default" language as
      editorial intent — not a constraint that limits what you catalog.
@@ -180,8 +247,8 @@ like for Storyboard Films projects before you begin cataloguing.
 ## Phase 1: Transcript Review
 
 Before reading the transcript, read:
-- `handoffs/act-structure-v[N].md` — understand the approved structure and act labels thoroughly
-- `handoffs/creative-brief-summary-v[N].md` — understand the editorial priorities, key moments
+- `handoffs/[project-slug]/act-structure-v[N].md` — understand the approved structure and act labels thoroughly
+- `handoffs/[project-slug]/creative-brief-summary-v[N].md` — understand the editorial priorities, key moments
   Jeff flagged, and the overall creative direction established in the Creative Context session
 
 These documents are your compass. Every tagging decision you make should be informed
@@ -191,7 +258,9 @@ by the approved structure and the creative brief.
    up, and where the emotional peaks and key insights land.
 
 2. **Identify the speaker.** If the transcript doesn't label the speaker clearly, do your
-   best to distinguish them from context and ask Jeff to confirm.
+   best to distinguish them from context and ask Jeff to confirm (manual mode only —
+   see Invocation Mode; in orchestrated mode, take the speaker identity as given in
+   the Orchestrator's launch prompt — it was confirmed upstream at transcription time).
 
 3. **Identify the speaker's role:**
    - **Customer** — had the problem, adopted the product or service. Carries the main
@@ -210,7 +279,7 @@ by the approved structure and the creative brief.
      specific metrics or data points
    - Any problems to flag: unclear timestamps, gaps, overlapping speakers, audio issues
 
-Save to `handoffs/[speaker-slug]-summary-v[N].md`.
+Save to `handoffs/[project-slug]/[speaker-slug]-summary-v[N].md`.
 
 ---
 
@@ -304,7 +373,7 @@ all quotes belong to one speaker. The Synthesis Agent will renumber across speak
 
 ### Tagging
 For each quote, assign the narrative section tag using the **exact act labels from
-`handoffs/act-structure-v[N].md`**. Do not use generic labels like "Act 1" or default
+`handoffs/[project-slug]/act-structure-v[N].md`**. Do not use generic labels like "Act 1" or default
 labels like "Challenge" unless those are the labels Jeff approved. The approved labels
 carry through the entire pipeline — use them exactly as written.
 
@@ -328,7 +397,7 @@ exactly. The Edit Agent will handle cleanup within the bounds of the Cardinal Ru
 (via head/tail trims and segment drops).
 
 ### Output Format
-Produce the tagged quote list as `handoffs/[speaker-slug]-tagged-quotes-v[N].json` with
+Produce the tagged quote list as `handoffs/[project-slug]/[speaker-slug]-tagged-quotes-v[N].json` with
 this structure:
 
 ```json
@@ -354,7 +423,10 @@ this structure:
 ]
 ```
 
-Also present the full tagged list in chat so Jeff can review without opening the file.
+Also present the full tagged list in chat so Jeff can review without opening the file
+(manual mode only — see Invocation Mode; in orchestrated mode skip this step: the four
+output files are the deliverable, and Synthesis plus the Orchestrator's validation are
+the review).
 
 ### Per-Quote Schema Reference
 
@@ -385,17 +457,18 @@ and will not proceed if any are missing.** Presenting results in chat is not suf
 
 All four files share the same `-v[N]` version suffix, where N comes from the
 `pipeline-state.json` block for this speaker's `transcript` agent (incremented from
-the previous run, or v1 on first run).
+the previous run, or v1 on first run). In orchestrated mode, the Orchestrator passes
+N explicitly in the launch prompt — use that value.
 
 ### Output 1: Tagged Quote List
-`handoffs/[speaker-slug]-tagged-quotes-v[N].json`
+`handoffs/[project-slug]/[speaker-slug]-tagged-quotes-v[N].json`
 
 Every quote that could serve the narrative, tagged by act section, verbatim, with
 rationale, and **with segment decomposition**. This is the complete catalogue —
 nothing filtered, nothing curated.
 
 ### Output 2: Orphan Quote List
-`handoffs/[speaker-slug]-orphans-v[N].md`
+`handoffs/[project-slug]/[speaker-slug]-orphans-v[N].md`
 
 Quotes that exist in the transcript but did not fit cleanly into any of the approved act
 sections. Present these to Jeff explicitly — do not silently discard them.
@@ -409,11 +482,12 @@ Some orphans contain great material that warrants adjusting the narrative struct
 Others belong on the cutting room floor. Jeff decides — not you.
 
 (Orphans do not need segment decomposition at this stage; if Jeff promotes one into
-the structure during the Edit Agent session, the Synthesis Agent or a follow-up
-Transcript Agent re-run will decompose it.)
+the structure during the Edit Agent session, a follow-up Transcript Agent re-run will
+decompose it. The Synthesis Agent cannot — it never receives raw transcripts and is
+forbidden from altering quote text or segments.)
 
 ### Output 3: Discard Summary
-`handoffs/[speaker-slug]-discards-v[N].md`
+`handoffs/[project-slug]/[speaker-slug]-discards-v[N].md`
 
 A brief description of what was excluded from the tagged list entirely and why. This
 is the safety net — it allows Jeff to sanity check that nothing important was silently
@@ -429,7 +503,7 @@ The discard summary does not need to list every excluded sentence. A brief parag
 category is sufficient. The goal is transparency, not exhaustiveness.
 
 ### Output 4: Content Summary
-`handoffs/[speaker-slug]-summary-v[N].md`
+`handoffs/[project-slug]/[speaker-slug]-summary-v[N].md`
 
 This file is produced during Phase 1 (Transcript Review). It is listed here to be
 explicit: the summary is a required output file, not an optional deliverable. The
@@ -450,11 +524,11 @@ correctly. Do not rely on having presented the content in chat — the file must
 Read each of the following files. If any file fails to read (file not found), you
 are not done — save the missing file immediately.
 
-1. `handoffs/[speaker-slug]-tagged-quotes-v[N].json` — read it, confirm it parses as JSON,
+1. `handoffs/[project-slug]/[speaker-slug]-tagged-quotes-v[N].json` — read it, confirm it parses as JSON,
    confirm every quote has a non-empty `segments[]` array
-2. `handoffs/[speaker-slug]-orphans-v[N].md` — read it, confirm it has content
-3. `handoffs/[speaker-slug]-discards-v[N].md` — read it, confirm it has content
-4. `handoffs/[speaker-slug]-summary-v[N].md` — read it, confirm it has content
+2. `handoffs/[project-slug]/[speaker-slug]-orphans-v[N].md` — read it, confirm it has content
+3. `handoffs/[project-slug]/[speaker-slug]-discards-v[N].md` — read it, confirm it has content
+4. `handoffs/[project-slug]/[speaker-slug]-summary-v[N].md` — read it, confirm it has content
 
 ### Step 2: Content verification
 
@@ -471,12 +545,51 @@ are not done — save the missing file immediately.
 
 **Do not report completion until every file has been verified.**
 
+### Step 3: Timecode-sanity self-check (run before you emit)
+
+This is where degenerate timecodes are born, so this is where they must be
+caught. On epicor-rf-fager, this stage emitted `startTC == endTC` on 86 of
+Doug Duvall's 87 quotes; nothing downstream noticed until the FCPXML export
+verify failed five stages later. A zero-duration or out-of-order TC makes the
+Edit and FCPXML stages unusable — never emit one.
+
+Run the shared deterministic gate against your tagged-quotes file before
+reporting completion. Because at this stage your quote numbering is pure
+transcript order (no promoted orphans yet), run it `--strict`, which also
+catches a corrupt/non-monotonic TC track:
+
+```bash
+python3 scripts/validate_timecodes.py --strict \
+  handoffs/<project-slug>/<speaker-slug>-tagged-quotes-v<N>.json
+```
+
+- [ ] The gate exits `0`. It checks, per speaker: runs of `startTC == endTC`
+      at quote AND segment level, non-monotonic `startTC`, and segment TCs
+      outside their quote's `[startTC, endTC]` window.
+- [ ] If it exits `2`, **do not emit**. The TCs come from the transcript's
+      timecodes — re-read them from the source, fix the quotes/segments it
+      named, and re-run the gate until clean. If the transcript itself lacks
+      usable timecodes, stop and flag it to Jeff (the Transcription stage owes
+      populated per-line TCs); do not paper over it with placeholder values.
+
+In orchestrated mode the Orchestrator runs this same gate again over all
+per-speaker files as a hard pre-handoff check (SKILL-orchestrator.md Phase 3,
+step 6) — but do not rely on it to catch your own output. Self-check first.
+
 ---
 
 ## Update `pipeline-state.json`
 
-After all four files are saved and verified, update
-`handoffs/pipeline-state.json`:
+**Orchestrated mode: do NOT write this file.** During an orchestrated run,
+`pipeline-state.json` has a single writer — the Orchestrator — because parallel
+sub-agents writing it concurrently would race and overwrite each other's entries.
+Instead, include your entry data in your final report back to the Orchestrator:
+the four files you saved, the output version N you used, and the Creative Context
+version this run was based on. The Orchestrator writes your entry after validating
+your outputs.
+
+**Manual/standalone mode:** after all four files are saved and verified, update
+`handoffs/[project-slug]/pipeline-state.json` yourself as before:
 
 - Increment `agents.transcript.[speaker-slug].current_version` to N
 - Set `agents.transcript.[speaker-slug].based_on.creative-context` to the
@@ -489,10 +602,10 @@ After all four files are saved and verified, update
 
 ## Pipeline state
 
-- **This output:** `handoffs/[speaker-slug]-tagged-quotes-v[N].json`,
-  `handoffs/[speaker-slug]-orphans-v[N].md`,
-  `handoffs/[speaker-slug]-discards-v[N].md`,
-  `handoffs/[speaker-slug]-summary-v[N].md`
+- **This output:** `handoffs/[project-slug]/[speaker-slug]-tagged-quotes-v[N].json`,
+  `handoffs/[project-slug]/[speaker-slug]-orphans-v[N].md`,
+  `handoffs/[project-slug]/[speaker-slug]-discards-v[N].md`,
+  `handoffs/[project-slug]/[speaker-slug]-summary-v[N].md`
 - **Generated by:** Transcript Agent on sonnet-4.6 at [ISO timestamp]
 - **Based on upstream:** `act-structure-v[X].md`, `creative-brief-summary-v[X].md`
 
@@ -509,7 +622,7 @@ After all four files are saved and verified, update
 > for this project. All per-speaker Transcript Agents have emitted their four
 > output files. Merge the per-speaker tagged-quotes (preserving segments[]),
 > orphans, discards, and summaries into versioned merged outputs and produce the
-> narrative assessment. Update `handoffs/pipeline-state.json` on emit.
+> narrative assessment. Update `handoffs/[project-slug]/pipeline-state.json` on emit.
 
 ---
 
@@ -518,15 +631,19 @@ After all four files are saved and verified, update
 When all four outputs are saved and the completeness check is done:
 
 1. Confirm your outputs are saved and verified — list all four file paths:
-   - `handoffs/[speaker-slug]-tagged-quotes-v[N].json` ✓
-   - `handoffs/[speaker-slug]-orphans-v[N].md` ✓
-   - `handoffs/[speaker-slug]-discards-v[N].md` ✓
-   - `handoffs/[speaker-slug]-summary-v[N].md` ✓
+   - `handoffs/[project-slug]/[speaker-slug]-tagged-quotes-v[N].json` ✓
+   - `handoffs/[project-slug]/[speaker-slug]-orphans-v[N].md` ✓
+   - `handoffs/[project-slug]/[speaker-slug]-discards-v[N].md` ✓
+   - `handoffs/[project-slug]/[speaker-slug]-summary-v[N].md` ✓
 2. Report completion with a brief summary:
    - Total quotes catalogued for this speaker
    - Total segments produced (sum across all quotes)
    - Number of orphan quotes flagged
    - Any issues or questions for Jeff
+   - In orchestrated mode, additionally: the output version N you used and the
+     Creative Context version this run was based on — the Orchestrator needs both
+     to write your `pipeline-state.json` entry — plus any stale-state or other
+     issues you recorded instead of blocking on
 
 **Do not report completion without listing all four files and confirming each exists.**
 The Synthesis Agent validates all four files per speaker and will reject incomplete
@@ -538,5 +655,5 @@ outputs.
 
 ---
 
-*Transcript Agent — documentary-junior-editor v5.5*
+*Transcript Agent — documentary-junior-editor v5.10 (June 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*

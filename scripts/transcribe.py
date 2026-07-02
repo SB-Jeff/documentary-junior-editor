@@ -39,11 +39,6 @@ try:
     repo_env = script_dir.parents[2] / "file-api" / ".env"
     if repo_env.exists():
         load_dotenv(repo_env, override=False)
-
-    # Priority 3: file-api/.env on the Mac mini Desktop (when running from SSD)
-    mac_mini_env = Path.home() / "Desktop" / "storyboard-ops" / "file-api" / ".env"
-    if mac_mini_env.exists():
-        load_dotenv(mac_mini_env, override=False)
 except ImportError:
     pass  # python-dotenv not installed — rely on env vars being set directly
 

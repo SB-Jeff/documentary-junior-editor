@@ -23,6 +23,7 @@ import os
 import re
 import sys
 import traceback
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 # Import library functions from generate_fcpxml.py (same directory).
@@ -42,7 +43,12 @@ except ImportError:
     )
     sys.modules["openpyxl"] = _stub
 
-from generate_fcpxml import parse_source_fcpxml, generate_fcpxml  # noqa: E402
+from generate_fcpxml import (  # noqa: E402
+    parse_source_fcpxml,
+    generate_fcpxml,
+    normalize_label,
+    _canonicalize_section,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -53,8 +59,10 @@ EXIT_OK = 0
 EXIT_GENERIC = 1
 EXIT_MISSING_INPUT = 2
 EXIT_BAD_PARAMS = 3
-EXIT_NO_CAPTION = 4
+EXIT_NO_CAPTION = 4      # quote-text truncation: clip plays less than verbatim
 EXIT_GEN_ERROR = 5
+EXIT_SPEAKER_MISS = 6    # speaker(s) skipped or 0-clip output
+EXIT_VERIFY_FAIL = 7     # --verify post-generation checks failed
 
 
 # ---------------------------------------------------------------------------
@@ -552,6 +560,22 @@ def _v5_entry_to_segment_quotes(
     part = entry.get("part") or source.get("part", "")
     entry_id = entry.get("entry_id", "")
 
+    # Guard: a raw viewer export carries char-range `_editCuts` and no
+    # `segments[]`. This script builds clips from `segments[]`, so such a file
+    # must be converted first. Fail with an actionable message rather than the
+    # cryptic "produced zero kept segments" error the empty loop would raise.
+    entry_segments = entry.get("segments")
+    if (not entry_segments) and entry.get("_editCuts") is not None:
+        raise ValueError(
+            f"Entry {entry_id!r} carries char-range `_editCuts` but no "
+            "`segments[]`. This is a raw viewer export; convert it first with "
+            "scripts/editcuts_to_segments.py "
+            "(python3 scripts/editcuts_to_segments.py <cut_file> "
+            "--source-pool <tagged-quotes-v[N].json> -o <converted.json>), "
+            "then build from the converted file. See SKILL-edit.md "
+            "\"Fulfilling an export request\"."
+        )
+
     out = []
     for seg_ref in entry.get("segments", []):
         idx = seg_ref.get("source_segment_idx")
@@ -791,8 +815,17 @@ def parse_act_structure(path: str):
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
 
+    # C7: in addition to numbered "Act N"-style headings, standalone act
+    # headings like "Intro" / "Prologue" / "Epilogue" are real acts too.
+    # Note generate_fcpxml.create_section_divider renames "Opening" ->
+    # "Intro" at display time; both spellings must parse here so the
+    # rename stays consistent end-to-end. The \b keeps "Action items"
+    # from matching "Act".
+    # [ \t]* (NOT \s*) after the keyword: \s matches newlines, which lets a
+    # bare heading like '## Intro' swallow the next body line into the label.
     label_re = re.compile(
-        r"^\s*#+\s*((?:Act|Part|Section)\s*[^#\n]*)$",
+        r"^[ \t]*#+[ \t]*((?:Act|Part|Section|Intro|Introduction|Opening"
+        r"|Prologue|Epilogue|Conclusion|Outro)\b[ \t]*[^#\n]*)$",
         re.IGNORECASE | re.MULTILINE,
     )
     labels = [m.group(1).strip() for m in label_re.finditer(text)]
@@ -803,11 +836,25 @@ def parse_act_structure(path: str):
 # Source caption file lookup
 # ---------------------------------------------------------------------------
 
+class AmbiguousSpeakerFileError(RuntimeError):
+    """Raised when a speaker's name-token fallback matches >1 source file."""
+
+
 def find_speaker_fcpxml(speaker: str, xml_dir: Path):
     """
     Locate a source caption .fcpxml for a given speaker. Tries exact match,
-    case-insensitive match, then first/last-name substring match. Returns the
-    Path to the matching file or raises FileNotFoundError with a diagnostic.
+    case-insensitive stem match, then a name-token fallback. Returns the
+    Path to the matching file, or raises FileNotFoundError (no match) /
+    AmbiguousSpeakerFileError (more than one fallback match).
+
+    B6 — the fallback matches name tokens against WORD-BOUNDARY tokens of
+    the file stem (stem split on non-alphanumerics), not raw substrings, so
+    'Ben' does not match 'Reuben_interview.fcpxml'. Files matching ALL of
+    the speaker's name tokens are preferred over files matching only some
+    (so 'Mike Stern' binds to 'Mike_Stern.fcpxml' even when
+    'Jana_Stern.fcpxml' also exists). If the best tier still holds more
+    than one candidate, this fails loudly instead of silently binding the
+    first sorted hit.
     """
     candidates_tried = []
 
@@ -823,18 +870,36 @@ def find_speaker_fcpxml(speaker: str, xml_dir: Path):
         if p.stem.lower() == target_lower:
             return p
 
-    # Substring match on first or last name
-    parts = speaker.split()
-    tokens = [t.lower() for t in parts if t]
-    for p in fcpxmls:
-        stem_lower = p.stem.lower()
-        if any(t and t in stem_lower for t in tokens):
-            return p
+    # Name-token fallback: match speaker name tokens against the stem's
+    # word tokens (word boundaries — split on non-alphanumerics).
+    tokens = [t.lower() for t in speaker.split() if t]
+    full_matches = []     # files whose stem contains ALL name tokens
+    partial_matches = []  # files whose stem contains at least one token
+    if tokens:
+        for p in fcpxmls:
+            stem_words = set(re.split(r"[^a-z0-9]+", p.stem.lower())) - {""}
+            hit = [t for t in tokens if t in stem_words]
+            if len(hit) == len(tokens):
+                full_matches.append(p)
+            elif hit:
+                partial_matches.append(p)
+
+    candidates = full_matches if full_matches else partial_matches
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        listing = ", ".join(p.name for p in candidates)
+        raise AmbiguousSpeakerFileError(
+            f"Speaker '{speaker}' matches more than one source caption "
+            f"FCPXML in {xml_dir}: [{listing}]. Refusing to guess — rename "
+            "the files (or the speaker in fcpxml-params.md) so exactly one "
+            "file matches, e.g. '<Full Speaker Name>.fcpxml'."
+        )
 
     candidates_tried.append(f"case-insensitive stem match in {xml_dir}")
     if tokens:
         candidates_tried.append(
-            f"substring match on {tokens} in {xml_dir}"
+            f"word-boundary token match on {tokens} in {xml_dir}"
         )
 
     raise FileNotFoundError(
@@ -888,18 +953,29 @@ def adapt_quote(q: dict, fallback_seq: int) -> dict:
 def count_mc_clips(output_path: str) -> int:
     """
     Count spine clip elements (<mc-clip> + <asset-clip>) in the generated
-    FCPXML via regex. Name preserved for backward compat with main()'s
-    success-line print; the count is now total spine clips, not just
-    multicam.
+    FCPXML. Name preserved for backward compat with main()'s success-line
+    print; the count is total DIRECT spine clips, not just multicam.
+
+    Counts spine children via XML parse rather than a whole-file regex —
+    multicam `<media>` resources legitimately contain `<asset-clip>`
+    elements inside their angles, which a raw regex over-counts.
     """
     try:
-        with open(output_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        mc = len(re.findall(r"<mc-clip\b", content))
-        asset = len(re.findall(r"<asset-clip\b", content))
-        return mc + asset
+        root = ET.parse(output_path).getroot()
+        spine = root.find(".//spine")
+        if spine is None:
+            return 0
+        return sum(1 for el in spine if el.tag in ("mc-clip", "asset-clip"))
     except Exception:
-        return 0
+        # Fall back to the legacy regex count if the XML doesn't parse.
+        try:
+            with open(output_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            mc = len(re.findall(r"<mc-clip\b", content))
+            asset = len(re.findall(r"<asset-clip\b", content))
+            return mc + asset
+        except Exception:
+            return 0
 
 
 def extract_total_duration(output_path: str) -> str:
@@ -913,6 +989,303 @@ def extract_total_duration(output_path: str) -> str:
     except Exception:
         pass
     return "unknown"
+
+
+def _frac_secs(s: str) -> float:
+    """Parse an FCPXML rational time ('16016/24000s', '0s') to float seconds."""
+    if not s:
+        return 0.0
+    s = s.strip().rstrip("s")
+    if "/" in s:
+        num, denom = s.split("/")
+        return int(num) / int(denom)
+    return float(s)
+
+
+def _entry_key(paper_cut: dict, index: int) -> str:
+    """
+    Stable per-entry grouping key for a paper-cut dict.
+
+    v5-derived quotes carry 'entry=<id> seg=<n>' in notes — group by the
+    entry id so all kept segments of one timeline entry verify together.
+    v4 quotes are their own entry (one quote == one entry).
+    """
+    m = re.search(r"entry=(\S+)", paper_cut.get("notes") or "")
+    if m:
+        return m.group(1)
+    return f"q{paper_cut.get('quote_num', '?')}#{index}"
+
+
+def verify_output(output_path: str, paper_cuts: list, params: dict,
+                  act_labels: list, build_report: dict) -> tuple:
+    """
+    W1 — post-generation verification. Parses the emitted FCPXML and
+    cross-checks it against the expected inputs + the build report.
+
+    Returns (report_dict, ok). report_dict is JSON-serializable:
+
+      {
+        "output": str,
+        "overall_pass": bool,
+        "failures": [str, ...],          # human-readable failure reasons
+        "totals": {"clips_in_xml", "clips_expected_from_build",
+                   "spine_elements"},
+        "per_speaker": {speaker: {"clips_in_xml", "expected_entries",
+                                  "expected_segments", "segments_matched",
+                                  "clip_type_expected", "clip_types_in_xml",
+                                  "clip_type_ok"}},
+        "per_entry": [{"entry", "speaker", "expected_segments",
+                       "segments_matched", "emitted_clips", "ok"}],
+        "truncations": [...],            # from the build (W3)
+        "speaker_misses": [...],         # from the build (W3)
+        "act_dividers": {"declared_acts", "expected_dividers",
+                         "divider_titles_in_xml", "offsets_monotonic",
+                         "titles_consistent_with_gaps", "ok"},
+        "project": {"has_uid", "has_mod_date"},
+      }
+    """
+    failures = []
+
+    tree = ET.parse(output_path)
+    root = tree.getroot()
+    spine = root.find(".//spine")
+    if spine is None:
+        return ({"output": output_path, "overall_pass": False,
+                 "failures": ["no <spine> element in output"]}, False)
+
+    xml_clips = [el for el in spine if el.tag in ("mc-clip", "asset-clip")]
+    divider_gaps = [el for el in spine
+                    if el.tag == "gap" and el.find("title") is not None]
+
+    report_clips = build_report.get("clips", [])
+    truncations = build_report.get("truncations", [])
+    speaker_misses = build_report.get("speaker_misses", [])
+
+    # ── totals ────────────────────────────────────────────────────────────
+    if len(xml_clips) != len(report_clips):
+        failures.append(
+            f"spine clip count mismatch: {len(xml_clips)} in XML vs "
+            f"{len(report_clips)} recorded during build"
+        )
+
+    # ── per-clip pairing: XML clips are emitted in build order ────────────
+    clip_types_cfg = params.get("clip_types", {})
+    per_speaker = {}
+
+    def _speaker_bucket(speaker):
+        if speaker not in per_speaker:
+            per_speaker[speaker] = {
+                "clips_in_xml": 0,
+                "expected_entries": 0,
+                "expected_segments": 0,
+                "segments_matched": 0,
+                "clip_type_expected": clip_types_cfg.get(speaker, "multicam"),
+                "clip_types_in_xml": [],
+                "clip_type_ok": True,
+            }
+        return per_speaker[speaker]
+
+    # Expected side, from the trimmed-quotes JSON (paper_cuts):
+    entries = {}  # entry_key -> {"speaker", "indices": [paper_cut_index]}
+    for idx, pc in enumerate(paper_cuts):
+        key = _entry_key(pc, idx)
+        ent = entries.setdefault(key, {"speaker": pc.get("speaker", ""),
+                                       "indices": []})
+        ent["indices"].append(idx)
+
+    matched_indices = {c.get("paper_cut_index") for c in report_clips}
+    clips_per_index = {}
+    for c in report_clips:
+        clips_per_index[c.get("paper_cut_index")] = \
+            clips_per_index.get(c.get("paper_cut_index"), 0) + 1
+
+    for key, ent in entries.items():
+        b = _speaker_bucket(ent["speaker"])
+        b["expected_entries"] += 1
+        b["expected_segments"] += len(ent["indices"])
+        b["segments_matched"] += sum(
+            1 for i in ent["indices"] if i in matched_indices)
+
+    # Actual side, pairing XML elements with build-report clips in order:
+    for i, el in enumerate(xml_clips):
+        if i >= len(report_clips):
+            break
+        rc = report_clips[i]
+        speaker = rc.get("speaker", "")
+        b = _speaker_bucket(speaker)
+        b["clips_in_xml"] += 1
+        b["clip_types_in_xml"].append(el.tag)
+        expected_tag = ("asset-clip"
+                        if clip_types_cfg.get(speaker, "multicam") == "single_clip"
+                        else "mc-clip")
+        if el.tag != expected_tag:
+            b["clip_type_ok"] = False
+            failures.append(
+                f"clip {i} for speaker {speaker!r} is <{el.tag}> but params "
+                f"Clip Types says it should be <{expected_tag}>"
+            )
+
+    for speaker, b in per_speaker.items():
+        if b["expected_segments"] and b["segments_matched"] < b["expected_segments"]:
+            failures.append(
+                f"speaker {speaker!r}: only {b['segments_matched']} of "
+                f"{b['expected_segments']} expected segments produced clips"
+            )
+        if b["expected_segments"] and b["clips_in_xml"] == 0:
+            failures.append(
+                f"speaker {speaker!r}: expected "
+                f"{b['expected_segments']} segment(s) but emitted 0 clips"
+            )
+
+    # ── per-entry: expected segments vs emitted clips ─────────────────────
+    per_entry = []
+    for key, ent in entries.items():
+        expected = len(ent["indices"])
+        matched = sum(1 for i in ent["indices"] if i in matched_indices)
+        emitted = sum(clips_per_index.get(i, 0) for i in ent["indices"])
+        ok = matched == expected
+        per_entry.append({
+            "entry": key,
+            "speaker": ent["speaker"],
+            "expected_segments": expected,
+            "segments_matched": matched,
+            "emitted_clips": emitted,
+            "ok": ok,
+        })
+        if not ok:
+            failures.append(
+                f"entry {key!r} ({ent['speaker']}): {matched} of {expected} "
+                "segments produced clips"
+            )
+
+    # ── act dividers (C5 invariants, verified from the XML itself) ────────
+    # Expected divider count = number of section CHANGES across the
+    # paper-cut sequence after canonicalization against act_labels —
+    # exactly the rule build_spine applies.
+    expected_dividers = 0
+    cur = None
+    for pc in paper_cuts:
+        section = pc.get("section", "")
+        if act_labels:
+            section = _canonicalize_section(section, act_labels)
+        if section and section != cur:
+            expected_dividers += 1
+            cur = section
+
+    offsets = [_frac_secs(g.get("offset", "0s")) for g in divider_gaps]
+    offsets_monotonic = all(b > a for a, b in zip(offsets, offsets[1:]))
+    titles_consistent = True
+    for g in divider_gaps:
+        g_start = _frac_secs(g.get("start", "0s"))
+        g_dur = _frac_secs(g.get("duration", "0s"))
+        t = g.find("title")
+        t_off = _frac_secs(t.get("offset", "0s"))
+        t_dur = _frac_secs(t.get("duration", "0s"))
+        if abs(t_off - g_start) > 1e-9:
+            titles_consistent = False
+            failures.append(
+                f"divider title offset {t.get('offset')} != enclosing gap "
+                f"start {g.get('start')} (gap offset {g.get('offset')})"
+            )
+        if t_off + t_dur > g_start + g_dur + 1e-9:
+            titles_consistent = False
+            failures.append(
+                f"divider title (offset {t.get('offset')}, duration "
+                f"{t.get('duration')}) overruns its gap (start "
+                f"{g.get('start')}, duration {g.get('duration')})"
+            )
+    if not offsets_monotonic:
+        failures.append(
+            f"act-divider gap offsets are not monotonically increasing: "
+            f"{[g.get('offset') for g in divider_gaps]}"
+        )
+    if len(divider_gaps) != expected_dividers:
+        failures.append(
+            f"act-divider count mismatch: {len(divider_gaps)} title gaps in "
+            f"XML vs {expected_dividers} expected from section changes"
+        )
+
+    act_dividers = {
+        "declared_acts": len(act_labels),
+        "expected_dividers": expected_dividers,
+        "divider_titles_in_xml": len(divider_gaps),
+        "offsets_monotonic": offsets_monotonic,
+        "titles_consistent_with_gaps": titles_consistent,
+        "ok": (offsets_monotonic and titles_consistent
+               and len(divider_gaps) == expected_dividers),
+    }
+
+    # ── W3 carry-through ──────────────────────────────────────────────────
+    if truncations:
+        failures.append(
+            f"{len(truncations)} truncation event(s): clips play less than "
+            "the verbatim quote text (see 'truncations')"
+        )
+    if speaker_misses:
+        failures.append(
+            f"{len(speaker_misses)} speaker miss(es): quotes dropped (see "
+            "'speaker_misses')"
+        )
+    if len(xml_clips) == 0:
+        failures.append("output contains 0 spine clips")
+
+    # ── project element hygiene (C1) ──────────────────────────────────────
+    project_el = root.find(".//project")
+    project_info = {
+        "has_uid": project_el is not None and project_el.get("uid") is not None,
+        "has_mod_date": (project_el is not None
+                         and project_el.get("modDate") is not None),
+    }
+    if project_info["has_uid"] or project_info["has_mod_date"]:
+        failures.append(
+            "generated <project> carries uid/modDate — these must be "
+            "omitted so FCP assigns fresh ones on import (C1)"
+        )
+
+    report = {
+        "output": output_path,
+        "overall_pass": not failures,
+        "failures": failures,
+        "totals": {
+            "clips_in_xml": len(xml_clips),
+            "clips_expected_from_build": len(report_clips),
+            "spine_elements": len(list(spine)),
+        },
+        "per_speaker": per_speaker,
+        "per_entry": per_entry,
+        "truncations": truncations,
+        "speaker_misses": speaker_misses,
+        "act_dividers": act_dividers,
+        "project": project_info,
+    }
+    return report, not failures
+
+
+def print_verify_summary(report: dict):
+    """Human-readable --verify summary on stdout."""
+    status = "PASS" if report.get("overall_pass") else "FAIL"
+    print(f"\n[verify] overall: {status}")
+    totals = report.get("totals", {})
+    print(f"[verify] spine clips: {totals.get('clips_in_xml')} in XML / "
+          f"{totals.get('clips_expected_from_build')} expected from build")
+    for speaker, b in sorted(report.get("per_speaker", {}).items()):
+        print(f"[verify]   {speaker}: {b['clips_in_xml']} clips "
+              f"({b['expected_entries']} entries / "
+              f"{b['expected_segments']} segments expected, "
+              f"{b['segments_matched']} matched), "
+              f"clip_type={b['clip_type_expected']} "
+              f"({'ok' if b['clip_type_ok'] else 'MISMATCH'})")
+    ad = report.get("act_dividers", {})
+    print(f"[verify] act dividers: {ad.get('divider_titles_in_xml')} in XML / "
+          f"{ad.get('expected_dividers')} expected "
+          f"(declared acts: {ad.get('declared_acts')}; "
+          f"monotonic={ad.get('offsets_monotonic')}, "
+          f"fit_gaps={ad.get('titles_consistent_with_gaps')})")
+    n_trunc = len(report.get("truncations", []))
+    n_miss = len(report.get("speaker_misses", []))
+    print(f"[verify] truncations: {n_trunc}; speaker misses: {n_miss}")
+    for f in report.get("failures", []):
+        print(f"[verify] FAIL: {f}")
 
 
 # ---------------------------------------------------------------------------
@@ -943,6 +1316,23 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--output", required=True, help="Output .fcpxml file path")
     p.add_argument("--project-name", required=True,
                    help="Project name used in the FCP project element")
+    p.add_argument("--allow-partial", action="store_true",
+                   help=(
+                       "Exit 0 even when quotes were truncated (unmatched "
+                       "sentences) or speakers were skipped. The warning "
+                       "summary is still printed and the output file is "
+                       "still written. Also downgrades --verify failures "
+                       "to warnings."
+                   ))
+    p.add_argument("--verify", action="store_true",
+                   help=(
+                       "After generation, parse the emitted FCPXML and "
+                       "write a JSON verification report next to the "
+                       "output (<output_basename>.verify.json) plus a "
+                       "human-readable summary to stdout. Exits "
+                       f"{EXIT_VERIFY_FAIL} on verification failure unless "
+                       "--allow-partial is set."
+                   ))
     return p
 
 
@@ -1013,13 +1403,18 @@ def main(argv=None) -> int:
         stage = "parsing act-structure.md"
         act_labels = parse_act_structure(args.act_structure)
         if act_labels:
-            label_set = {lbl.lower() for lbl in act_labels}
+            # C8: compare normalized forms (lowercase, dashes/underscores ->
+            # spaces, punctuation stripped) so slug parts like 'act-1-addie'
+            # match labels like 'Act 1 — Addie'. Same normalization as
+            # generate_fcpxml._canonicalize_section.
+            label_set = {normalize_label(lbl) for lbl in act_labels} - {""}
             unknown_parts = set()
             for q in quotes_raw:
                 part = (q.get("part") or "").strip()
-                if part and part.lower() not in label_set:
+                part_norm = normalize_label(part)
+                if part_norm and part_norm not in label_set:
                     # Also accept partial matches
-                    if not any(part.lower() in lbl or lbl in part.lower()
+                    if not any(part_norm in lbl or lbl in part_norm
                                for lbl in label_set):
                         unknown_parts.add(part)
             for part in unknown_parts:
@@ -1064,7 +1459,7 @@ def main(argv=None) -> int:
             output_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            generate_fcpxml(
+            build_report = generate_fcpxml(
                 paper_cuts=paper_cuts,
                 source_fcpxmls=source_fcpxmls,
                 reference_path=str(reference_path),
@@ -1102,20 +1497,87 @@ def main(argv=None) -> int:
 
         n_clips = count_mc_clips(args.output)
         total_dur = extract_total_duration(args.output)
-        if n_clips == 0:
-            print(
-                "[build_fcpxml] warning: generated FCPXML contains 0 mc-clip "
-                "elements. No quotes matched their source captions.",
-                file=sys.stderr,
-            )
-            # Not fatal — still report the file — but surface the condition.
+        build_report = build_report or {}
+        truncations = build_report.get("truncations", [])
+        speaker_misses = build_report.get("speaker_misses", [])
+        zero_clips = (n_clips == 0)
+
+        # ── W3: prominent integrity summary on stderr ────────────────────
+        if truncations or speaker_misses or zero_clips:
+            bar = "=" * 72
+            print(f"\n{bar}", file=sys.stderr)
+            print("[build_fcpxml] VERBATIM-INTEGRITY WARNINGS — the output "
+                  "file WAS written,", file=sys.stderr)
+            print("but it does not faithfully cover the input quotes:",
+                  file=sys.stderr)
+            if truncations:
+                print(f"\n  TRUNCATED QUOTES ({len(truncations)}): the "
+                      "emitted clips play LESS than the verbatim text",
+                      file=sys.stderr)
+                for t in truncations:
+                    text = t.get("text", "")
+                    preview = text if len(text) <= 80 else text[:80] + "..."
+                    print(f"    - quote #{t.get('quote_num')} "
+                          f"[{t.get('speaker')}] "
+                          f"({t.get('kind')}"
+                          f"{', ' + t['entry'] if t.get('entry') else ''}): "
+                          f"\"{preview}\"", file=sys.stderr)
+            if speaker_misses:
+                print(f"\n  SKIPPED SPEAKERS ({len(speaker_misses)}): quotes "
+                      "dropped entirely", file=sys.stderr)
+                for m in speaker_misses:
+                    print(f"    - quote #{m.get('quote_num')} "
+                          f"[{m.get('speaker')}]: {m.get('reason')}",
+                          file=sys.stderr)
+            if zero_clips:
+                print("\n  EMPTY SPINE: generated FCPXML contains 0 clip "
+                      "elements. No quotes matched their source captions.",
+                      file=sys.stderr)
+            if args.allow_partial:
+                print("\n  --allow-partial set: exiting 0 despite the above.",
+                      file=sys.stderr)
+            else:
+                print("\n  Exiting non-zero (truncation -> exit "
+                      f"{EXIT_NO_CAPTION}, speaker miss / empty spine -> "
+                      f"exit {EXIT_SPEAKER_MISS}). Re-run with "
+                      "--allow-partial to accept a partial build.",
+                      file=sys.stderr)
+            print(bar, file=sys.stderr)
 
         print(
             f"Generated FCPXML with {n_clips} clips; "
             f"total duration {total_dur}; output: {args.output}"
         )
-        return EXIT_OK
 
+        exit_code = EXIT_OK
+        if truncations:
+            exit_code = EXIT_NO_CAPTION
+        elif speaker_misses or zero_clips:
+            exit_code = EXIT_SPEAKER_MISS
+
+        # ── W1: --verify ──────────────────────────────────────────────────
+        if args.verify:
+            stage = "running --verify"
+            verify_report, verify_ok = verify_output(
+                args.output, paper_cuts, params, act_labels, build_report
+            )
+            out_path = Path(args.output)
+            report_path = out_path.parent / (out_path.stem + ".verify.json")
+            with open(report_path, "w", encoding="utf-8") as f:
+                json.dump(verify_report, f, indent=2)
+            print_verify_summary(verify_report)
+            print(f"[verify] report written: {report_path}")
+            if not verify_ok and exit_code == EXIT_OK:
+                exit_code = EXIT_VERIFY_FAIL
+
+        if exit_code != EXIT_OK and args.allow_partial:
+            return EXIT_OK
+        return exit_code
+
+    except AmbiguousSpeakerFileError as ae:
+        print(f"[build_fcpxml] ambiguous speaker file during {stage}: {ae}",
+              file=sys.stderr)
+        return EXIT_GENERIC
     except FileNotFoundError as fe:
         print(f"[build_fcpxml] missing input during {stage}: {fe}", file=sys.stderr)
         return EXIT_MISSING_INPUT

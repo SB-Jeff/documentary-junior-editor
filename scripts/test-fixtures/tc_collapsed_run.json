@@ -1,0 +1,27 @@
+[
+  {
+    "num": 1, "speaker": "Doug Duvall", "role": "Customer", "part": "Act 1",
+    "quote": "First quote, collapsed.",
+    "startTC": "00:01:10", "endTC": "00:01:10",
+    "segments": [
+      {"idx": 0, "text": "First quote,", "startTC": "00:01:10", "endTC": "00:01:10"},
+      {"idx": 1, "text": "collapsed.", "startTC": "00:01:10", "endTC": "00:01:10"}
+    ]
+  },
+  {
+    "num": 2, "speaker": "Doug Duvall", "role": "Customer", "part": "Act 1",
+    "quote": "Second quote, collapsed.",
+    "startTC": "00:01:20", "endTC": "00:01:20",
+    "segments": [
+      {"idx": 0, "text": "Second quote,", "startTC": "00:01:20", "endTC": "00:01:20"}
+    ]
+  },
+  {
+    "num": 3, "speaker": "Doug Duvall", "role": "Customer", "part": "Act 2",
+    "quote": "Third quote, collapsed.",
+    "startTC": "00:01:30", "endTC": "00:01:30",
+    "segments": [
+      {"idx": 0, "text": "Third quote,", "startTC": "00:01:30", "endTC": "00:01:30"}
+    ]
+  }
+]

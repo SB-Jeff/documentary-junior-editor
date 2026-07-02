@@ -13,7 +13,7 @@ description: |
 ---
 
 # Documentary Junior Editor — Master Skill Index
-### Version 5.9 | June 2026
+### Version 5.10 | June 2026
 
 This is the master index for the documentary-junior-editor skill. Read this file first at
 the start of every session. It describes the pipeline, the folder structure, how agents
@@ -126,8 +126,10 @@ Synthesis Agent          →  merged tagged-quotes-v[N].json (segments preserved
 │                            entries with segments[]),            │
 │                            edit-handoff-v[N].md,                │
 │                            [project-slug]_quotes_view.html      │
-│                            (live artifact, updated mid-session) │
-│        ↓                                                        │
+│                            (persistent local app; act-by-act    │
+│                            live partner via viewer-state.json)  │
+│        ↓ (Export → export-request.json; Edit Agent launches    │
+│           the FCPXML Agent itself via the Task tool)            │
 │  FCPXML Agent          →  [project-slug]_rough_cut_v[N].fcpxml  │
 │        ↓                                                        │
 │  Jeff watches in FCP. Approves OR appends to review-notes.md    │
@@ -158,8 +160,9 @@ The pipeline pauses and waits for Jeff at these moments:
    from filenames; Jeff confirms or corrects.
 2. **After Creative Context Agent** — discovery candidates presented for ingestion approval;
    act structure proposed and iterated until Jeff approves.
-3. **During Edit Agent** — Jeff works collaboratively with the agent on the live HTML
-   artifact across multiple rounds (Rough Cut → Discussion → Reduction → loop).
+3. **During Edit Agent** — Jeff works collaboratively with the agent **act by act** in
+   the persistent viewer app (the live-partner loop: the agent reads
+   `viewer-state.json` each turn; Jeff edits and talks back), across multiple rounds.
 4. **After each FCPXML Agent run** — Jeff imports and watches the cut. He either approves
    (proceed to Skill Review) or appends notes to `review-notes.md` and re-launches Edit
    for another round.
@@ -186,6 +189,8 @@ for multi-project SSDs) tracks the current version of each agent's output and th
 dependency edges between them. Every agent reads this file on launch — it surfaces
 stale-state warnings when an upstream agent has run since this agent last did. Every
 agent writes to this file on emit, recording which upstream versions it consumed.
+During orchestrated fan-out, sub-agents do not write this file — the Orchestrator is
+the single writer for their entries.
 
 In Cowork today, stale-state warnings are surfaced to Jeff so he can decide pace and
 order. In the n8n + Claude API build (Phase 4 of the storyboard-ops roadmap), the same
@@ -204,7 +209,7 @@ The schema:
     "creative-context":{"current_version": 2, "outputs": ["creative-brief-summary-v2.md", "act-structure-v2.md"], "last_run": "..."},
     "fcpxml-params":   {"current_version": 1, "outputs": ["fcpxml-params-v1.md"], "last_run": "..."},
     "transcript":      {"alice-mupenzi": {"current_version": 2, "based_on": {"creative-context": 2}}, "..."},
-    "synthesis":       {"current_version": 2, "based_on": {"transcript": "all-current"}, "last_run": "..."},
+    "synthesis":       {"current_version": 2, "based_on": {"transcript": {"alice-mupenzi": 2, "...": "..."}}, "last_run": "..."},
     "edit":            {"current_version": 3, "based_on": {"synthesis": 2}, "last_run": "..."},
     "fcpxml":          {"current_version": 2, "based_on": {"edit": 2, "fcpxml-params": 1}, "last_run": "..."}
   },
@@ -248,8 +253,6 @@ documentary-junior-editor/
 ├── CHANGELOG.md                    ← version history
 ├── .env                            ← ASSEMBLYAI_API_KEY=... (gitignored, per-Mac)
 ├── start-editing                   ← one-command host-side launcher (no extension)
-├── secrets/                        ← DEPRECATED in v5.1; remove on next review pass
-│   └── assembly_ai.key             ← legacy git-crypt path; replaced by .env
 ├── design-samples/                 ← reference fixtures for skill implementation
 │   └── single-clip/                ← Ben + Sample (Nanos 2026 Boston) — single-clip FCPXML reference
 ├── reference-examples/             ← knowledge base of completed projects
@@ -529,7 +532,27 @@ fallback if n8n has issues.
 
 See `CHANGELOG.md` for full version history.
 
-Current version: 5.9 — June 2026
+Current version: 5.10 — June 2026
+
+### v5.10 highlights (doc/code reconciliation pass from skill-review-2026-06-10.md)
+
+- **FCPXML skills reconciled with implemented code** — single-clip support, caption
+  TC-window narrowing, and the params parser are implemented; docs no longer describe
+  them as pending.
+- **Generation bugs fixed** — project UID, act-divider offset stacking, Intro parsing
+  in `parse_act_structure`, slug→label canonicalization.
+- **`build_fcpxml.py` --verify + loud-failure exits** — the script exits non-zero on
+  quote truncation or speaker drops; `--allow-partial` opts back into partial output.
+- **Viewer tight-export filename fix** — tight cuts export as
+  `trimmed-quotes-v[N]-tight.json`.
+- **Orchestrator single-writer state rule + JSON validation** — sub-agents no longer
+  write `pipeline-state.json` during fan-out; the Orchestrator owns those entries.
+- **Transcript Agent invocation modes** — new "Invocation mode" section (manual vs
+  orchestrated) in `SKILL-transcript.md`.
+- **Skill Review approval gate + drift lint** — Skill Review must present each proposed
+  skill-file edit to Jeff for approval before writing; `scripts/lint_skill_drift.py`
+  runs before and after.
+- **README git-crypt removal** — setup docs now match the v5.1 `.env` reality.
 
 ### v5.9 highlights (quote viewer Tight/Loose/Library rework + TC Pain Clinic reference examples)
 
@@ -718,20 +741,17 @@ Send-to-agent panel, direct-write Export).
   the sandbox — see v5.1 highlights above.)*
 - **Universal pipeline versioning.** Every handoff is `-v[N]` suffixed; no agent ever
   overwrites. `pipeline-state.json` tracks current versions and dependency edges across
-  all eight agents. Stale-state warnings surface in Cowork; n8n consumes the same file
+  all agents. Stale-state warnings surface in Cowork; n8n consumes the same file
   as a work queue.
-- **Edit Agent built for multi-round iteration.** Indefinite Rough Cut → Discussion →
-  Reduction → FCPXML round → review → next round, with all rounds preserved on disk.
-  Edit and FCPXML stay separate sessions to preserve the model split (Opus / Sonnet);
-  better waypoint signaling reduces orchestration friction.
-- **Live HTML artifact as Edit Agent work surface.** Created at session start, updated
-  via `update_artifact` after every decision, bidirectional via `sendPrompt()`,
-  auto-scrolls to current focus. Full quote text always inlined in chat on first
-  reference. End-of-session, final state saved as `[project-slug]_quotes_view.html`.
-  *(JSX template rewrite flagged as Phase 3 follow-up code change.)*
-- **Wide rough cut + per-quote runtime recommendation.** Rough cut stays wide for
-  visibility; each quote tagged `must-keep / probable-keep / probable-cut / optional`
-  toward 2× target. Viewer toggles between full inventory and recommended-tight view.
+- **Edit Agent built for multi-round iteration.** Indefinite refine → FCPXML round →
+  review → next round, with all rounds preserved on disk. *(v5.0 framed this as
+  Rough Cut → Discussion → Reduction and kept Edit/FCPXML as separate sessions; the
+  later viewer/edit redesign makes it act-by-act and has the Edit Agent launch the
+  FCPXML Agent itself, still on Sonnet — see SKILL-edit.md.)*
+- **Edit Agent work surface (v5.0 model, since superseded).** The old in-Cowork live artifact — pushed via `update_artifact` after every decision and two-way via `sendPrompt()` — is retired; the redesigned viewer is a persistent local app the agent reads from `viewer-state.json` on disk each turn. Full quote text is still inlined in chat on first reference.
+- **Wide rough cut + membership tiers.** Rough cut stays wide for visibility; entries carry
+  `tight`/`loose` membership (surfaced as the Timeline / Cuts tiers) toward ~2× target.
+  *(The v5.0 four-tier `must-keep / probable-keep / probable-cut / optional` vocabulary is retired.)*
 - **Title-card-as-shortener pattern.** Promoted from incidental to a named editorial
   move in `SKILL-edit.md`. Trigger: content reads cleaner on screen than spoken.
 - **Context-beat suggestions.** Edit Agent flags narrative gaps where external context
@@ -765,17 +785,20 @@ Send-to-agent panel, direct-write Export).
   now correctly finds the key at `documentary-junior-editor/.env`. The
   legacy `storyboard-ops` lookup is harmless (just unused) and can be
   pruned on next Skill Review.
-- **`scripts/build_fcpxml.py` clip_type branching** — `SKILL-fcpxml.md` documents the
-  multicam / single_clip code paths but the Python script supports only multicam.
-  Phase 3 follow-up code change.
-- **`scripts/quotes_viewer_template.jsx` v5.0 features** — `SKILL-edit.md` specifies
-  bidirectional `sendPrompt()` buttons, segment-level reorder UI, status badges,
-  source attribution per segment, runtime-recommendation toggle. Template still v4.0.1.
-  Phase 3 follow-up code change.
-- **FCPXML Params parser-format mismatch** carried forward from v4.0; documented in
-  `SKILL-fcpxml-params.md`, `parse_params_md` permanent fix still pending.
-- **FCPXML caption-matcher performance** workaround promoted to standard practice in
-  `SKILL-fcpxml.md`; permanent fix to `find_quote_range` still pending.
+- **`scripts/build_fcpxml.py` clip_type branching** — RESOLVED in v5.10. The script
+  now implements both the multicam and single_clip code paths documented in
+  `SKILL-fcpxml.md`. *(Historical note: at v5.0 the script supported only multicam;
+  this was a Phase 3 follow-up.)*
+- **`scripts/quotes_viewer_template.jsx` v5.0 features** — RESOLVED: the viewer was
+  rewritten in React in v5.3 and reworked to the Tight/Loose membership model in
+  v5.8/v5.9. *(Historical note: at v5.0 the template was still v4.0.1.)*
+- **FCPXML Params parser-format mismatch** — RESOLVED in v5.10: `parse_params_md`
+  reads the single canonical handoff format documented in `SKILL-fcpxml-params.md`;
+  the redundant dual-format instruction is removed. *(Carried from v4.0 until then.)*
+- **FCPXML caption-matcher performance** — RESOLVED in v5.10. The TC-window
+  narrowing fix is implemented in the caption matcher. *(Historical note: the
+  per-quote `startTC`/`endTC` narrowing started as a manual workaround promoted to
+  standard practice in `SKILL-fcpxml.md` while a permanent fix was pending.)*
 
 ## v4.0 — April 2026
 

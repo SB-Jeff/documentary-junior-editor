@@ -1,5 +1,210 @@
 # Documentary Junior Editor — Changelog
 
+## Durable Edit→FCPXML export conversion — 2026-07-02 (`viewer-edit-redesign` branch)
+
+Makes the viewer-export → FCPXML handoff durable. The viewer's **Export**
+writes char-range `_editCuts` in `trimmed-quotes-v[N]-tight.json`, but
+`build_fcpxml.py` builds clips from v5 `segments[]` + `head_trim_words` /
+`tail_trim_words`. The two shapes never met, so on every export the Edit Agent
+hand-converted `_editCuts` → segment shape before the FCPXML build — fragile and
+undocumented, and seen to break on two projects (h-s-ibew-2026,
+epicor-rf-fager). Fixed with a canonical, tested converter in the export path
+(chosen over teaching `build_fcpxml.py` to read `_editCuts` directly, which would
+bury the mid-segment approximation and destroy the per-entry verbatim
+re-check checkpoint).
+
+- **New converter `scripts/editcuts_to_segments.py`** (importable + CLI). The
+  exact inverse of `build_quotes_viewer.migrate_entry_trims`: reconstructs full
+  text from the source pool, complements `_editCuts` into kept ranges, and emits
+  per-segment `{source_segment_idx, head_trim_words, tail_trim_words}`. Idempotent
+  (passes through entries that already have `segments[]` and non-spoken entries),
+  drops fully-cut entries loudly, and its output is consumed unchanged by
+  `build_fcpxml.py`.
+- **Mid-segment interior cuts (the v5.7 limitation)** — cuts that leave disjoint
+  kept pieces in one segment can't be expressed as head/tail word-trims. The
+  converter keeps the **widest contiguous span** (retaining the interior cut
+  words, so the clip "plays slightly wider" — the documented, accepted behavior)
+  and emits a **per-entry fidelity note** naming the retained words (e.g. epicor
+  #68/#130), printed as a report and writable with `--report`.
+- **`build_fcpxml.py` guard.** A raw `_editCuts`-only export now fails with an
+  actionable error pointing at the converter, instead of the old cryptic
+  "produced zero kept segments after applying trims."
+- **New regression suite `scripts/test_editcuts_to_segments.py`** (8 checks, all
+  pass). Load-bearing test is the round trip `segments[] → _editCuts → segments[]`
+  preserving verbatim text; also pins the mid-segment approximation + note,
+  idempotency, the fully-cut drop, end-to-end `build_fcpxml` consumption, and the
+  clear-error guard.
+- **`SKILL-edit.md`** — "Fulfilling an export request" now documents that
+  `cut_file` is char-range data requiring conversion (new step 2, with the exact
+  command) plus a per-entry verbatim (Cardinal Rule 1) re-check of the fidelity
+  report before handoff; the Data Model `_editCuts` note and the mid-segment
+  limitation section cross-reference the converter.
+
+## Timecode-sanity gate — 2026-07-02 (`viewer-edit-redesign` branch)
+
+Prevention guardrail for the epicor-rf-fager collapsed-timecode bug (see memory
+`epicor_doug_tc_bug.md`): Doug Duvall's quotes shipped with `startTC == endTC`
+on 86 of 87 quotes (Bryce's on 14 of 46), born at the Transcript/Transcription
+stage, undetected through Synthesis, and only caught when the FCPXML export
+verify failed five stages later. This moves the check to the source.
+
+- **New shared helper `scripts/validate_timecodes.py`.** Deterministic,
+  importable + CLI. Per speaker it flags/fails on: (a) runs of `startTC == endTC`
+  at quote AND segment level, (b) non-monotonic `startTC` within a speaker,
+  (c) segment TCs outside their quote's `[startTC, endTC]` window. Also fails on
+  unparseable and inverted (`endTC < startTC`) TCs. An isolated collapsed TC is a
+  WARN; it escalates to FAIL on a run (≥3 consecutive) or a high collapsed
+  fraction (≥25%) per speaker — so the epicor case fails loud while a lone edge
+  case only flags. Cross-quote non-monotonicity is a WARN, not a FAIL, because a
+  legitimately promoted orphan gets a high `num` with an earlier TC (`--strict`
+  promotes it at the Transcript stage, where numbering is pure transcript order).
+  The TC parser mirrors `_tc_string_to_seconds` in `generate_fcpxml.py` so the
+  gate and the downstream matcher agree on what "parseable" means. Exit codes:
+  `0` clean/warn-only, `2` FAIL, `1` unreadable input. Flags: `--warn-only`,
+  `--strict`, `--json`, `--quiet`, `--run-threshold`, `--collapse-fraction`.
+- **New regression suite `scripts/test_validate_timecodes.py`** (+ fixtures
+  `tc_clean.json`, `tc_collapsed_run.json`, `tc_segment_and_monotonic.json`).
+  Pins the epicor Doug run, segment-outside/ordering/inverted classes, and the
+  isolated-collapse / promoted-orphan WARN behavior. All 7 checks pass.
+- **Gate wired into three skill docs, source-first:**
+  - `SKILL-orchestrator.md` Phase 3 **step 6** — hard pre-handoff gate over all
+    per-speaker files; a FAIL blocks the `pipeline-state.json` write and the
+    Synthesis handoff (fail loud where files are validated, not at export).
+  - `SKILL-transcript.md` Completeness Check **Step 3** — self-check
+    (`--strict`) before the agent emits its four output files.
+  - `SKILL-edit.md` Phase 1 input precondition — `--warn-only` scan of the
+    source pool at session start, so degenerate TCs are known before building
+    acts rather than at FCPXML export.
+
+## v5.10 — 2026-06-12 (skill-review NOW batch: doc/code reconciliation + pipeline hardening)
+
+Implements the [NOW]/[NOW*] set from `skill-review-2026-06-10.md` (the full-system review;
+finding IDs below refer to that doc). Goal: implement, then regression-test in the next real
+editing session. Produced by a parallel multi-agent implementation pass; every code change
+tested against fixtures before landing.
+
+### Scripts — FCPXML generation (`generate_fcpxml.py`, `build_fcpxml.py`)
+
+- **Project UID fix (C1).** Generated `<project>` elements no longer copy `uid`/`modDate` from
+  the reference project (FCP assigns fresh ones on import) — removes the
+  duplicate-multicam-on-second-import trigger. The docs had recorded this fix as applied; it
+  wasn't. Now it is, and `--verify` guards it.
+- **Act-divider offset bug fixed (C5, twice-reproduced).** Divider gaps now place their inner
+  title at the gap's local start and size the title to the gap (the 1.001s title in a 0.67s gap
+  was a leftover from the 1s prototype). Dividers land at their act positions; verified by
+  parsing output (offsets strictly increasing, title==gap geometry).
+- **Act parsing (C7).** `parse_act_structure` now matches Intro/Introduction/Opening/Prologue/
+  Epilogue/Conclusion/Outro headings (plus Act/Part/Section); also fixed a latent bug where a
+  bare heading swallowed the next body line into the label.
+- **Label canonicalization (C8).** New shared `normalize_label()` (case, hyphens/underscores/
+  em-dashes, punctuation) — `act-1-addie` now matches `Act 1 — Addie`; used by both the divider
+  canonicalizer and the part-vs-label warning check.
+- **Loud verbatim-integrity failures (W3/B1/B2).** Truncated quotes (unmatched sentences) and
+  speaker misses/zero-clip spines now print a fenced VERBATIM-INTEGRITY WARNINGS block and exit
+  non-zero (truncation = 4, speaker miss = 6; output file still written for inspection).
+  `--allow-partial` downgrades to warnings + exit 0.
+- **`--verify` (W1).** Emits `<output_basename>.verify.json` + human summary: per-speaker clip
+  counts vs expected, per-entry segment clip counts, clip_type sanity, truncations, act-divider
+  count/geometry, project-UID guard. Verification failure = exit 7 unless `--allow-partial`.
+  Replaces the agent hand-counting clips in multi-MB XML.
+- **Ambiguous speaker-file binding fixed (B6).** Word-boundary token matching with a
+  full-match preference tier; >1 surviving candidate now errors listing the candidates instead
+  of silently binding the first sorted hit ("Ben" no longer matches "Reuben…").
+
+### Quote viewer (`quotes_viewer_template.jsx`, `build_quotes_viewer.py`)
+
+- **Export filename collision fixed (B3).** Tight-window exports now write
+  `trimmed-quotes-v[N]-tight.json`; Loose (full) keeps `trimmed-quotes-v[N].json` — same-round
+  exports no longer overwrite each other. Round discovery anchors its regex so `-tight` files
+  never shift version numbering. Export modal/launch prompt name the actual file written.
+  Verified via the committed QA gate (6/6) + live browser export of both windows.
+
+### Skill docs — reconciliation with implemented code
+
+- **FCPXML skills (C2/C3/C4/C11/C12).** Deleted the obsolete manual workarounds the code made
+  unnecessary: mc-clip→asset-clip post-processing (single-clip branching is implemented),
+  §2.3 manual caption pre-trimming (TC-window narrowing is implemented; the nonexistent
+  `find_quote_range` symbol is gone from all docs), the triple-redundant params handoff format
+  (parser reads one canonical format — now documented exactly as parsed). Resource-remap and
+  pass-through descriptions now match the code. Phase 3 verification reads the `--verify`
+  report. Cut-selection step reworded to membership (loose/tight/both). Non-spoken entries
+  being dropped by the script is now stated in the skill (rendering = W2/C6, still open).
+- **SKILL-edit.md brought to v5.9 viewer reality (D1/D3/P3/P7/P8).** Membership
+  (tight/loose) replaces the retired `runtime_recommendation` prescriptions throughout
+  (editorial intent preserved); two views (Edit + Quote Library); Tight/Loose window toggle;
+  Cut → Loose / Add Back → Tight; real export behavior incl. `-tight` split; 3-tier
+  `persistFile()` documented incl. the save-helper startup step (F4); offline vendored build
+  (the CDN mandate the blank-page fix removed is finally gone from the skill); whole-card
+  within-act drag; all `e_NNN` example IDs converted to the `"23"`/`"23a"`/`"T1"` namespace;
+  mid-segment `_editCuts` exception added to the "never do" list; drop/demote/never-add
+  redefined against membership. New two-writers rule (B8): ask Jeff to send/discard pending
+  viewer tweaks before any artifact rebuild. Directory-resolution block added (O2).
+- **SKILL-edit-pipeline.md frozen banner (D1/Q10 interim).** Marked frozen at the v5.0 data
+  model — not a porting source; re-sync tracked as Q10.
+- **SKILL-editing-coach.md (D10).** Membership vocabulary (`set_membership` ops);
+  `must-keep-as-workspace` pattern closed out as RESOLVED by the shipped redesign;
+  `-tight` filenames; `edit-agent-lessons-v[N].md` added as first-class input.
+- **README.md (D2/D6/D7/D8).** The git-crypt setup walkthrough (dead since v5.1, and inverted
+  — it claimed .env was being phased out) replaced with the `.env` flow; transcription
+  documented via the `start-editing` launcher; SKILL-file table gains the three missing agents;
+  ghost `cowork-session-guide-restore.md` reference removed.
+- **SKILL.md.** `based_on.transcript` example fixed to the map form (Q1); stale agent-count
+  wording fixed (D5); deprecated `secrets/` tree entries removed (D11); v5.0 known-issues
+  annotated with what's since shipped; single-writer note added to Pipeline State Tracking.
+- **SKILL-creative-context.md (F1/P2).** Hardcoded per-install MCP tool UUIDs replaced with
+  capability naming + discover-at-launch instruction; Phase 3 restructured so the one-line
+  deliverable format comes before the six-dimension internal checklist (no more
+  correction-by-appendix).
+
+### Orchestration hardening
+
+- **Single-writer rule (B4).** Sub-agents no longer write `pipeline-state.json`; they report
+  entry data back and the Orchestrator commits all entries after validation — removes the
+  N-concurrent-writers race.
+- **Real fan-out validation (B5).** Orchestrator Phase 3 now parses every tagged-quotes JSON,
+  asserts non-empty `segments[]`, and spot-checks act labels; content failure = sub-agent
+  failure even if the sub-agent reported success.
+- **Invocation Mode (O1).** SKILL-transcript.md now branches MANUAL vs ORCHESTRATED: in
+  orchestrated mode the Jeff-facing pauses (stale-state wait, speaker confirmation, in-chat
+  review) become record-and-report, speaker identity is taken as given from the launch prompt,
+  and reference-example reading is skipped (O7). The Orchestrator's sub-agent template declares
+  the mode explicitly.
+- **Directory resolution (O2)** mirrored from Synthesis into SKILL-transcript.md (and
+  SKILL-edit.md); flat-vs-slugged handoff paths resolved once at launch.
+- **Synthesis act-label drift (O6)** now has a defined resolution path (Jeff-approved
+  mechanical rename or upstream re-run); quality check 5.5 updated to "zero UNRESOLVED drift."
+- Smaller: orphan re-decomposition false option removed (O3); Orchestrator read-instruction
+  ambiguity resolved (O9).
+
+### Guardrails (S1/S2)
+
+- **Skill Review approval gate (S1).** SKILL-review.md Phase 6 now requires presenting each
+  proposed skill edit as a before/after in chat and receiving Jeff's approval BEFORE writing
+  any SKILL file; Phase 8 sync + notification operate on approved changes only. Jeff-directed
+  SKILL-edit.md changes route through the same gate and are logged as Coach-bypass entries (S6).
+  Push step uses the `commit-skill-changes` helper — never `git add -A` (S4). Orchestrator +
+  session guide added to the may-update list with an every-pass drift check (S7).
+- **New `scripts/lint_skill_drift.py` (S2/W7).** Mechanical drift linter: version-footer sync
+  against the SKILL.md header, agent-count wording, references to nonexistent files, retired
+  symbols (`find_quote_range`, `runtime_recommendation`, git-crypt/secrets instructions, MCP
+  UUIDs) outside deprecation context. Wired into Skill Review Phase 6 (run before proposing and
+  after applying).
+
+### Cowork session guide
+
+- Synced to v5.10: Step 5b prompt aligned with SKILL-review.md's actual scope + approval gate;
+  orchestrated-mode and single-writer notes in Step 2; save-helper startup and membership
+  vocabulary in Step 3; `--verify`/exit-code behavior in Step 4; troubleshooting entries for
+  now-fixed bugs marked "fixed in v5.10 — if seen, the fix regressed."
+
+### Deliberately NOT in this batch (see skill-review-2026-06-10.md triage)
+
+- [HOLD] Q10 shared editorial core, P1 patterns extraction, W2/C6 non-spoken entry rendering,
+  S3 sync-flow change. [PORT] Q2–Q8 state-schema/envelope work. [DECIDE] C9 empty-act divider
+  policy, Q9 duplicate-ref-ID check relaxation, S5 transcripts-in-repo policy, F7 zero-duration
+  TC check. §13 capability audit (Dynamic Workflows / subagent definitions / hooks / Agent SDK)
+  recommends piloting a workflow-based fan-out AFTER the next session.
+
 ## v5.9 — 2026-06-09 (quote viewer kickoff-brief P1–P5 batch + Skill Review pass)
 
 Two threads from 2026-06-09, consolidated into one release: the quote-viewer kickoff-brief

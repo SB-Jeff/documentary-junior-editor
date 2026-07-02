@@ -124,14 +124,16 @@ that may not already be in the project folder.
 
 ### What to search
 
-- **Google Drive** — using the Drive MCP connector tools:
-  `mcp__28a0f4cc-f196-48fd-939b-70413383de9d__search_files`,
-  `mcp__28a0f4cc-f196-48fd-939b-70413383de9d__list_recent_files`,
-  `mcp__28a0f4cc-f196-48fd-939b-70413383de9d__read_file_content`,
-  `mcp__28a0f4cc-f196-48fd-939b-70413383de9d__get_file_metadata`.
-- **Gmail** — using the Gmail MCP connector tools:
-  `mcp__76ba9669-13d7-4b95-8a59-8419c66e8e64__search_threads`,
-  `mcp__76ba9669-13d7-4b95-8a59-8419c66e8e64__get_thread`.
+- **Google Drive** — using the Google Drive connector's file-search tools
+  (file search, recent files, file content, file metadata).
+- **Gmail** — using the Gmail connector's thread-search tools (thread search,
+  thread read).
+
+The exact MCP tool names are per-install and change on reconnect or on another
+Mac — never hardcode them. At launch, discover the tool names actually available
+in the current session (the Drive and Gmail connector tools as they appear in
+your tool list) and use those. If either connector isn't connected, fall back
+to the manual-upload path described under "Connector fallback" below.
 
 Ask Jeff at session start: "What is this project called, and what is the client's
 domain (or any keywords I should search for context)?" Use the answer to seed both
@@ -437,11 +439,29 @@ If Jeff revises labels in a later round, this agent re-runs and emits a new vers
 
 ## Phase 3: Narrative Roadmap Development
 
-After Jeff approves the act structure and labels, develop a detailed narrative roadmap
-for each section. These roadmaps give the Edit Agent specific editorial direction
+After Jeff approves the act structure and labels, develop a narrative roadmap for
+each section. These roadmaps give the Edit Agent specific editorial direction
 beyond just act labels.
 
-For each approved act section, write a roadmap covering:
+**The review deliverable is a one-line act summary with supporting points beneath
+(Jeff feedback, v5.9).** What Jeff reviews and approves, for each act, is:
+
+- **One line** summarizing the act (its essence, in a single sentence).
+- **A few main supporting points underneath** (brief bullets — the beats or ideas that act
+  carries).
+
+That is the whole format. It does **NOT include quotes**, and it is not an exhaustive
+write-up of the six dimensions below. Two specific failures to avoid (Jeff, TC Pain Clinic
+organic variant): the deliverable runs **too long**, and it **pastes in verbatim quotes** —
+both belong downstream (the Edit Agent works from the full tagged-quote pool; the roadmap
+references material by speaker name and topic only, never by quoting it). Keep it to the
+one-line-plus-bullets format so Jeff can approve or critique each act at a glance; reserve
+any expanded direction for long-form documentary/testimonial work, and only when Jeff asks
+for more.
+
+**Internal checklist — six dimensions the supporting bullets may draw on.** This is a
+*menu* to think through per act, not a template to fill out in full, and not the
+deliverable format:
 
 1. **Opening:** How should this section begin? What should the viewer's first impression
    be? Which speaker or moment should set the tone?
@@ -457,23 +477,6 @@ For each approved act section, write a roadmap covering:
    this section that they didn't before? How does this section serve the overall narrative?
 6. **Closing / transition:** How should this section end? What sets up the transition
    to the next section?
-
-**The review deliverable is a one-line act summary with supporting points beneath
-(Jeff feedback, v5.9).** What Jeff reviews and approves, for each act, is:
-
-- **One line** summarizing the act (its essence, in a single sentence).
-- **A few main supporting points underneath** (brief bullets — the beats or ideas that act
-  carries).
-
-That is the whole format. It does **NOT include quotes**, and it is not an exhaustive
-write-up of all six dimensions. Two specific failures to avoid (Jeff, TC Pain Clinic organic
-variant): the deliverable runs **too long**, and it **pastes in verbatim quotes** — both
-belong downstream (the Edit Agent works from the full tagged-quote pool; the roadmap
-references material by speaker name and topic only, never by quoting it). The six points
-above are an internal *menu* of what those supporting bullets may draw on, not a template to
-fill out in full. Keep it to the one-line-plus-bullets format so Jeff can approve or critique
-each act at a glance; reserve any expanded direction for long-form documentary/testimonial
-work, and only when Jeff asks for more.
 
 Present the roadmaps to Jeff for review and iteration. These are collaborative —
 Jeff may adjust emphasis, reorder speakers, or redirect the emotional arc. The
@@ -613,7 +616,7 @@ provides the launch prompt for the Synthesis Agent (sonnet-4.6) per
 
 ---
 
-*Creative Context Agent — documentary-junior-editor v5.9*
+*Creative Context Agent — documentary-junior-editor v5.10*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.9: review deliverable is a one-line act summary with main supporting points beneath, no
 quotes — concise and approvable at a glance (Jeff feedback, TC Pain Clinic organic variant).*

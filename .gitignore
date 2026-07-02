@@ -3,8 +3,10 @@
 .env.local
 *.env
 
-# Claude Code per-session state
-.claude/
+# Claude Code per-session state (machine-local); but DO track the shared
+# project settings (the SessionStart re-entry hook) so it travels across clones.
+.claude/*
+!.claude/settings.json
 
 # Python
 __pycache__/

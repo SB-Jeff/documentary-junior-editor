@@ -115,11 +115,13 @@ do their work). The FCPXML Params sub-agent doesn't need them.
   sub-agent (it will auto-detect which path contains source files).
 
 **Skill files.**
-- `SKILL-transcript.md` — the Transcript Agent's skill, read on launch so
-  you can compose accurate sub-agent prompts (you don't read the whole
-  file; you reference it in the sub-agent prompts so each sub-agent
-  reads it themselves).
-- `SKILL-fcpxml-params.md` — same for FCPXML Params Agent.
+- `SKILL-transcript.md` — the Transcript Agent's skill. On launch, read
+  only its "Invocation Mode" section and its output-spec sections
+  (Phase 3: Four Required Output Files) so you can compose accurate
+  sub-agent prompts. Do not read the full file — you reference it in
+  the sub-agent prompts so each sub-agent reads it themselves.
+- `SKILL-fcpxml-params.md` — same approach for the FCPXML Params Agent
+  (read only its output-spec section).
 - `SKILL-orchestrator.md` — this file.
 
 ---
@@ -181,7 +183,10 @@ the Task tool. Each sub-agent gets:
   project-slug in all paths)
 - Its specific assignment (which speaker, for Transcript Agents)
 - Explicit output expectations (which files to save, where)
-- Instructions to update `pipeline-state.json` for its own work
+- Instructions to report back the data you need to write its
+  `pipeline-state.json` entry (outputs written, version used, based_on
+  versions). Sub-agents do NOT touch `pipeline-state.json` themselves —
+  see the single-writer rule in Phase 4.
 
 ### Sub-agent prompt template — Transcript Agent
 
@@ -189,7 +194,14 @@ the Task tool. Each sub-agent gets:
 You are the Transcript Agent. Read
 `documentary-junior-editor/SKILL-transcript.md` and follow it exactly.
 
+You are running in ORCHESTRATED mode (see SKILL-transcript.md
+"Invocation Mode"): non-interactive — do not wait for user
+confirmation at any step; record issues in your summary output and
+report them back.
+
 Your assigned interview is `transcripts/text/[SPEAKER FILENAME].txt`.
+The speaker is [SPEAKER NAME], confirmed upstream at transcription
+time — take this identity as given.
 
 Read the latest `handoffs/[project-slug]/act-structure-v[N].md` and
 `handoffs/[project-slug]/creative-brief-summary-v[N].md` for context,
@@ -208,13 +220,16 @@ Save all four required output files (versioned -v[N]) to
 
 Verify all four files exist on disk before reporting completion.
 
-Update handoffs/[project-slug]/pipeline-state.json with your work.
+Do NOT write to pipeline-state.json — the Orchestrator owns all
+pipeline-state writes for this run.
 
-Return when complete with a list of the files you saved.
+Return when complete. Your final report must include: the list of
+files you saved, the output version [N] you used, and the
+creative-context version you based your tagging on.
 ```
 
-Replace `[SPEAKER FILENAME]`, `[speaker-slug]`, `[project-slug]`, and
-`[N]` with the appropriate values per speaker.
+Replace `[SPEAKER FILENAME]`, `[SPEAKER NAME]`, `[speaker-slug]`,
+`[project-slug]`, and `[N]` with the appropriate values per speaker.
 
 ### Sub-agent prompt template — FCPXML Params Agent
 
@@ -240,9 +255,11 @@ Save `fcpxml-params-v[N].md` to `handoffs/[project-slug]/`.
 
 Verify the file exists on disk before reporting completion.
 
-Update handoffs/[project-slug]/pipeline-state.json with your work.
+Do NOT write to pipeline-state.json — the Orchestrator owns all
+pipeline-state writes for this run.
 
-Return when complete.
+Return when complete. Your final report must include: the file you
+saved and the output version [N] you used.
 ```
 
 Use the Task tool with appropriate `subagent_type` (general-purpose
@@ -257,14 +274,55 @@ in a single message with multiple tool calls so they run concurrently
 The Task tool returns when each sub-agent completes. Collect the
 return messages. For each sub-agent that completed:
 
-1. Note which files it claims to have saved
+1. Note which files it claims to have saved, plus the entry data it
+   reported back (output version used, based_on versions) — you need
+   this to write `pipeline-state.json` in Phase 4. If a report omits
+   the entry data, reconstruct it from the plan you launched with.
 2. Independently verify each claimed file exists on disk (do not
    trust the sub-agent's report alone — actually check)
 3. Verify file sizes are non-zero
 4. If the sub-agent was a Transcript Agent, verify all four expected
    files exist (tagged-quotes, orphans, discards, summary)
-5. Verify `pipeline-state.json` was updated to reflect the sub-agent's
-   work
+5. Content-validate each `[speaker-slug]-tagged-quotes-v[N].json` —
+   existence and size checks are not enough, and a sub-agent's own
+   success report is not trusted (same principle as step 2):
+   - Parse the JSON. A file that does not parse is a failure.
+   - Assert the parsed quote list is non-empty.
+   - Assert every quote has a non-empty `segments[]` array.
+   - Spot-check that the `part` act labels match the approved act
+     structure in `act-structure-v[N].md` (exact label strings).
+
+   Any content-validation failure is a sub-agent failure — handle it
+   per "Handling failures" below, even though the sub-agent reported
+   success.
+
+6. **Timecode-sanity gate — fail loud here, not at FCPXML export.**
+   Existence and segment-shape checks do not catch *degenerate*
+   timecodes. On epicor-rf-fager, Doug Duvall's quotes had
+   `startTC == endTC` on 86 of 87 quotes (Bryce's on 14 of 46),
+   introduced at the Transcript/Transcription stage. It slipped through
+   Synthesis and only surfaced when the FCPXML export verify failed five
+   stages later with zero-length clip windows. Catch it at the source by
+   running the shared deterministic gate over every per-speaker file you
+   just validated:
+
+   ```bash
+   # substitute the resolved handoff dir; pass every per-speaker file for
+   # this run's version N (list them explicitly or glob *-tagged-quotes-vN.json)
+   python3 scripts/validate_timecodes.py handoffs/<project-slug>/*-tagged-quotes-v<N>.json
+   ```
+
+   It exits `2` on any FAIL and prints the offending speaker + quote/segment.
+   A FAIL is a sub-agent failure — do NOT write the sub-agent's
+   `pipeline-state.json` entry and do NOT hand off to Synthesis. Handle it
+   per "Handling failures": the recommended next action is almost always
+   "re-run the Transcript Agent for the named speaker" (the collapsed TCs
+   originate upstream, so re-running Synthesis alone will not fix them).
+   The gate flags three classes per speaker: runs of `startTC == endTC`
+   (quote and segment level), non-monotonic `startTC`, and segment TCs
+   outside their quote's `[startTC, endTC]` window. Exit `0` (WARN-only or
+   clean) passes; surface any WARN lines to Jeff in the completion report
+   but do not block on them.
 
 ### Counting expected outputs
 
@@ -304,11 +362,28 @@ check otherwise.
 
 ## Phase 4: Handoff
 
-When all sub-agents have completed successfully and all expected
-files are verified on disk:
+### Single-writer rule for pipeline-state.json
 
-1. Update `pipeline-state.json` with an `orchestrator` entry that
-   records:
+You are the ONLY writer of `pipeline-state.json` during an
+orchestrated run. The sub-agents run concurrently — if each wrote the
+state file itself, the writes would race and the last writer would
+silently erase the others' entries. Sub-agents therefore report their
+entry data back in their final reports (Phase 3, step 1), and you
+write every entry yourself, only after Phase 3 validation has passed.
+Do not write entries for sub-agents that failed validation.
+
+When all sub-agents have completed successfully and all expected
+files are verified and content-validated on disk:
+
+1. Write all `pipeline-state.json` entries from the reported data:
+   - For each Transcript Agent sub-agent: set
+     `agents.transcript.[speaker-slug].current_version` to the version
+     it reported, `agents.transcript.[speaker-slug].based_on.creative-context`
+     to the Creative Context version it consumed, and
+     `agents.transcript.[speaker-slug].last_run` to an ISO timestamp.
+   - For the FCPXML Params Agent (if launched): set its
+     `current_version` and `last_run` the same way.
+   - Add the `orchestrator` entry:
    ```json
    "orchestrator": {
      "current_version": [N],
@@ -349,7 +424,8 @@ sub-agent.
 Orchestrator launches only the Params sub-agent.
 
 In all cases, the new outputs get the next `-v[N]` version. Prior
-versions remain on disk. `pipeline-state.json` is updated.
+versions remain on disk. `pipeline-state.json` is updated by you
+(single-writer rule, Phase 4).
 
 ---
 
@@ -374,8 +450,9 @@ versions remain on disk. `pipeline-state.json` is updated.
 
 - **This output:** all per-speaker Transcript Agent handoffs +
   `fcpxml-params-v[N].md` (saved by sub-agents, validated by you);
-  `pipeline-state.json` updated with the orchestrator entry plus each
-  sub-agent's entries
+  `pipeline-state.json` written by you alone — the orchestrator entry
+  plus every sub-agent's entry, built from the data the sub-agents
+  reported back (single-writer rule, Phase 4)
 - **Generated by:** Orchestrator Agent on sonnet-4.6 at [ISO timestamp],
   coordinating [N] Transcript Agent sub-agents and [0 or 1] FCPXML
   Params Agent sub-agent
@@ -412,7 +489,7 @@ Update `handoffs/[project-slug]/pipeline-state.json`.
 
 ---
 
-*Orchestrator Agent — documentary-junior-editor v5.5*
+*Orchestrator Agent — documentary-junior-editor v5.10 (June 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *Pilot reference: 2026 Nanos Boston brand-video (May 14, 2026) ran
 this pattern organically before it was codified; 41 expected output

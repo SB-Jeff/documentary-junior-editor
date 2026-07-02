@@ -434,9 +434,9 @@ Increment N from `pipeline-state.json` — first run is v1.
 
 ## Notes for the next Skill Review pass
 
-- The legacy git-crypt-encrypted file at `secrets/assembly_ai.key` is deprecated
-  as of v5.1. When convenient, delete that file from the repo and remove
-  git-crypt references from the README. The `.env`-based flow replaces it.
+- ~~Legacy `secrets/` cleanup + README git-crypt removal~~ — DONE in v5.10:
+  `secrets/` is gone from the master and the README now documents the `.env`
+  flow. If an old project copy still carries `secrets/`, delete it there.
 - Sandbox-side transcription is currently blocked by Cowork's outbound
   network allowlist. If/when AssemblyAI is added to the allowlist, this SKILL
   can be revised to run `transcribe.py` from the sandbox directly and drop
@@ -526,7 +526,7 @@ transcribe, validate, save, emit handoff, update state.
 
 ---
 
-*Transcription Agent — documentary-junior-editor v5.4*
+*Transcription Agent — documentary-junior-editor v5.10*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
-*AssemblyAI calls delegated to `scripts/transcribe.py` (key path is a Phase 3
-follow-up — see Phase 4).*
+*AssemblyAI calls delegated to `scripts/transcribe.py` (key path resolved in
+v5.1 — the script reads `ASSEMBLYAI_API_KEY` from `documentary-junior-editor/.env`).*

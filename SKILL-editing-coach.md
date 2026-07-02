@@ -117,9 +117,10 @@ Mode is set at session start. If unclear, ask Jeff.
 **The override log (primary input).**
 - `handoffs/[project-slug]/tweak-log-v[N].json` — the persisted override
   log from the quote viewer. Each entry is a single change Jeff made
-  against what the Edit Agent proposed: status flips, trims, reorders,
-  drops, splits, free-text comments. Includes timestamps so iteration
-  patterns (e.g., promote-then-demote pairs) are preserved.
+  against what the Edit Agent proposed: membership flips (`set_membership`
+  ops — Cut → Loose / Add Back → Tight), trims, reorders, drops, splits,
+  interstitial adds/edits, free-text comments. Includes timestamps so
+  iteration patterns (e.g., add-back-then-cut pairs) are preserved.
 
 **Fallback inputs when the tweak log isn't persisted yet.** Persistence
 is a parallel code track and may not exist for the project being coached.
@@ -127,19 +128,24 @@ In that case, fall back to:
 - The viewer's current in-browser state at time of invocation (Jeff can
   share the visible pending-tweaks panel via screenshot or paste)
 - Jeff's memory of the session — Coach prompts for the substance
-- The diff between `trimmed-quotes-v[N].json` and `trimmed-quotes-v[N]-tight.json`
-  (or equivalent rough/tight pair), which captures the *terminal* state
-  changes even if the iteration pattern was lost
+- The diff between `trimmed-quotes-v[N].json` (the Loose-window /
+  full-timeline export) and `trimmed-quotes-v[N]-tight.json` (the
+  Tight-window export), which captures the *terminal* state changes even
+  if the iteration pattern was lost
 
 Explicitly note in the session's output which mode you ran in
 (persisted-log vs. fallback). Fallback runs are lower-confidence on
 iteration patterns specifically.
 
 **Supporting context.**
-- `handoffs/[project-slug]/trimmed-quotes-v[N].json` — what the Edit
-  Agent proposed in this round
-- `handoffs/[project-slug]/trimmed-quotes-v[N]-[variant].json` — variants
-  if the round produced multiple cuts (rough/tight)
+- `handoffs/[project-slug]/trimmed-quotes-v[N].json` — the round's
+  Loose-window (full-timeline) cut
+- `handoffs/[project-slug]/trimmed-quotes-v[N]-tight.json` — the round's
+  Tight-window cut, when one was exported (Tight and Loose exports write
+  separate files and never overwrite each other)
+- `handoffs/[project-slug]/edit-agent-lessons-v[N].md` (at project close)
+  — the Edit Agent's own feedback-capture handoff; read it as a
+  first-class input alongside the tweak log
 - `handoffs/[project-slug]/[project-slug]_quotes_view.html` — the saved
   final state of the viewer
 - `handoffs/[project-slug]/edit-handoff-v[N].md` (if present) — the Edit
@@ -184,15 +190,17 @@ clusters point at one-off judgment calls.
 
 ### Pattern categories
 
-- **Status flips** — promotions and demotions on `must-keep / probable-keep
-  / probable-cut / optional` tags. Sub-clusters:
-  - *Terminal promotions* — Jeff moved a quote up and left it there
-  - *Terminal demotions* — moved down and left
-  - *Reversal pairs* — promoted then demoted (or vice versa) on the same
-    quote. These are high-signal: Jeff was uncertain, weighed it, landed
-    on a final position. Reversals also frequently indicate the status
-    labels are being used as a workspace toggle rather than as conviction
-    signals (see Known Pattern: must-keep-as-workspace below).
+- **Membership flips** — `set_membership` ops moving entries between
+  `tight` and `loose` (the viewer's **Cut → Loose** / **Add Back → Tight**
+  buttons; legacy logs may instead carry status flips on the retired
+  must-keep / probable-keep / probable-cut / optional tags). Sub-clusters:
+  - *Terminal add-backs* — Jeff moved an entry to tight and left it there
+  - *Terminal cuts* — moved to loose and left
+  - *Reversal pairs* — added back then cut (or vice versa) on the same
+    entry. These are high-signal: Jeff was uncertain, weighed it, landed
+    on a final position. (Under the retired tiers, reversal-heavy logs
+    usually meant the workspace-toggle failure mode — see the resolved
+    Known Pattern: must-keep-as-workspace below.)
 - **Trims** — head, middle, or tail cut regions added or removed.
 - **Reorders** — entries moved up or down within an act.
 - **Drops** — entries removed from the cut entirely.
@@ -210,11 +218,12 @@ For each cluster, report:
 - Total count
 - Distribution by act
 - Distribution by speaker
-- Distribution by source `runtime_recommendation` (must-keep, probable-keep, etc.)
-- Reversal rate (for status flips: what percentage were later undone)
+- Distribution by the membership the Edit Agent originally proposed
+  (tight / loose)
+- Reversal rate (for membership flips: what percentage were later undone)
 
-A cluster of 38 promotions concentrated in one act tells a different
-story than 38 promotions spread evenly across the cut. Surface the
+A cluster of 38 add-backs concentrated in one act tells a different
+story than 38 add-backs spread evenly across the cut. Surface the
 concentration.
 
 ### Recognize viewer-UX patterns vs. agent-behavior patterns
@@ -224,12 +233,12 @@ point at the viewer (the viewer's UX forced Jeff to use a tool as a
 workaround). Many point at both.
 
 Examples of viewer-UX patterns:
-- **must-keep-as-workspace** — if a meaningful number of promotions are
-  later reversed AND clustered in advance of switching to the Tight
-  view, the promotions are workspace toggles, not editorial conviction.
-  The agent should rank within probable-keeps (SKILL-edit.md change)
-  AND the viewer should expose a tight-candidate state distinct from
-  must-keep (viewer roadmap entry).
+- **must-keep-as-workspace** *(resolved — historical example)* — under the
+  retired recommendation tiers, promotions later reversed and clustered in
+  advance of switching to the Tight view were workspace toggles, not
+  editorial conviction. The tight/loose membership redesign shipped as the
+  fix (see the resolved Known Pattern below); watch only for *new*
+  workaround patterns of the same shape.
 - **Drop-then-restore patterns** — entries dropped then restored from
   Quote Library imply Jeff couldn't see enough context in the drop
   decision. Viewer change candidate.
@@ -247,15 +256,14 @@ Present clusters to Jeff in priority order — highest-volume first,
 highest-reversal-rate second, free-text comments last. For each cluster,
 present:
 
-- The pattern in one sentence ("38 promotions from probable-keep to
-  must-keep, 12 later reversed, concentrated in Birth and Community
-  acts.")
+- The pattern in one sentence ("38 add-backs from loose to tight, 12
+  later reversed, concentrated in Birth and Community acts.")
 - 3–5 specific examples by entry ID with the before/after states
 - Your hypothesis for what drove it (if you have one from the corpus
-  or from the log alone — "this looks like the must-keep-as-workspace
-  pattern from [prior project]")
+  or from the log alone — "this looks like the [named Known Pattern]
+  from [prior project]")
 - A targeted open question to elicit Jeff's reasoning ("What were you
-  using must-keep for in this round — conviction or sorting?")
+  keeping in the Timeline this round — conviction or sorting?")
 
 Do not present all clusters at once. Walk through them one at a time.
 The conversation is the agent's primary work — don't compress it into a
@@ -275,7 +283,8 @@ override counts are just the surface.
   not "What's your trimming philosophy?"
 - **Draw out the why, not just the what.** Jeff's overrides are
   observable; his reasoning isn't. The override log without reasoning
-  is contaminated signal (see Known Pattern: must-keep-as-workspace).
+  is contaminated signal (the resolved must-keep-as-workspace pattern
+  below is the canonical example).
 - **Distinguish project-shaped from rule-shaped insights.** Some
   reasoning generalizes ("I always trim the throat-clearing at the front
   of an answer"). Some doesn't ("Heather's #46 needed this trim because
@@ -288,18 +297,26 @@ override counts are just the surface.
   clusters until you've worked through each individually. Cross-cluster
   patterns belong in Phase 4.
 
-### Known Pattern: must-keep-as-workspace
+### Known Pattern: must-keep-as-workspace (RESOLVED — historical)
 
-Documented in Nanos brand-video review (May 2026). The Edit Agent's
-flat probable-keep pile forces Jeff to promote quotes to must-keep so
-they appear in the Tight view, then evaluate the expanded Tight cut
-and demote what didn't earn the promotion. This corrupts the
-must-keep signal in the override log (many promotions are workspace
-toggles, not conviction) AND points at two fixes: (1) Edit Agent
-should rank within probable-keeps with a `tight_priority` field,
-(2) viewer should expose a tight-candidate state distinct from
-must-keep. Look for this pattern in every project; it will recur
-until both fixes ship.
+Documented in Nanos brand-video review (May 2026). Under the retired
+recommendation tiers, the Edit Agent's flat probable-keep pile forced
+Jeff to promote quotes to must-keep so they appeared in the Tight view,
+then demote what didn't earn the promotion — corrupting the must-keep
+signal in the override log (many promotions were workspace toggles, not
+conviction).
+
+**Resolution: the tight/loose membership redesign IS the prescribed fix,
+and it shipped** (v5.9 viewer; surfaced as the Timeline/Cuts tiers in the
+later viewer redesign). Membership is a binary tier assignment — the
+**Timeline** tier is exactly the membership-tight entries, the verbs are
+**Cut → Cuts** / **Restore → Timeline** (internally still tight/loose), and
+the retired `runtime_recommendation` tiers are dropped at build time. Treat this
+pattern as historical: it can still appear in legacy tweak logs recorded
+before the redesign, but it should not recur in new sessions. If
+reversal-heavy membership flips DO recur in the redesigned viewer,
+that is a new pattern — document it separately rather than reviving
+this one.
 
 Add new Known Patterns to this section as they're discovered across
 projects.
@@ -490,6 +507,6 @@ specific adjustments to apply. Read that before your standard inputs.
 
 ---
 
-*Editing Coach Agent — documentary-junior-editor v5.4*
+*Editing Coach Agent — documentary-junior-editor v5.10 (June 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *Read `SKILL-edit.md` to understand what you're coaching.*

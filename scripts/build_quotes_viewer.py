@@ -9,7 +9,9 @@ Reads:
       (a) A pre-assembled project data JSON file (--data option)
       (b) Auto-discovered files in the project handoffs folder
           (tagged-quotes-v*.json, trimmed-quotes-v*.json,
-          editing-versions/v*.json, pipeline-state.json)
+          editing-versions/v*.json, pipeline-state.json).
+          Tight-window exports (trimmed-quotes-v[N]-tight.json) are window
+          variants, not rounds — round discovery/version counting ignores them.
 
 Writes:
   - A genuinely self-contained HTML viewer: React 18 + ReactDOM UMD bundles
@@ -120,14 +122,49 @@ def parse_act_structure_md(text: str):
         )
         return m.group(1) if m else ""
 
+    # Act labels: PREFER the explicit canonical "### Act Labels" bullet list
+    # (the list downstream agents are told to tag against). Keep its order and
+    # include every bullet line — including a trailing "Orphan" bullet, which a
+    # downstream step filters out (the viewer's act_labels at build time drops
+    # "Orphan"). Only fall back to deriving labels from the act headings when
+    # that explicit section is absent; the heading scan yields bare names like
+    # "Act 1".."Act 4", which is exactly why the explicit list is preferred.
     act_labels = []
-    for line in section_body(r"Act Labels").splitlines():
-        lm = re.match(r"\s*[-*]\s+(.+?)\s*$", line)
-        if lm:
-            label = re.sub(r"^\[|\]$", "", lm.group(1).strip()).strip()
-            # Drop the "Orphan (...)" bookkeeping bullet and unfilled template
-            # placeholders like "[Label 1]". Orphan is a quote flag, not an act.
-            if label and not re.match(r"^(Label \d|Orphan\b)", label, re.I):
+    labels_body = section_body(r"Act Labels")
+    if labels_body.strip():
+        # Capture ONLY the first contiguous bullet block — the canonical label
+        # list. Explanatory prose after the list (e.g. a "Safety Lines is a
+        # dedicated tag…" paragraph) often carries its OWN sub-bullets (the six
+        # scripted line texts), which are NOT act labels. So: skip leading
+        # non-bullet lines (the "Use exactly these labels:" intro), then once
+        # bullets begin, stop at the first blank or non-bullet line.
+        started = False
+        for line in labels_body.splitlines():
+            lm = re.match(r"\s*[-*]\s+(.+?)\s*$", line)
+            if lm:
+                started = True
+                label = re.sub(r"^\[|\]$", "", lm.group(1).strip()).strip()
+                # Strip any parenthetical gloss (e.g. "Orphan (for quotes that
+                # don't fit any act)") down to the bare label, and skip unfilled
+                # template placeholders like "[Label 1]".
+                label = re.sub(r"\s*\(.*\)\s*$", "", label).strip()
+                if label and not re.match(r"^Label \d", label, re.I):
+                    act_labels.append(label)
+            elif started:
+                # First non-bullet line after the block ended — stop before any
+                # trailing explanatory bullets get swept in.
+                break
+    else:
+        # Fallback only: derive from act headings such as
+        #   ### Act 1 — "Philosophy"   or   **Act 2 — "Used Right":**   or   ## Act 1
+        # Yields bare "Act N" names when no descriptive title is present.
+        seen = set()
+        for hm in re.finditer(
+            r"^(?:#{2,4}\s*|\*{2}\s*)Act\s+(\d+)\b", text, re.MULTILINE
+        ):
+            label = f"Act {hm.group(1)}"
+            if label not in seen:
+                seen.add(label)
                 act_labels.append(label)
 
     speakers = []
@@ -137,12 +174,126 @@ def parse_act_structure_md(text: str):
             # "Name — Role — description"; split on em/en dash only so hyphenated
             # names survive.
             parts = re.split(r"\s+[—–]\s+", lm.group(1).strip())
-            name = re.sub(r"^\[|\]$", "", parts[0]).strip()
+            # Strip markdown bold (**Name**) and template brackets from the name.
+            name = re.sub(r"^\[|\]$", "", parts[0].strip().strip("*").strip()).strip()
             role = parts[1].strip() if len(parts) > 1 else ""
+            # summary: the whole description after the name (role + any blurb),
+            # rejoined with em-dashes — feeds the viewer's speaker-context panel.
+            summary = " — ".join(p.strip() for p in parts[1:]) if len(parts) > 1 else ""
             if name and not name.startswith("Speaker Name"):
-                speakers.append({"name": name, "slug": slugify(name), "role": role})
+                speakers.append({"name": name, "slug": slugify(name),
+                                 "role": role, "summary": summary})
 
     return project_name, act_labels, speakers
+
+
+def parse_act_roadmaps_md(text: str):
+    """Parse per-act one-liner roadmaps + a project premise from act-structure-v*.md.
+
+    Looks at the "### Structure" section, whose entries look like:
+
+        **Act 2 — "Used Right":** How BizTrack lets Shane and the team actually
+        live that philosophy ...
+
+    The quoted act NAME ("Used Right") equals the canonical Act Label, so the
+    roadmaps key on that name. Returns:
+        (roadmaps {label -> one_line_summary}, premise | "")
+
+    Defensive (SPEC §10): a missing/unparseable section yields ({}, "") — never
+    raises. The caller aligns roadmaps to act_labels and substitutes "" for any
+    label with no match.
+    """
+    roadmaps = {}
+    premise = ""
+    if not text:
+        return roadmaps, premise
+
+    # Isolate the "### Structure" section body (up to the next ### heading).
+    m = re.search(
+        r"^###\s*Structure.*?$(.*?)(?=^###\s|\Z)",
+        text, re.MULTILINE | re.DOTALL,
+    )
+    structure_body = m.group(1) if m else ""
+
+    # Each entry: a bold heading with a label token before the em-dash and a
+    # quoted act name, then a colon, then the one-liner sentence(s):
+    #   **Intro — "Who Is ProTec":** Meet ProTec: a young ...      (label "Intro")
+    #   **Act 1 — "Philosophy":** How Shane believes ...           (label "Philosophy")
+    #   **Act 2 — "Used Right":** ...                              (label "Used Right")
+    # The canonical Act Label equals the QUOTED name for the numbered acts, but
+    # for the Intro the quoted name is a title ("Who Is ProTec") while the label
+    # is the pre-dash token ("Intro"). Key the roadmap under BOTH the quoted name
+    # and the pre-dash token so the caller's `act_roadmaps.get(label)` matches
+    # whichever form the canonical Act Labels list uses.
+    for em in re.finditer(
+        r'\*\*\s*([^—–*"""]+?)\s*[—–]\s*[""]([^""]+)[""]\s*:\*\*\s*(.+?)'
+        r'(?=\n\s*\n|\n\s*\*\*|\Z)',
+        structure_body, re.DOTALL,
+    ):
+        pre = em.group(1).strip()
+        quoted = em.group(2).strip()
+        summary = re.sub(r"\s+", " ", em.group(3).strip())
+        if not summary:
+            continue
+        for key in (quoted, pre):
+            if key and key not in roadmaps:
+                roadmaps[key] = summary
+
+    # Supplemental pass: UNQUOTED act headings, where the act name is the
+    # post-dash token rather than a quoted string. Seen in H+S IBEW 2026:
+    #   **Act 1 — Jobs** *(elements 1 + 2)*: A ton of safe, high-paying ...
+    #   **Act 2 — Done Right** *(elements 3 + 5)*: Minnesota builds these ...
+    # The quoted-name pass above misses these (no quotes). Key on the WHOLE
+    # heading and on the parts either side of the em/en dash ("Act 1", "Jobs")
+    # so the caller's act_roadmaps.get(label) matches whichever the canonical
+    # Act Labels list uses. `key not in roadmaps` keeps the quoted pass winning.
+    for em in re.finditer(
+        r'\*\*\s*([^*]+?)\s*\*\*\s*(?:\*\([^)]*\)\*\s*)?:\s*(.+?)'
+        r'(?=\n\s*\n|\n\s*\*\*|\Z)',
+        structure_body, re.DOTALL,
+    ):
+        heading = em.group(1).strip().rstrip(":").strip()
+        summary = re.sub(r"\s+", " ", em.group(2).strip())
+        if not summary:
+            continue
+        keys = [heading]
+        parts = re.split(r"\s+[—–]\s+", heading)
+        if len(parts) > 1:
+            keys.append(parts[0].strip())
+            keys.append(parts[-1].strip())
+        for key in keys:
+            if key and key not in roadmaps:
+                roadmaps[key] = summary
+
+    # Premise: prefer the Intro one-liner if present (concise project framing);
+    # the caller can override from the creative brief. Leave to caller; here we
+    # only return the structure-derived roadmaps + a best-effort premise.
+    premise = roadmaps.get("Intro", "")
+    return roadmaps, premise
+
+
+def parse_premise_md(text: str):
+    """Best-effort project premise from creative-brief-summary-v*.md (1-2 sentences).
+
+    Prefers the "## Central narrative" section's first sentence(s). Defensive
+    (SPEC §10): returns "" if the file/section is missing or unparseable — never
+    raises.
+    """
+    if not text:
+        return ""
+    m = re.search(
+        r"^##\s*Central narrative.*?$(.*?)(?=^##\s|\Z)",
+        text, re.MULTILINE | re.DOTALL,
+    )
+    body = (m.group(1) if m else "").strip()
+    if not body:
+        return ""
+    body = re.sub(r"\s+", " ", body)
+    # Keep it short: first 1-2 sentences. Split on sentence-ending punctuation
+    # followed by a space + capital/quote (avoids splitting "$40M.").
+    sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z\"'])", body)
+    premise = " ".join(sentences[:2]).strip()
+    return premise
 
 
 def derive_speakers_from_quotes(quotes):
@@ -243,6 +394,28 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
     src = lookup_source_quote(source_quotes_by_num, entry.get("source_quote_id"))
     if not src:
         return None
+
+    # Already-runtime-shaped entry (saved BY THE VIEWER, e.g. a named cut in
+    # editing-versions): it carries char-range `_editCuts` and has NO old
+    # `segments` list. The segment→char migration below assumes the old shape and
+    # would re-derive cuts from a missing `segments` field — yielding [[0, len]]
+    # (the whole quote cut) and a blank card. Detect and pass it through intact,
+    # only normalising the entry_id + canonical int source num + sub-label.
+    if "segments" not in entry and "_editCuts" in entry:
+        old_id = str(entry.get("entry_id", src["num"]))
+        new_id = str(src["num"]) if old_id.startswith("e_") else old_id
+        return {
+            "entry_id": new_id,
+            "_subLabel": entry.get("_subLabel"),
+            "source_quote_id": src["num"],
+            "type": entry.get("type", "spoken"),
+            "speaker": entry.get("speaker"),
+            "part": entry.get("part"),
+            "runtime_recommendation": entry.get("runtime_recommendation", "probable-keep"),
+            "membership": entry.get("membership"),
+            "_editCuts": entry.get("_editCuts", []),
+            "notes": entry.get("notes", ""),
+        }
 
     # Build full original text (join all segments with single space, matching
     # what the new viewer's fullQuoteText does).
@@ -373,9 +546,42 @@ def migrate_membership(entries):
     return out
 
 
+def resolve_handoffs_dir(slug: str, ssd_root: Path) -> Path:
+    """Resolve the handoffs directory for a project, tolerating two layouts.
+
+    Standard (multi-project) layout::
+        <ssd_root>/handoffs/<slug>/tagged-quotes-v*.json
+
+    Flat (single-project) layout — what SKILL-edit documents and what the
+    Epicor ProTec project ships::
+        <ssd_root>/handoffs/tagged-quotes-v*.json   (no per-slug subdir)
+
+    Prefers the slugged subdir when it actually holds the inputs
+    (tagged-quotes-v*.json). A bare slugged subdir that exists only to hold the
+    viewer's own runtime state (viewer-state.json, agent-cursor.json,
+    editing-versions/) for a FLAT project must NOT shadow the flat input dir —
+    so existence alone is not enough; the inputs must be present. Otherwise, if
+    the bare ``handoffs`` dir exists AND directly contains tagged-quotes-v*.json,
+    use it (the flat single-project layout). Raises SystemExit only when neither
+    layout resolves, so no symlink is required for flat projects.
+    """
+    slugged = ssd_root / "handoffs" / slug
+    if slugged.is_dir() and any(slugged.glob("tagged-quotes-v*.json")):
+        return slugged
+    flat = ssd_root / "handoffs"
+    if flat.is_dir() and any(flat.glob("tagged-quotes-v*.json")):
+        return flat
+    raise SystemExit(
+        f"Handoffs folder not found: no tagged-quotes-v*.json in {slugged} "
+        f"or flat {flat}"
+    )
+
+
 def load_project_data_from_handoffs(slug: str, ssd_root: Path,
                                      title_override: str = None,
-                                     act_labels_override=None) -> dict:
+                                     act_labels_override=None,
+                                     client_override: str = None,
+                                     project_override: str = None) -> dict:
     """Auto-discover project data files in the handoffs folder.
 
     Project metadata (title, act labels, speakers) is derived from files that
@@ -385,9 +591,7 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
 
     Returns the assembled project data dict in the shape the new template expects.
     """
-    handoffs = ssd_root / "handoffs" / slug
-    if not handoffs.is_dir():
-        raise SystemExit(f"Handoffs folder not found: {handoffs}")
+    handoffs = resolve_handoffs_dir(slug, ssd_root)
 
     # pipeline-state.json is a fallback source only — not required, and not
     # depended on for title/act_labels/speakers (those frequently aren't written
@@ -406,7 +610,9 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
 
     target_seconds = 120
     # Best-effort: look for target_runtime_seconds in any trimmed-quotes file
-    # (or, pre-emit, in editing-versions working rounds)
+    # (or, pre-emit, in editing-versions working rounds). Deliberately matches
+    # -tight window variants too — they carry the same target_runtime_seconds
+    # and this scan is value-lookup only, not version counting.
     for f in sorted(handoffs.glob("trimmed-quotes-v*.json")) + sorted((handoffs / "editing-versions").glob("v*.json") if (handoffs / "editing-versions").is_dir() else []):
         try:
             j = json.loads(f.read_text())
@@ -469,6 +675,29 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         o["is_orphan"] = True
     combined_quotes = list(source_quotes) + list(orphans)
 
+    # Edit-Agent notes sidecar (M5): the Edit Agent records WHY it left a quote
+    # out (agent_note, keyed by quote num → shown on not-used Library cards, the
+    # silent-omissions fix) and the narrative-coherence seam-flags it found when
+    # it read the cut (shown inline in Review mode). Optional; absent = empty.
+    seam_flags = []
+    notes_latest = latest_versioned(handoffs.glob("edit-agent-notes-v*.json"))
+    if notes_latest:
+        try:
+            notes = json.loads(notes_latest.read_text())
+        except (ValueError, OSError) as e:
+            print(f"Warning: could not read {notes_latest.name}: {e}", file=sys.stderr)
+            notes = {}
+        by_num = notes.get("by_num", {}) if isinstance(notes, dict) else {}
+        if by_num:
+            for q in combined_quotes:
+                # JSON object keys are strings; quote nums are ints.
+                note = by_num.get(str(q.get("num"))) or by_num.get(q.get("num"))
+                if note:
+                    q["agent_note"] = note
+        raw_flags = notes.get("seam_flags", []) if isinstance(notes, dict) else []
+        if isinstance(raw_flags, list):
+            seam_flags = [f for f in raw_flags if isinstance(f, dict) and f.get("before_entry_id")]
+
     # --- Metadata: derive from always-present files, args win (Bug 3) ---
     as_path = latest_versioned(handoffs.glob("act-structure-v*.md"))
     as_name, as_labels, as_speakers = None, [], []
@@ -482,6 +711,14 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         or (ps.get("project_name") if ps.get("project_name") not in (None, "", slug) else None)
         or slug
     )
+    # Header identity split (eyebrow "Client · Project" + edit name as headline).
+    # No reliable upstream client field today, so: --client > a forward-compatible
+    # "## Client:" line in act-structure > blank. project: --project > the derived
+    # title. The template falls back to PROJECT_TITLE when both are blank.
+    as_text = as_path.read_text(errors="ignore") if as_path else ""
+    cm = re.search(r"^##\s*Client:\s*(.+?)\s*$", as_text, re.MULTILINE)
+    client_name = (client_override or (cm.group(1).strip() if cm else "") or "").strip()
+    project_label = (project_override or project_name or "").strip()
     # act labels: --act-labels > act-structure > pipeline-state.
     # NO silent ["Act 1","Act 2","Act 3"] default — a missing/empty result is a
     # hard failure in validate_project_metadata (kickoff brief P2). The old
@@ -498,16 +735,94 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         or cc.get("speakers")
         or as_speakers
     )
+    # Attach act-structure "who's who" summaries to the displayed speakers
+    # (the pool-derived list carries name/slug/role but no blurb). Match on slug
+    # first, then on slugified name, so the viewer's speaker-context panel can
+    # show "why this voice matters" per the approved Speakers section.
+    as_summary = {}
+    for s in as_speakers:
+        if s.get("summary"):
+            as_summary[s.get("slug")] = s["summary"]
+            as_summary[slugify(s.get("name", ""))] = s["summary"]
+    for s in speakers:
+        if not s.get("summary"):
+            blurb = as_summary.get(s.get("slug")) or as_summary.get(slugify(s.get("name", "")))
+            if blurb:
+                s["summary"] = blurb
 
-    # Rounds: prefer editing-versions/v*.json, fallback to trimmed-quotes-v*.json
+    # --- Creative context: per-act roadmaps + project premise (SPEC §3.3) ---
+    # Read the act-structure "### Structure" one-liners and the creative-brief
+    # premise. Defensive (SPEC §10): any missing/unparseable file or section
+    # degrades to "" — never crashes.
+    act_roadmaps, structure_premise = {}, ""
+    if as_path:
+        try:
+            act_roadmaps, structure_premise = parse_act_roadmaps_md(
+                as_path.read_text(errors="ignore"))
+        except Exception as e:
+            print(f"Roadmap parse skipped ({as_path.name}): {e}", file=sys.stderr)
+
+    brief_premise = ""
+    cb_path = latest_versioned(handoffs.glob("creative-brief-summary-v*.md"))
+    if cb_path:
+        try:
+            brief_premise = parse_premise_md(cb_path.read_text(errors="ignore"))
+        except Exception as e:
+            print(f"Premise parse skipped ({cb_path.name}): {e}", file=sys.stderr)
+
+    # premise: creative-brief central-narrative > structure Intro one-liner > "".
+    premise = brief_premise or structure_premise or ""
+
+    # acts: aligned to act_labels (Orphan excluded later in build_data_block),
+    # each {label, roadmap}. Match by quoted act name == label; "" if no match.
+    acts = [
+        {"label": lbl, "roadmap": act_roadmaps.get(lbl, "")}
+        for lbl in act_labels_full
+        if lbl != "Orphan"
+    ]
+
+    # Rounds + named cuts: prefer editing-versions/, fallback to trimmed-quotes.
+    # Numbered rounds are v<N>.json; NAMED deliverables (e.g. social-short.json)
+    # are any other *.json. Globbing only "v*.json" both crashes on names that
+    # match the glob without a v<digit> (e.g. vlog.json) AND hides named saves so
+    # they never reload — so we glob *.json and classify each file.
     rounds = []
-    editing_versions_dir = handoffs / "editing-versions"
-    if editing_versions_dir.is_dir():
-        round_files = sorted(editing_versions_dir.glob("v*.json"),
-                             key=lambda p: int(re.search(r"v(\d+)", p.name).group(1)))
+
+    def _round_vnum(name):
+        m = re.fullmatch(r"(?:trimmed-quotes-)?v(\d+)\.json", name)
+        return int(m.group(1)) if m else None
+
+    # Scan editing-versions in BOTH the resolved handoffs dir AND the viewer's
+    # own runtime folder (ssd_root/handoffs/<slug>/editing-versions). On a flat
+    # project those differ: the pipeline/agent writes rounds to the flat
+    # handoffs/editing-versions/, while the VIEWER saves named cuts under the
+    # slug subfolder. Reading only the resolved dir made viewer-saved cuts
+    # invisible to rebuilds (the Open menu re-found them via the server's /list,
+    # but a rebuild dropped them from the baked rounds). Union both, dedup by
+    # stem with the slug-subfolder (the viewer's authoritative save) winning.
+    ev_dirs = [handoffs / "editing-versions",
+               ssd_root / "handoffs" / slug / "editing-versions"]
+    ev_by_stem = {}
+    for d in ev_dirs:
+        if d.is_dir():
+            for p in d.glob("*.json"):
+                ev_by_stem[p.stem] = p  # later dir wins on stem collision
+    if ev_by_stem:
+        all_ev = list(ev_by_stem.values())
+        numbered = sorted((p for p in all_ev if _round_vnum(p.name) is not None),
+                          key=lambda p: _round_vnum(p.name))
+        named = sorted((p for p in all_ev if _round_vnum(p.name) is None),
+                       key=lambda p: p.name)
+        round_files = numbered + named
     else:
-        round_files = sorted(handoffs.glob("trimmed-quotes-v*.json"),
-                             key=lambda p: int(re.search(r"v(\d+)", p.name).group(1)))
+        # Anchor on trimmed-quotes-v(\d+).json exactly: Tight-window exports
+        # (trimmed-quotes-v[N]-tight.json) are window variants of an existing
+        # round, NOT rounds of their own — they must never appear in the round
+        # dropdown or shift version numbering (B3).
+        round_files = sorted(
+            (p for p in handoffs.glob("trimmed-quotes-v*.json")
+             if re.fullmatch(r"trimmed-quotes-v(\d+)\.json", p.name)),
+            key=lambda p: int(re.search(r"v(\d+)", p.name).group(1)))
 
     for f in round_files:
         try:
@@ -515,24 +830,36 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         except Exception as e:
             print(f"Skipping {f.name}: {e}", file=sys.stderr)
             continue
-        round_num = j.get("round", int(re.search(r"v(\d+)", f.name).group(1)))
         entries = j.get("entries", [])
+        vnum = _round_vnum(f.name)
+        if vnum is not None:
+            round_num = j.get("round", vnum)
+            round_label = f"Round {round_num}"
+        else:
+            # Named deliverable (e.g. "Social 30s") — label by its saved cut_name.
+            round_num = j.get("round", 0)
+            round_label = j.get("cut_name") or f.stem
         rounds.append({
             "round_number": round_num,
-            "round_label": f"Round {round_num}",
+            "round_label": round_label,
             "version": f.stem,
             "_raw_entries": entries,
         })
 
     return {
         "project_name": project_name,
+        "client": client_name,
+        "project": project_label,
         "slug": slug,
         "ssd_root": str(ssd_root),
         "act_labels": act_labels_full,
         "speakers": speakers,
+        "acts": acts,
+        "premise": premise,
         "target_seconds": target_seconds,
         "source_quotes": combined_quotes,
         "rounds": rounds,
+        "seam_flags": seam_flags,
     }
 
 
@@ -643,11 +970,20 @@ def assemble_data_block(data: dict) -> dict:
     project_meta = {
         "slug": data["slug"],
         "ssd_root": data["ssd_root"],
+        # Header identity (option 2): eyebrow "Client · Project", edit name as the
+        # headline. Both optional; the template falls back to PROJECT_TITLE.
+        "client": data.get("client", ""),
+        "project": data.get("project", "") or data["project_name"],
         "target_seconds": data["target_seconds"],
         # Keep only real act labels (Orphan filtered out — orphans live as flag
         # on quotes, not as an act). Preserve order.
         "act_labels": [a for a in data["act_labels"] if a != "Orphan"],
         "speakers": data["speakers"],
+        # Creative context (SPEC §3.3): per-act narrative roadmaps + premise,
+        # for the act-scoped "Creative context" dropdown. acts is aligned to
+        # act_labels; each {label, roadmap}. Defensive defaults ([] / "").
+        "acts": data.get("acts", []),
+        "premise": data.get("premise", ""),
     }
 
     return {
@@ -657,6 +993,7 @@ def assemble_data_block(data: dict) -> dict:
         "ROUNDS": migrated_rounds,
         "INITIAL_ROUND_INDEX": max(0, len(migrated_rounds) - 1),
         "INITIAL_FOCUS": None,
+        "SEAM_FLAGS": data.get("seam_flags", []),
     }
 
 
@@ -724,6 +1061,16 @@ def substitute_data_block(template_src: str, data_block: dict) -> str:
     out = re.sub(
         r'^const INITIAL_FOCUS = null;',
         lambda _: f'const INITIAL_FOCUS = {focus_literal};',
+        out,
+        count=1,
+        flags=re.MULTILINE,
+    )
+
+    # SEAM_FLAGS (M5): the Edit Agent's Review-mode coherence flags. Empty list
+    # when the agent hasn't run / no notes sidecar present.
+    out = re.sub(
+        r'^const SEAM_FLAGS = \[\];',
+        lambda _: f'const SEAM_FLAGS = {js_literal(data_block.get("SEAM_FLAGS", []))};',
         out,
         count=1,
         flags=re.MULTILINE,
@@ -797,7 +1144,9 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
   border-bottom: 1px solid var(--border);
 }
 .hdr-row1-inner {
-  display: flex; align-items: center; gap: 14px;
+  /* Bottom-align so the buttons/tabs sit on the same baseline as the edit name
+     (the headline is the lower line of the two-line identity block). */
+  display: flex; align-items: flex-end; gap: 14px;
   padding: 12px 20px;
   max-width: 1100px;
   margin: 0 auto;
@@ -818,6 +1167,9 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
   display: flex; align-items: center; gap: 14px;
   flex-wrap: wrap;
 }
+.hdr-identity { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.hdr-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hdr-title { font-size: 15px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .round-select {
   background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
@@ -876,6 +1228,14 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .chip:hover { background: var(--surface-2); color: var(--text); }
 .chip.active { background: var(--text); color: white; border-color: var(--text); }
+/* Set-apart filter chip for dedicated tags (e.g. Safety Lines) that are not
+   one of the three narrative acts. Dashed outline + a small leading divider
+   read it as "separate from the acts." */
+.nav-tag-divider { display:inline-block; width:1px; height:16px; vertical-align:middle;
+  background: var(--border-strong); margin:0 8px 0 4px; }
+.chip-tag { border:1px dashed var(--border-strong); color: var(--text-subtle); }
+.chip-tag:hover { border-style:dashed; }
+.chip-tag.active { background: var(--text-subtle); color: white; border-color: var(--text-subtle); border-style:solid; }
 
 /* Window block */
 .win-block {
@@ -910,7 +1270,9 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .export-overlay { position: fixed; inset: 0; background: rgba(28,25,23,.45); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .export-modal { background: var(--surface); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,.25); max-width: 620px; width: 100%; padding: 22px 24px; }
 .export-modal h3 { margin: 0 0 4px; font-size: 16px; }
-.export-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }
+.export-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 12px; }
+.export-sub code, .export-next code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+.export-next { font-size: 13px; line-height: 1.55; color: var(--text); margin: 0 0 16px; }
 .export-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
 .export-num { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .export-step-body { font-size: 13px; line-height: 1.5; }
@@ -934,6 +1296,20 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .act-title { font-size: 18px; font-weight: 600; margin: 0; }
 .act-sub { color: var(--text-muted); font-size: 13px; }
+/* One "Add title card" button per act (option C) — replaces the old per-gap
+   "+ interstitial" rows. Right-aligned in the act header. */
+.act-header-actions { margin-left: auto; align-self: center; }
+.act-add-btn {
+  background: transparent; border: 1px solid var(--border-strong); border-radius: 6px;
+  padding: 4px 11px; font: inherit; font-size: 12px; color: var(--text-muted);
+  cursor: pointer; white-space: nowrap;
+}
+.act-add-btn:hover { color: var(--text); background: var(--surface-2); border-color: var(--text-muted); }
+.act-add-btn.active { color: var(--text); background: var(--surface-2); border-color: var(--text-muted); }
+.ins-add-pos {
+  width: 100%; margin-bottom: 8px; padding: 5px 8px; font: inherit; font-size: 12px;
+  border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text);
+}
 
 /* === Library toolbar (hide-in-cut toggle + search) === */
 .lib-toolbar {
@@ -1100,6 +1476,17 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .read-card { padding: 10px 14px 14px 16px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; position: relative; }
 .read-card.tight-mark { border-left-color: var(--must); }
 .read-card.loose-mark { border-left-color: var(--probable); background: rgba(37,99,235,0.035); }
+/* Drag-to-reorder grip on the collapsed Edit card — a vertical strip on the
+   left edge. Drag from the grip (or anywhere non-interactive) to reorder within
+   the act; the ↑↓ buttons remain for precise single-step nudges. */
+.read-card.rc-draggable { padding-left: 26px; touch-action: none; }
+.rc-drag { position: absolute; left: 0; top: 0; bottom: 0; width: 20px; display: flex;
+  align-items: center; justify-content: center; cursor: grab; color: var(--text-subtle);
+  background: var(--surface-2); border-right: 1px solid var(--border); user-select: none; opacity: .65; }
+.rc-drag:hover { opacity: 1; color: var(--text); }
+.read-card.rc-draggable:active .rc-drag { cursor: grabbing; }
+.read-card.rc-draggable.dragging { opacity: 0.45; }
+.read-card.rc-draggable.drag-over { box-shadow: 0 -3px 0 0 var(--accent); }
 .rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
 .rc-quote { font-size: 15px; line-height: 1.6; margin: 2px 0 0; color: var(--text); }
 .rc-quote.rc-interstitial { font-style: italic; color: var(--text-muted); }
@@ -1111,6 +1498,10 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .read-card:hover .rc-tool, .read-card:focus-within .rc-tool { opacity: 1; }
 .rc-tool:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
 .rc-tool.edit:hover { background: var(--surface-2); color: var(--accent); border-color: var(--accent); }
+/* Cut (recoverable, blue) / Drop (destructive-ish, red) tint on hover — match
+   the full buttons' intent without widening the compact corner. */
+.rc-tool.cut:hover { background: var(--probable); color: white; border-color: var(--probable); }
+.rc-tool.drop:hover { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
 .rc-collapse { margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--text-subtle); font-size: 12px; padding: 3px 9px; border-radius: 6px; cursor: pointer; }
 .rc-collapse:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
 .reveal-block { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--border-strong); border-radius: 8px; margin-left: auto; }
@@ -1206,6 +1597,8 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .split-marker:hover { background: var(--probable-soft); color: var(--probable); }
 .split-marker.active { background: var(--probable); color: white; font-weight: 700; }
+/* Words already trimmed away — shown struck so the split lands on what plays. */
+.split-word-cut { text-decoration: line-through; color: var(--text-subtle); opacity: 0.55; }
 .split-counter { font-size: 11px; color: var(--text-subtle); margin: 8px 0; }
 
 /* === Review === */
@@ -1466,6 +1859,11 @@ def main():
     p.add_argument("--output", help="Output HTML path")
     p.add_argument("--title", default=None,
                    help="Override the project title (else derived from act-structure-v*.md)")
+    p.add_argument("--client", default=None,
+                   help="Client name for the header eyebrow (else from a '## Client:' "
+                        "line in act-structure-v*.md, else blank)")
+    p.add_argument("--project", default=None,
+                   help="Project name for the header eyebrow (else the derived title)")
     p.add_argument("--act-labels", default=None,
                    help="Override act labels, comma-separated (else from act-structure-v*.md)")
     args = p.parse_args()
@@ -1498,6 +1896,7 @@ def main():
         raw = load_project_data_from_handoffs(
             args.slug, Path(args.ssd_root),
             title_override=args.title, act_labels_override=act_labels_override,
+            client_override=args.client, project_override=args.project,
         )
         data_block = assemble_data_block(raw)
         slug = raw["slug"]
@@ -1510,7 +1909,11 @@ def main():
         if not ssd_root:
             print("Cannot infer output path; provide --output", file=sys.stderr)
             return 1
-        out_path = Path(ssd_root) / "handoffs" / slug / f"{slug}_quotes_view.html"
+        # Default the output into whichever handoffs layout the project uses, so
+        # a flat single-project layout (handoffs/ holding tagged-quotes-v*.json
+        # directly, no per-slug subdir) lands the html in that flat dir rather
+        # than a nonexistent handoffs/<slug>/.
+        out_path = resolve_handoffs_dir(slug, Path(ssd_root)) / f"{slug}_quotes_view.html"
 
     # Substitute data, strip module syntax, wrap
     substituted = substitute_data_block(template_src, data_block)
