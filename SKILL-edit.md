@@ -376,6 +376,31 @@ immediately. The Synthesis Agent (and upstream Transcript Agents) must produce
 segment-decomposed quotes before this agent can begin. Tell Jeff which agent
 needs to re-run and provide the launch prompt.
 
+**Timecode-sanity precondition — check the source pool at session start.**
+Degenerate timecodes in the source pool are invisible while you build the cut
+and only detonate at FCPXML export, five stages after they were introduced. On
+epicor-rf-fager the source pool carried `startTC == endTC` on most of one
+speaker's quotes (born at the Transcript stage) and the whole session's work
+had to wait on a re-run discovered at export time. Catch it before building
+acts. After resolving the handoff directory, run the shared gate over the
+source pool in warn-only mode:
+
+```bash
+python3 scripts/validate_timecodes.py --warn-only \
+  handoffs/<project-slug>/tagged-quotes-v<N>.json
+```
+
+- It never blocks the session (`--warn-only` always exits `0`) — it reports.
+- If it prints any **FAIL** line (a run of collapsed `startTC == endTC`, a
+  segment outside its quote window, an inverted or unparseable TC), surface it
+  to Jeff at session start with the named speaker/quotes and note that FCPXML
+  export for those entries will fail until the Transcript Agent re-runs for that
+  speaker. Let Jeff decide whether to fix upstream first or proceed knowing the
+  affected entries can't export yet — do not silently build on top of them.
+- **WARN** lines (e.g. a single collapsed TC, or a non-monotonic `startTC`
+  from a legitimately promoted orphan) are informational; mention them only if
+  relevant.
+
 ### Brief language is advisory, not constraint
 
 When you read `creative-brief-summary-v[N].md`, treat language like "must
@@ -487,12 +512,15 @@ A timeline entry has:
   the viewer derives a character-range trim representation on top of this.
 - `_editCuts` — character-range cuts on the entry's concatenated full-quote
   text, populated by the viewer's character-range trim editor. Used by the
-  viewer for the editing UI; the FCPXML Agent reads `segments[]`. When an
-  entry carries `_editCuts`, they are **authoritative** for the viewer's
-  display (the build script honors them rather than recomputing from
-  `segments[]` + trims). For mid-segment cuts, `_editCuts` can be finer than
-  `segments[]` + word trims can represent — see "Known limitation —
-  mid-segment cuts" under Per-segment trims.
+  viewer for the editing UI; the FCPXML Agent reads `segments[]`. **The viewer's
+  Export writes `_editCuts` only (no `segments[]`)**, so before an FCPXML build
+  the export is passed through `scripts/editcuts_to_segments.py`, which
+  reconstructs `segments[]` from `_editCuts` against the source pool (see
+  "Fulfilling an export request"). When an entry carries `_editCuts`, they are
+  **authoritative** for the viewer's display (the build script honors them rather
+  than recomputing from `segments[]` + trims). For mid-segment cuts, `_editCuts`
+  can be finer than `segments[]` + word trims can represent — see "Known
+  limitation — mid-segment cuts" under Per-segment trims.
 - `_subLabel` — `"a"`, `"b"`, etc. when this entry is one of a split set
   from a single source quote; `null` otherwise.
 - `membership` — `"tight"` or `"loose"` (see "Membership on every entry"
@@ -580,7 +608,11 @@ the FCPXML Agent generates clips from `segments[]` + word trims, which can
 only approximate a mid-segment cut with the nearest contiguous span — so at
 those specific points the exported FCPXML may **play slightly wider than the
 viewer shows**, and the editor refines the in/out in Final Cut Pro. This is
-the accepted behavior, not a bug. A cleaner long-term fix — extending the
+the accepted behavior, not a bug. **`scripts/editcuts_to_segments.py` is where
+that approximation happens on export**: it keeps the widest contiguous span for
+such a segment and emits a per-entry fidelity note naming the interior words
+FCPXML will retain, so you can re-check verbatim before handoff (see "Fulfilling
+an export request"). A cleaner long-term fix — extending the
 schema to allow multiple disjoint kept ranges per segment (e.g.
 `kept_ranges: [[start_word, end_word], ...]`), or segmenting more finely
 upstream so cut points fall on segment boundaries — is parked as a
@@ -893,14 +925,43 @@ the same way the Orchestrator launches downstream agents:
    `{ status, window, label, round, cut_name, cut_file, out_fcpxml, entry_count }`.
    Act **only when `status == "requested"`** — if it's already `"built"`, do
    nothing (this is what prevents rebuilding the same export every turn).
-2. **Launch the FCPXML Agent via the Task tool** (subagent), instructing it to
+2. **Convert `cut_file` before building — it is char-range data, not the shape
+   the FCPXML build reads.** `cut_file` (`trimmed-quotes-v[N]-tight.json`) is the
+   viewer's export: each entry carries character-range `_editCuts` and **no**
+   `segments[]`. `build_fcpxml.py` builds clips from `segments[]` + word trims,
+   so it cannot read the raw export (it now fails with a message pointing here).
+   Run the canonical, tested converter — **never hand-convert** `_editCuts`:
+
+   ```bash
+   python3 scripts/editcuts_to_segments.py \
+       handoffs/[slug]/trimmed-quotes-v[N]-tight.json \
+       --source-pool handoffs/[slug]/tagged-quotes-v[N].json \
+       -o handoffs/[slug]/trimmed-quotes-v[N]-tight.segments.json \
+       --report handoffs/[slug]/export-fidelity-v[N].md
+   ```
+
+   It writes a `segments[]`-shaped JSON (the file you hand the FCPXML Agent) and
+   prints a **fidelity report**. **Read the report and do a per-entry verbatim
+   (Cardinal Rule 1) re-check before handoff.** Entries under "FIDELITY NOTES"
+   have **mid-segment interior cuts** that head/tail word-trims cannot represent
+   (the v5.7 limitation): the converter keeps the widest contiguous span, so at
+   those points the FCPXML **plays slightly wider than the viewer shows** — it
+   retains the interior words the editor cut (e.g. epicor #68/#130). Confirm the
+   retained words don't change meaning, note them in the edit-handoff so the
+   editor refines the in/out in Final Cut Pro, and only then proceed. This is
+   accepted behavior, not a build failure. (The converter is the exact inverse
+   of `build_quotes_viewer.migrate_entry_trims`; regression-tested in
+   `scripts/test_editcuts_to_segments.py`.)
+3. **Launch the FCPXML Agent via the Task tool** (subagent), instructing it to
    read `SKILL-fcpxml-params.md` + `SKILL-fcpxml.md` and follow them exactly:
-   build the `{window}` cut for `[slug]` from `cut_file` plus the project's
-   handoff context (fcpxml-params, edit-handoff, act-structure per
+   build the `{window}` cut for `[slug]` from the **converted**
+   `trimmed-quotes-v[N]-tight.segments.json` (not the raw `cut_file`) plus the
+   project's handoff context (fcpxml-params, edit-handoff, act-structure per
    `pipeline-state.json`), and save to `out_fcpxml`. (Set its model to Sonnet.)
-3. When it finishes, **rewrite `export-request.json` with `status: "built"`**
+4. When it finishes, **rewrite `export-request.json` with `status: "built"`**
    (add `built_at` and the final `out_fcpxml`), update `pipeline-state.json`,
-   and tell Jeff in chat where the `.fcpxml` landed so he can import it.
+   and tell Jeff in chat where the `.fcpxml` landed so he can import it — and
+   surface any fidelity-note entries so he knows which points to refine in FCP.
 
 This keeps the FCPXML Agent's specialised skill intact while removing the
 copy-paste / new-session step — Export now rides the same disk channel as the

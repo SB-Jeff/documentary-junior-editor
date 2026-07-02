@@ -1,0 +1,20 @@
+[
+  {
+    "num": 1, "speaker": "Doug Duvall", "role": "Customer", "part": "Act 1",
+    "quote": "We were running blind before the RF upgrade.",
+    "startTC": "00:01:10", "endTC": "00:01:14",
+    "segments": [
+      {"idx": 0, "text": "We were running blind", "startTC": "00:01:10", "endTC": "00:01:12"},
+      {"idx": 1, "text": "before the RF upgrade.", "startTC": "00:01:12", "endTC": "00:01:14"}
+    ]
+  },
+  {
+    "num": 2, "speaker": "Doug Duvall", "role": "Customer", "part": "Act 2",
+    "quote": "Now every scan lands in real time.",
+    "startTC": "00:02:40", "endTC": "00:02:44",
+    "segments": [
+      {"idx": 0, "text": "Now every scan", "startTC": "00:02:40", "endTC": "00:02:42"},
+      {"idx": 1, "text": "lands in real time.", "startTC": "00:02:42", "endTC": "00:02:44"}
+    ]
+  }
+]

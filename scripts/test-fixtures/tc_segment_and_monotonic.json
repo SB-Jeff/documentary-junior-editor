@@ -1,0 +1,28 @@
+[
+  {
+    "num": 1, "speaker": "Bryce Nolan", "role": "Customer", "part": "Act 1",
+    "quote": "Segment runs outside the quote window on both ends.",
+    "startTC": "00:03:00", "endTC": "00:03:08",
+    "segments": [
+      {"idx": 0, "text": "Segment runs", "startTC": "00:02:40", "endTC": "00:03:02"},
+      {"idx": 1, "text": "outside the quote window", "startTC": "00:03:04", "endTC": "00:03:20"}
+    ]
+  },
+  {
+    "num": 2, "speaker": "Bryce Nolan", "role": "Customer", "part": "Act 2",
+    "quote": "Segments go backwards in time within one quote.",
+    "startTC": "00:04:00", "endTC": "00:04:10",
+    "segments": [
+      {"idx": 0, "text": "Segments go", "startTC": "00:04:06", "endTC": "00:04:08"},
+      {"idx": 1, "text": "backwards in time.", "startTC": "00:04:00", "endTC": "00:04:03"}
+    ]
+  },
+  {
+    "num": 3, "speaker": "Bryce Nolan", "role": "Customer", "part": "Act 2",
+    "quote": "Endpoint is before the start point.",
+    "startTC": "00:05:20", "endTC": "00:05:10",
+    "segments": [
+      {"idx": 0, "text": "Endpoint is before the start point.", "startTC": "00:05:20", "endTC": "00:05:10"}
+    ]
+  }
+]

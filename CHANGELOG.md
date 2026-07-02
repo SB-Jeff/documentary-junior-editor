@@ -1,5 +1,41 @@
 # Documentary Junior Editor — Changelog
 
+## Timecode-sanity gate — 2026-07-02 (`viewer-edit-redesign` branch)
+
+Prevention guardrail for the epicor-rf-fager collapsed-timecode bug (see memory
+`epicor_doug_tc_bug.md`): Doug Duvall's quotes shipped with `startTC == endTC`
+on 86 of 87 quotes (Bryce's on 14 of 46), born at the Transcript/Transcription
+stage, undetected through Synthesis, and only caught when the FCPXML export
+verify failed five stages later. This moves the check to the source.
+
+- **New shared helper `scripts/validate_timecodes.py`.** Deterministic,
+  importable + CLI. Per speaker it flags/fails on: (a) runs of `startTC == endTC`
+  at quote AND segment level, (b) non-monotonic `startTC` within a speaker,
+  (c) segment TCs outside their quote's `[startTC, endTC]` window. Also fails on
+  unparseable and inverted (`endTC < startTC`) TCs. An isolated collapsed TC is a
+  WARN; it escalates to FAIL on a run (≥3 consecutive) or a high collapsed
+  fraction (≥25%) per speaker — so the epicor case fails loud while a lone edge
+  case only flags. Cross-quote non-monotonicity is a WARN, not a FAIL, because a
+  legitimately promoted orphan gets a high `num` with an earlier TC (`--strict`
+  promotes it at the Transcript stage, where numbering is pure transcript order).
+  The TC parser mirrors `_tc_string_to_seconds` in `generate_fcpxml.py` so the
+  gate and the downstream matcher agree on what "parseable" means. Exit codes:
+  `0` clean/warn-only, `2` FAIL, `1` unreadable input. Flags: `--warn-only`,
+  `--strict`, `--json`, `--quiet`, `--run-threshold`, `--collapse-fraction`.
+- **New regression suite `scripts/test_validate_timecodes.py`** (+ fixtures
+  `tc_clean.json`, `tc_collapsed_run.json`, `tc_segment_and_monotonic.json`).
+  Pins the epicor Doug run, segment-outside/ordering/inverted classes, and the
+  isolated-collapse / promoted-orphan WARN behavior. All 7 checks pass.
+- **Gate wired into three skill docs, source-first:**
+  - `SKILL-orchestrator.md` Phase 3 **step 6** — hard pre-handoff gate over all
+    per-speaker files; a FAIL blocks the `pipeline-state.json` write and the
+    Synthesis handoff (fail loud where files are validated, not at export).
+  - `SKILL-transcript.md` Completeness Check **Step 3** — self-check
+    (`--strict`) before the agent emits its four output files.
+  - `SKILL-edit.md` Phase 1 input precondition — `--warn-only` scan of the
+    source pool at session start, so degenerate TCs are known before building
+    acts rather than at FCPXML export.
+
 ## v5.10 — 2026-06-12 (skill-review NOW batch: doc/code reconciliation + pipeline hardening)
 
 Implements the [NOW]/[NOW*] set from `skill-review-2026-06-10.md` (the full-system review;

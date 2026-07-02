@@ -545,6 +545,37 @@ are not done — save the missing file immediately.
 
 **Do not report completion until every file has been verified.**
 
+### Step 3: Timecode-sanity self-check (run before you emit)
+
+This is where degenerate timecodes are born, so this is where they must be
+caught. On epicor-rf-fager, this stage emitted `startTC == endTC` on 86 of
+Doug Duvall's 87 quotes; nothing downstream noticed until the FCPXML export
+verify failed five stages later. A zero-duration or out-of-order TC makes the
+Edit and FCPXML stages unusable — never emit one.
+
+Run the shared deterministic gate against your tagged-quotes file before
+reporting completion. Because at this stage your quote numbering is pure
+transcript order (no promoted orphans yet), run it `--strict`, which also
+catches a corrupt/non-monotonic TC track:
+
+```bash
+python3 scripts/validate_timecodes.py --strict \
+  handoffs/<project-slug>/<speaker-slug>-tagged-quotes-v<N>.json
+```
+
+- [ ] The gate exits `0`. It checks, per speaker: runs of `startTC == endTC`
+      at quote AND segment level, non-monotonic `startTC`, and segment TCs
+      outside their quote's `[startTC, endTC]` window.
+- [ ] If it exits `2`, **do not emit**. The TCs come from the transcript's
+      timecodes — re-read them from the source, fix the quotes/segments it
+      named, and re-run the gate until clean. If the transcript itself lacks
+      usable timecodes, stop and flag it to Jeff (the Transcription stage owes
+      populated per-line TCs); do not paper over it with placeholder values.
+
+In orchestrated mode the Orchestrator runs this same gate again over all
+per-speaker files as a hard pre-handoff check (SKILL-orchestrator.md Phase 3,
+step 6) — but do not rely on it to catch your own output. Self-check first.
+
 ---
 
 ## Update `pipeline-state.json`

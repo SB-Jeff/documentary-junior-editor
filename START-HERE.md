@@ -2,7 +2,7 @@
 
 **This is the re-entry point.** Coming back after a break and not sure where things stand? Read this (2 min). Or just open a Claude session in this repo and say **"where are we?"** — I keep my own memory of this project and will reconstruct it for you.
 
-**Last updated:** 2026-06-30 — by Claude, at the close of the H+S IBEW 2026 edit session.
+**Last updated:** 2026-07-01 — by Claude, mid **Epicor / RF Fager** edit session (second live-loop project).
 
 ---
 
@@ -11,7 +11,8 @@ Turn the `documentary-junior-editor` pipeline into a **SaaS app inside the Story
 
 ## Where we are right now
 - The full pipeline works. The **Edit** step was redesigned into an act-by-act "live partner" with a persistent quote-viewer app.
-- ✅ **Just validated on a real project** (H+S IBEW 2026, 2026-06-30): a complete edit → a verified FCPXML export. The live loop is real, not theoretical.
+- ✅ **Validated on real projects:** H+S IBEW 2026 (2026-06-30, edit → verified FCPXML export). The live loop is real, not theoretical.
+- 🎬 **Epicor / RF Fager — round-1 export DONE (2026-07-02).** Full four-act cut assembled + winnowed to a 29-entry tight cut; FCPXML built and **verify PASS**: `XML/imports/epicor-rf-fager_tight_cut_v1.fcpxml` (56 clips, 6:32), import-ready. Hit an upstream **collapsed-timecode bug** (Doug Duvall 86/87, Bryce 14/46, from the Transcript stage) — patched inline by re-deriving TCs from the FCPXML captions into `tagged-quotes-v2.json`; text untouched (Rule 1 intact). Prevention guardrail **now built (2026-07-02):** a deterministic upstream **timecode-sanity gate** (`scripts/validate_timecodes.py` + `test_validate_timecodes.py`) catches collapsed/non-monotonic/out-of-window TCs at the source — wired into the Orchestrator (hard pre-handoff fail), Transcript (self-check before emit), and Edit (session-start warning) skills. Still open: the durable `_editCuts↔segments` export-conversion fix (see memory `epicor_doug_tc_bug.md`). Entries #68/#130 need a manual in/out tighten in FCP (mid-segment limitation). Handoffs at `handoffs/epicor-rf-fager/`.
 - Code lives on branch **`viewer-edit-redesign`** (draft PR #1). **Not merged to `main` yet.**
 - Strategically: we're at the decision of **whether/when to take the viewer to the cloud** (see the migration path — the viewer goes first).
 

@@ -296,6 +296,34 @@ return messages. For each sub-agent that completed:
    per "Handling failures" below, even though the sub-agent reported
    success.
 
+6. **Timecode-sanity gate — fail loud here, not at FCPXML export.**
+   Existence and segment-shape checks do not catch *degenerate*
+   timecodes. On epicor-rf-fager, Doug Duvall's quotes had
+   `startTC == endTC` on 86 of 87 quotes (Bryce's on 14 of 46),
+   introduced at the Transcript/Transcription stage. It slipped through
+   Synthesis and only surfaced when the FCPXML export verify failed five
+   stages later with zero-length clip windows. Catch it at the source by
+   running the shared deterministic gate over every per-speaker file you
+   just validated:
+
+   ```bash
+   # substitute the resolved handoff dir; pass every per-speaker file for
+   # this run's version N (list them explicitly or glob *-tagged-quotes-vN.json)
+   python3 scripts/validate_timecodes.py handoffs/<project-slug>/*-tagged-quotes-v<N>.json
+   ```
+
+   It exits `2` on any FAIL and prints the offending speaker + quote/segment.
+   A FAIL is a sub-agent failure — do NOT write the sub-agent's
+   `pipeline-state.json` entry and do NOT hand off to Synthesis. Handle it
+   per "Handling failures": the recommended next action is almost always
+   "re-run the Transcript Agent for the named speaker" (the collapsed TCs
+   originate upstream, so re-running Synthesis alone will not fix them).
+   The gate flags three classes per speaker: runs of `startTC == endTC`
+   (quote and segment level), non-monotonic `startTC`, and segment TCs
+   outside their quote's `[startTC, endTC]` window. Exit `0` (WARN-only or
+   clean) passes; surface any WARN lines to Jeff in the completion report
+   but do not block on them.
+
 ### Counting expected outputs
 
 For first runs:
