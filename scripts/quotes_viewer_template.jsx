@@ -331,6 +331,96 @@ function isTrimmed(entry) {
   return (entry._editCuts || []).length > 0;
 }
 
+// Detect mid-segment (interior) cuts — trims that remove words from the MIDDLE
+// of a source segment, leaving non-contiguous kept words within that one
+// segment. The FCPXML export path (segments[] + head/tail word-trims, produced
+// by scripts/editcuts_to_segments.py) can only keep a single CONTIGUOUS span
+// per segment, so it approximates such a cut with the widest span — first-kept
+// through last-kept word — RETAINING the interior words the viewer cut. The
+// exported clip therefore "plays slightly wider" at those points and must be
+// tightened in Final Cut Pro (documented v5.7 limitation; epicor-rf-fager #68,
+// #130). This mirrors editcuts_to_segments.editcuts_to_segments so the viewer
+// warns on exactly the entries the converter will flag.
+//
+// `cutsOverride` lets the live trim editor pass its in-progress cuts; when
+// omitted the entry's saved `_editCuts` are used. Returns an array of
+// { segIdx, retained: [word, ...] }, one per affected segment — empty when the
+// trim is exactly representable (or there are no cuts / no source).
+function interiorCutSegments(entry, cutsOverride) {
+  if (!entry || entry.type === "title_card" || entry.type === "interstitial" || entry.type === "context_beat") return [];
+  const src = findSourceQuote(entry.source_quote_id);
+  if (!src || !src.segments) return [];
+  const cuts = cutsOverride || entry._editCuts || [];
+  if (cuts.length === 0) return [];
+
+  // full text = segment texts joined with a SINGLE space (matches
+  // fullQuoteText and build_quotes_viewer.migrate_entry_trims exactly, so the
+  // char coordinates in _editCuts line up).
+  const full = src.segments.map((s) => s.text || "").join(" ");
+  const kept = keptRangesOf(cuts, full.length);
+  const overlapsKept = (a, b) => kept.some(([ks, ke]) => Math.max(ks, a) < Math.min(ke, b));
+
+  const affected = [];
+  let pos = 0;
+  src.segments.forEach((seg, si) => {
+    const text = seg.text || "";
+    const segStart = pos;
+    pos += text.length + 1; // + the single-space separator between segments
+
+    const words = [];
+    const re = /\S+/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      words.push({ w: m[0], s: segStart + m.index, e: segStart + m.index + m[0].length });
+    }
+    if (words.length === 0) return;
+
+    const keptFlags = words.map((wd) => overlapsKept(wd.s, wd.e));
+    const keptIdx = [];
+    keptFlags.forEach((k, i) => { if (k) keptIdx.push(i); });
+    if (keptIdx.length === 0) return; // segment fully cut → dropped, not an interior cut
+
+    const first = keptIdx[0];
+    const last = keptIdx[keptIdx.length - 1];
+    const retained = [];
+    for (let i = first + 1; i < last; i++) {
+      if (!keptFlags[i]) retained.push(words[i].w); // fully-cut word between two kept words
+    }
+    if (retained.length > 0) {
+      affected.push({ segIdx: seg.idx != null ? seg.idx : si, retained });
+    }
+  });
+  return affected;
+}
+
+// Fidelity notice for a mid-segment (interior) cut — see interiorCutSegments.
+// `compact` renders a small inline badge (for the collapsed timeline card);
+// otherwise a full explanatory notice (trim editor + revealed card).
+function InteriorCutNotice({ affected, compact }) {
+  if (!affected || affected.length === 0) return null;
+  const title = "Interior cut — the FCPXML export plays slightly wider here; tighten the in/out in Final Cut Pro.";
+  if (compact) {
+    return <span className="interior-cut-badge" title={title}>⚠ interior cut</span>;
+  }
+  const words = affected.reduce((a, x) => a.concat(x.retained), []);
+  const preview = words.slice(0, 6).join(" ");
+  return (
+    <div className="interior-cut-notice">
+      <div className="interior-cut-head">
+        <span className="interior-cut-glyph" aria-hidden="true">⚠</span>
+        <span className="interior-cut-kind">Interior cut</span>
+      </div>
+      <div className="interior-cut-msg">
+        This trim removes words from the <strong>middle</strong> of a segment.
+        The FCPXML export can only keep one continuous span per segment, so it
+        approximates — the clip will <strong>play slightly wider</strong> here
+        {words.length > 0 && <> (it retains “{preview}{words.length > 6 ? "…" : ""}”)</>}.
+        Tighten the in/out in Final Cut Pro.
+      </div>
+    </div>
+  );
+}
+
 // Kept ranges = the complement of `cuts` over [0, len] (the spans that play).
 function keptRangesOf(cuts, len) {
   const sorted = (cuts || []).map((r) => [r[0], r[1]]).sort((a, b) => a[0] - b[0]);
@@ -546,6 +636,7 @@ function EditPanel({ entry, editCuts, setEditCuts, onSave, onCancel }) {
           </span>
         ))}
       </div>
+      <InteriorCutNotice affected={interiorCutSegments(entry, editCuts)} />
       <div className="trim-actions">
         <button className="btn btn-primary" onClick={onSave}>Save trim</button>
         <button className="btn" onClick={onCancel}>Cancel</button>
@@ -1212,13 +1303,38 @@ export default function QuotesView() {
     const round = cuts[roundIndex];
     const filename = `trimmed-quotes-v${round.round_number}${win === "tight" ? "-tight" : ""}.json`;
     const relPath = `handoffs/${PROJECT_META.slug}/${filename}`;
+    // Stamp mid-segment (interior) cuts onto the export so the FCPXML
+    // handoff/verify can list the affected entries automatically instead of the
+    // Edit Agent listing them by hand. Non-mutating: affected entries get a
+    // shallow copy carrying `_fidelity`; the underlying _editCuts are untouched,
+    // so scripts/editcuts_to_segments.py still converts (and re-derives the same
+    // notes) exactly as before. See interiorCutSegments / session B2.
+    const exportEntries = filtered.map((e) => {
+      const affected = interiorCutSegments(e);
+      if (affected.length === 0) return e;
+      return {
+        ...e,
+        _fidelity: {
+          interior_cut: true,
+          segments: affected.map((a) => ({ segment_idx: a.segIdx, retained_words: a.retained })),
+        },
+      };
+    });
+    const fidelityWarnings = exportEntries
+      .filter((e) => e._fidelity && e._fidelity.interior_cut)
+      .map((e) => ({
+        entry_id: e.entry_id,
+        source_quote_id: e.source_quote_id,
+        segments: e._fidelity.segments,
+      }));
     const payload = {
       schema_version: 5,
       round: round.round_number,
       project_slug: PROJECT_META.slug,
       window: win,
       target_runtime_seconds: PROJECT_META.target_seconds,
-      entries: filtered,
+      entries: exportEntries,
+      fidelity_warnings: fidelityWarnings,
     };
     const json = JSON.stringify(payload, null, 2);
     const outFcpxml = `XML/imports/${PROJECT_META.slug}_${win}_cut_v${round.round_number}.fcpxml`;
@@ -1244,13 +1360,17 @@ export default function QuotesView() {
         cut_file: relPath,
         out_fcpxml: outFcpxml,
         entry_count: filtered.length,
+        // Interior/mid-segment cuts the FCPXML can only approximate (session
+        // B2). The Edit Agent surfaces these on handoff/verify; the exported
+        // cut_file carries the per-entry detail in `fidelity_warnings`.
+        fidelity_warning_count: fidelityWarnings.length,
       };
       const rres = await persistFile(`handoffs/${PROJECT_META.slug}/export-request.json`,
         JSON.stringify(request, null, 2), { allowDownload: false });
       queued = !!(rres && rres.ok);
       if (queued) setPendingExport(request);
     }
-    setExportInfo({ win, label, count: filtered.length, time: fmtSec(totalSec), file: relPath, filename, outFcpxml, wrote, queued });
+    setExportInfo({ win, label, count: filtered.length, time: fmtSec(totalSec), file: relPath, filename, outFcpxml, wrote, queued, fidelity: fidelityWarnings.length });
   }
 
   // ====== Move + reorder helpers ======
@@ -2626,6 +2746,7 @@ export default function QuotesView() {
               "{trimmedQuoteText(entry)}"
             </p>
           )}
+          {!isEditing && <InteriorCutNotice affected={interiorCutSegments(entry)} />}
           {!isEditing && !isSplitting && (
             <span
               className="tl-quote-hint"
@@ -2789,6 +2910,7 @@ export default function QuotesView() {
           <span className="speaker-tag" style={{ background: speakerC.bg, color: speakerC.fg }}>{speakerLabel}</span>
           <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
           {chip}
+          <InteriorCutNotice affected={interiorCutSegments(entry)} compact />
           {tools}
         </div>
         <p className="rc-quote">"{trimmedQuoteText(entry)}"</p>
@@ -3043,7 +3165,7 @@ export default function QuotesView() {
 
   const renderExportModal = () => {
     if (!exportInfo) return null;
-    const { win, label, count, time, file, filename, outFcpxml, wrote, queued } = exportInfo;
+    const { win, label, count, time, file, filename, outFcpxml, wrote, queued, fidelity } = exportInfo;
     return (
       <div className="export-overlay" onClick={() => setExportInfo(null)}>
         <div className="export-modal" onClick={(e) => e.stopPropagation()}>
@@ -3063,6 +3185,12 @@ export default function QuotesView() {
             </p>
           ) : (
             <p className="export-sub export-warn">⚠ Couldn't write the cut file — start the app server (so the agent can read it) and try again.</p>
+          )}
+          {fidelity > 0 && (
+            <p className="export-sub export-fidelity">
+              <span className="interior-cut-badge">⚠ {fidelity} interior cut{fidelity === 1 ? "" : "s"}</span>{" "}
+              {fidelity === 1 ? "One entry has a" : `${fidelity} entries have a`} mid-segment cut the FCPXML can only approximate — it plays slightly wider there. They're listed in the cut file's <code>fidelity_warnings</code>; tighten the in/out in Final Cut Pro.
+            </p>
           )}
           <div className="export-actions">
             <button className="btn" onClick={() => setExportInfo(null)}>Close</button>
@@ -3336,6 +3464,17 @@ export default function QuotesView() {
     .seam-flag-msg { font-size:13px; line-height:1.5; color: var(--text); }
     .seam-flag-fix { font-size:12px; line-height:1.5; color: var(--text-muted); margin-top:4px; }
     .seam-flag-fix-label { font-weight:700; color:#b45309; }
+
+    /* === B2 — interior (mid-segment) cut fidelity warning === */
+    .interior-cut-notice { margin:8px 0 2px; padding:8px 11px; border-left:3px solid #d97706;
+      background:rgba(217,119,6,.07); border-radius:0 8px 8px 0; }
+    .interior-cut-head { display:flex; align-items:center; gap:6px; margin-bottom:2px; }
+    .interior-cut-glyph { color:#b45309; font-size:12px; }
+    .interior-cut-kind { font-size:10px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.07em; color:#b45309; }
+    .interior-cut-msg { font-size:12px; line-height:1.5; color: var(--text); }
+    .interior-cut-badge { font-size:10px; font-weight:600; padding:1px 7px; border-radius:8px;
+      background:rgba(217,119,6,.12); color:#b45309; letter-spacing:.02em; white-space:nowrap; }
 
     /* === M3 T2 §C/§D — Point at this + Rejoin + Split tag === */
     .split-tag { font-size:10px; font-weight:600; padding:1px 7px; border-radius:8px;
