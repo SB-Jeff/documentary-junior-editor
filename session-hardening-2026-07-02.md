@@ -50,13 +50,27 @@ doc landed; if not, fold into B-doc task).
 **Note:** the converter must keep the mid-segment-cut approximation behavior (see B2) and emit a
 per-entry fidelity note.
 
-### B2 — Mid-segment interior cuts can't be represented  🆕
+### B2 — Mid-segment interior cuts can't be represented  ✅ (warn) + 📝 (schema)
 **What:** the viewer lets an editor cut the *interior* of a segment (#68, #130 this round);
 segments+word-trims can only approximate with the widest contiguous span, so the FCPXML plays
 slightly wider. Documented v5.7 limitation; the editor tightens in FCP.
-**Prevention:** (a) the viewer should **warn** when a trim creates an interior cut, so the editor
-knows it'll be approximated; (b) longer-term, extend the schema to allow disjoint kept-ranges
-per segment (touches Transcript/Synthesis/FCPXML — bigger). → task chip.
+**Prevention:**
+- ✅ **Viewer warns on interior cuts.** `scripts/quotes_viewer_template.jsx` detects when an
+  entry's `_editCuts` leave a fully-cut word *between* two kept words in one source segment
+  (`interiorCutSegments`, a JS mirror of `editcuts_to_segments.editcuts_to_segments` — cross-
+  validated byte-for-byte against the Python converter). Surfaces three ways: a live amber notice
+  in the trim editor as the cut is made (names the retained words), a persistent notice on the
+  revealed card, and a compact "⚠ interior cut" badge on the collapsed timeline card.
+- ✅ **Flag carried through export.** `exportToFCPXML` stamps affected entries with `_fidelity`
+  and adds a top-level `fidelity_warnings[]` to `trimmed-quotes-v*-tight.json`, plus a
+  `fidelity_warning_count` on `export-request.json` and a note in the export-confirm modal — so
+  the FCPXML handoff/verify can list them automatically instead of the Edit Agent doing it by
+  hand. Additive keys; `editcuts_to_segments.py` and `build_fcpxml.py` ignore/preserve them and
+  still convert from `_editCuts` (verified). SKILL-edit/SKILL-fcpxml should read
+  `fidelity_warnings` on handoff — cross-scope, flagged.
+- 📝 **Longer-term (not built):** extend the schema to allow disjoint kept-ranges per segment
+  (`kept_ranges: [[start,end],...]`) so interior cuts are *represented*, not approximated. Touches
+  Transcript/Synthesis/FCPXML — a dedicated schema pass.
 
 ### B3 — Filler one-word segments hard-FAIL the FCPXML verify  🆕
 **What:** bare one-word "sentences" ("Right.", "Yeah.", the name "Bryce Fager.") don't exist as
@@ -111,7 +125,7 @@ beats (Act 1: 13→6; Jeff cuts these first). Calibration note for the Editing C
 
 ## Rollup — what remains after this doc
 - 🔄 **A1 root cause** — why Transcript emits collapsed TCs (running task).
-- 🆕 **B2** mid-segment-cut viewer warning (+ schema consideration).
+- ✅ **B2** mid-segment-cut viewer warning + export flag DONE; 📝 disjoint-kept-ranges schema deferred.
 - 🆕 **B3/B4** FCPXML build/verify robustness (filler→warning; reference-file fallback).
 - 📝 **C1–C3** promote this session's editorial lessons into SKILL-edit + Editing Coach (C1 ready).
 - 📝 **D1/D2** minor session-setup + viewer-reload polish.
