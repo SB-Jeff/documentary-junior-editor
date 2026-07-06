@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M1 Cloud Viewer — round 4 mockup</title>
+<style>
+  :root {
+    --bg:#fafaf9; --surface:#fff; --surface-2:#f5f5f4;
+    --border:#e7e5e4; --border-strong:#d6d3d1;
+    --text:#1c1917; --text-muted:#57534e; --text-subtle:#78716c;
+    --accent:#0369a1; --accent-soft:#e0f2fe; --accent-strong:#075985;
+    --must:#059669; --must-soft:#d1fae5;
+    --probable:#2563eb; --probable-soft:#dbeafe;
+    --warn:#d97706; --warn-soft:#fef3c7;
+    --danger:#dc2626; --danger-soft:#fee2e2;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.05);
+    color-scheme:light;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e7e5e4; color:var(--text);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif; }
+
+  /* ── mockup chrome (not product) ─────────────────────────── */
+  .mock-banner { background:#1c1917; color:#fafaf9; padding:12px 20px; font-size:12.5px; line-height:1.6; }
+  .mock-banner .row { display:flex; gap:14px; align-items:baseline; flex-wrap:wrap; }
+  .mock-tag { background:#fde68a; color:#1c1917; font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:.05em; padding:2px 8px; border-radius:4px; white-space:nowrap; }
+  .mock-banner b { color:#fde68a; font-weight:600; }
+  .mock-legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px solid #44403c; font-size:12px; color:#d6d3d1; }
+  .mock-legend span { display:inline-flex; gap:6px; align-items:center; }
+  .ann { display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; flex:none; border-radius:50%; background:#fde68a; color:#1c1917; font-size:11px; font-weight:800; vertical-align:2px; margin:0 2px; }
+
+  /* ── fake browser chrome ─────────────────────────────────── */
+  .browser { max-width:1400px; margin:18px auto 40px; border-radius:10px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,.18); background:var(--bg); }
+  .browser-bar { display:flex; align-items:center; gap:10px; background:#d6d3d1; padding:8px 12px; }
+  .traffic { display:flex; gap:6px; }
+  .traffic i { width:11px; height:11px; border-radius:50%; display:block; }
+  .traffic i:nth-child(1){background:#f87171} .traffic i:nth-child(2){background:#fbbf24} .traffic i:nth-child(3){background:#34d399}
+  .urlbox { flex:1; max-width:560px; background:#fafaf9; border-radius:6px; padding:4px 12px; font-size:12px; color:var(--text-muted); display:flex; gap:7px; align-items:center; }
+  .urlbox .lock { color:var(--must); font-size:11px; }
+  .urlbox b { color:var(--text); font-weight:600; }
+
+  /* ── app bar (cloud chrome) ──────────────────────────────── */
+  .appbar { display:flex; align-items:center; gap:14px; background:#1c1917; color:#e7e5e4; padding:8px 20px; font-size:12.5px; }
+  .appbar .logo { font-weight:700; letter-spacing:.02em; color:#fafaf9; }
+  .appbar .logo em { font-style:normal; color:#7dd3fc; }
+  .proj-pill { background:#292524; border:1px solid #44403c; border-radius:6px; padding:3px 10px; color:#d6d3d1; }
+  .proj-pill b { color:#fafaf9; font-weight:600; }
+  .appbar-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+  .agent-state { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#a8a29e; }
+  .agent-state .dot { width:8px; height:8px; border-radius:50%; background:#34d399; box-shadow:0 0 0 3px rgba(52,211,153,.2); }
+  .fb-global { background:transparent; border:1px solid #57534e; color:#e7e5e4; border-radius:6px; padding:4px 12px; font-size:12px; cursor:pointer; }
+  .avatar { width:26px; height:26px; border-radius:50%; background:#0369a1; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+
+  /* ── viewer header (matches the shipped template) ────────── */
+  .hdr { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 20px 0; }
+  .hdr-row1 { display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding-bottom:12px; }
+  .hdr-eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-subtle); }
+  .hdr-title { font-size:17px; font-weight:700; margin:1px 0 0; }
+  .tb-btn { background:var(--surface-2); border:1px solid var(--border-strong); border-radius:6px; padding:5px 14px; font-size:12.5px; color:var(--text); cursor:pointer; }
+  .autosave { font-size:11.5px; color:var(--text-subtle); display:inline-flex; gap:5px; align-items:center; }
+  .autosave .dot { width:7px; height:7px; border-radius:50%; background:var(--must); }
+  .hdr-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+  .mode-toggle { display:inline-flex; gap:2px; background:var(--surface-2); padding:3px; border-radius:8px; }
+  .mode-toggle button { background:transparent; border:0; padding:6px 16px; border-radius:6px; font-size:13px; color:var(--text-muted); font-weight:500; cursor:pointer; }
+  .mode-toggle button.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+  .hdr-sep { width:1px; height:22px; background:var(--border-strong); }
+  .tb-export { background:var(--accent); border:1px solid var(--accent); color:#fff; font-weight:500; border-radius:6px; padding:6px 14px; font-size:12.5px; cursor:pointer; }
+
+  .hdr-row2 { border-top:1px solid var(--border); padding:10px 0; }
+  .hdr-filter-line { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; position:relative; }
+  .hdr-filter-line:last-child { margin-bottom:0; }
+  .filter-group { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border:1px solid var(--border-strong); border-radius:8px; position:relative; }
+  .group-label { color:var(--text-subtle); margin-right:4px; font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+  .chip { background:transparent; border:1px solid transparent; color:var(--text-muted); padding:3px 10px; border-radius:999px; font-size:12px; cursor:pointer; }
+  .chip.active { background:var(--text); color:#fff; border-color:var(--text); }
+  .cc-divider { width:1px; height:16px; background:var(--border); margin:0 3px; }
+  .cc-help-btn { width:20px; height:20px; border-radius:50%; border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text-subtle); font-size:11px; font-weight:700; cursor:pointer; line-height:1; }
+  .cc-help-btn.active { background:var(--accent-soft); border-color:var(--accent); color:var(--accent-strong); }
+  .cc-panel { position:absolute; top:calc(100% + 8px); left:0; width:440px; background:var(--surface); border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 10px 32px rgba(0,0,0,.14); padding:14px 16px 10px; z-index:30; }
+  .cc-block { margin-bottom:10px; }
+  .cc-block-label { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--accent-strong); font-weight:700; margin-bottom:2px; }
+  .cc-roadmap { margin:0; font-size:12.5px; color:var(--text-muted); line-height:1.55; }
+  .cc-source { font-size:10.5px; color:var(--text-subtle); border-top:1px dashed var(--border); padding-top:6px; margin-top:4px; font-style:italic; }
+  .win-block { margin-left:auto; display:inline-flex; align-items:center; gap:10px; padding:4px 12px; border:1px solid var(--border-strong); border-radius:8px; font-variant-numeric:tabular-nums; }
+  .win-metric { font-size:12px; }
+  .win-metric .val { font-weight:600; color:var(--must); }
+  .reveal-block { margin-left:auto; display:inline-flex; align-items:center; gap:6px; padding:3px 4px; border:1px solid var(--border-strong); border-radius:8px; }
+  .tl-mode-toggle { display:inline-flex; gap:2px; }
+  .tl-mode-toggle button { background:transparent; border:0; padding:4px 14px; border-radius:5px; font-size:12px; color:var(--text-muted); font-weight:500; cursor:pointer; }
+  .tl-mode-toggle button.active { background:var(--text); color:#fff; }
+
+  /* ── body layout: cards + chat panel ─────────────────────── */
+  .viewer-body { display:flex; align-items:flex-start; }
+  .main { flex:1; min-width:0; padding:20px 20px 60px; }
+  .act-section { margin-bottom:28px; max-width:880px; }
+  .act-header { display:flex; align-items:baseline; gap:12px; padding:8px 0; margin-bottom:8px; border-bottom:2px solid var(--border-strong); }
+  .act-title { font-size:17px; font-weight:600; margin:0; }
+  .act-sub { color:var(--text-muted); font-size:12.5px; }
+  .speaker-tag { font-size:11px; padding:2px 8px; border-radius:999px; font-weight:500; white-space:nowrap; }
+  .tc { color:var(--text-subtle); font-size:11px; font-family:ui-monospace,Menlo,monospace; }
+  .qid { font-weight:600; background:var(--surface-2); padding:1px 7px; border-radius:4px; font-size:12px; }
+
+  .read-card { padding:10px 14px 12px 16px; border-bottom:1px solid var(--border); border-left:3px solid transparent; background:var(--surface); position:relative; }
+  .read-card.tight-mark { border-left-color:var(--must); }
+  .read-card.loose-mark { border-left-color:var(--probable); background:rgba(37,99,235,.03); }
+  .rc-head { display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap; }
+  .rc-quote { font-size:15.5px; line-height:1.6; margin:2px 0 0; }
+  .mship-chip { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:2px 8px; border-radius:999px; }
+  .mship-chip.loose { color:var(--probable); background:var(--probable-soft); }
+  .rc-tools { margin-left:auto; display:inline-flex; gap:4px; }
+  .rc-tool { background:transparent; border:1px solid var(--border); color:var(--text-subtle); font-size:12px; padding:3px 9px; border-radius:6px; cursor:pointer; }
+  .fidelity-chip { font-size:10.5px; font-weight:600; color:var(--warn); background:var(--warn-soft); border:1px dashed var(--warn); border-radius:5px; padding:2px 8px; }
+
+  /* agent note + the §5e comment affordance */
+  .agent-note { color:var(--text-muted); font-size:12.5px; margin-top:9px; padding:8px 10px 7px; border:1px dashed var(--border-strong); border-radius:7px; background:var(--surface-2); font-style:italic; position:relative; }
+  .agent-note b { color:var(--text-subtle); font-style:normal; font-size:10px; text-transform:uppercase; letter-spacing:.05em; margin-right:5px; }
+  .note-comment-btn { position:absolute; top:6px; right:8px; background:var(--surface); border:1px solid var(--border-strong); color:var(--text-subtle); font-size:11px; font-style:normal; border-radius:5px; padding:2px 8px; cursor:pointer; }
+  .note-comment-btn:hover { color:var(--accent-strong); border-color:var(--accent); }
+  .comment-box { margin-top:8px; font-style:normal; }
+  .comment-box textarea { width:100%; font:12.5px/1.5 inherit; font-family:inherit; border:1px solid var(--accent); border-radius:6px; padding:7px 9px; resize:vertical; min-height:38px; background:var(--surface); }
+  .comment-foot { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .comment-send { background:var(--accent); color:#fff; border:0; border-radius:5px; padding:4px 12px; font-size:11.5px; font-weight:600; cursor:pointer; }
+  .comment-meta { font-size:10.5px; color:var(--text-subtle); }
+  .comment-filed { margin-top:8px; font-style:normal; font-size:12px; background:var(--accent-soft); border:1px solid #bae6fd; border-radius:6px; padding:6px 9px; color:var(--accent-strong); }
+  .comment-filed b { color:var(--accent-strong); font-size:10px; letter-spacing:.05em; }
+  .comment-filed .status { float:right; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--must); }
+
+  /* ── in-viewer chat panel (§5c surface, M1 scope) ────────── */
+  .chat-panel { width:360px; flex:none; background:var(--surface); border-left:1px solid var(--border-strong); display:flex; flex-direction:column; min-height:720px; position:relative; }
+  .chat-head { padding:12px 16px 10px; border-bottom:1px solid var(--border); }
+  .chat-title { font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:8px; }
+  .conn { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--must); margin-top:4px; }
+  .conn .dot { width:7px; height:7px; border-radius:50%; background:var(--must); box-shadow:0 0 0 3px rgba(5,150,105,.15); }
+  .conn-alt { font-size:10.5px; color:var(--text-subtle); margin-top:3px; }
+  .conn-alt .dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--warn); margin-right:4px; }
+  .chat-scroll { flex:1; overflow-y:auto; padding:14px 14px 8px; display:flex; flex-direction:column; gap:10px; }
+  .msg { max-width:88%; border-radius:10px; padding:8px 11px; font-size:12.5px; line-height:1.5; }
+  .msg.agent { background:var(--surface-2); border:1px solid var(--border); align-self:flex-start; border-bottom-left-radius:3px; }
+  .msg.user { background:var(--accent); color:#fff; align-self:flex-end; border-bottom-right-radius:3px; }
+  .msg .who { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; opacity:.65; display:block; margin-bottom:2px; }
+  .msg .ctxchip { display:inline-block; font-size:10px; background:rgba(255,255,255,.22); border-radius:4px; padding:0 6px; margin-top:5px; }
+  .msg.agent .ctxchip { background:var(--accent-soft); color:var(--accent-strong); }
+  .msg-ack { align-self:flex-start; font-size:10.5px; color:var(--text-subtle); display:flex; gap:5px; align-items:center; padding-left:4px; }
+  .msg-ack .tick { color:var(--must); }
+  .chat-compose { border-top:1px solid var(--border); padding:10px 14px 12px; }
+  .chat-input { width:100%; font:12.5px/1.5 inherit; font-family:inherit; border:1px solid var(--border-strong); border-radius:8px; padding:8px 10px; resize:none; min-height:44px; }
+  .chat-compose-foot { display:flex; align-items:center; gap:8px; margin-top:7px; }
+  .chat-send { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:5px 16px; font-size:12px; font-weight:600; cursor:pointer; }
+  .chat-ctx { font-size:10.5px; color:var(--text-subtle); }
+</style>
+
+<div class="mock-banner">
+  <div class="row">
+    <span class="mock-tag">Mockup · Round 4 (regenerated 2026-07-06)</span>
+    <span><b>Milestone 1 — the hosted viewer</b> at <b>edit.storyboardops.com/p/epicor-rf-fager</b>. Same viewer you use today (real header, filter rows, ?-popovers, card layout) + the cloud pieces. Quote text is representative — the real Epicor data lives on the SSD.</span>
+  </div>
+  <div class="mock-legend">
+    <span><i class="ann">1</i> Cloud chrome: HTTPS + auth, project pill, signed-in avatar</span>
+    <span><i class="ann">2</i> Data is fetched, not baked — agent notes appear without a rebuild</span>
+    <span><i class="ann">3</i> In-viewer chat panel (§5c) — replaces the separate Cowork window</span>
+    <span><i class="ann">4</i> "Comment on agent" feedback affordance (§5e) → agent-feedback log</span>
+    <span><i class="ann">5</i> Honest connection states over <b>djed sync</b> — local Edit Agent responds until A3</span>
+  </div>
+</div>
+
+<div class="browser">
+  <div class="browser-bar">
+    <div class="traffic"><i></i><i></i><i></i></div>
+    <div class="urlbox"><span class="lock">🔒</span> <span><b>edit.storyboardops.com</b>/p/epicor-rf-fager</span></div>
+    <i class="ann" title="Cloud chrome">1</i>
+  </div>
+
+  <div class="appbar">
+    <span class="logo">Storyboard <em>Ops</em></span>
+    <span class="proj-pill">Project: <b>Epicor — RF Fager</b> ▾</span>
+    <div class="appbar-right">
+      <span class="agent-state"><span class="dot"></span> Edit Agent connected <i class="ann" title="Connection states">5</i></span>
+      <button class="fb-global">✍ Feedback <i class="ann" title="Global feedback (§5e)">4</i></button>
+      <span class="avatar">JB</span>
+    </div>
+  </div>
+
+  <div class="hdr">
+    <div class="hdr-row1">
+      <div>
+        <div class="hdr-eyebrow">Epicor · RF Fager</div>
+        <h1 class="hdr-title">Tight cut v1</h1>
+      </div>
+      <button class="tb-btn">Save</button>
+      <button class="tb-btn">Open</button>
+      <span class="autosave"><span class="dot"></span> Saved · just now</span>
+      <div class="hdr-right">
+        <div class="mode-toggle">
+          <button>Quote Library</button>
+          <button class="active">Timeline</button>
+          <button>Cuts</button>
+        </div>
+        <span class="hdr-sep"></span>
+        <button class="tb-export">Export to Final Cut</button>
+      </div>
+    </div>
+    <div class="hdr-row2">
+      <div class="hdr-filter-line">
+        <div class="filter-group">
+          <span class="group-label">Act</span>
+          <button class="chip active">All</button>
+          <button class="chip">Act 1</button>
+          <button class="chip">Act 2</button>
+          <button class="chip">Act 3</button>
+          <button class="chip">Act 4</button>
+          <span class="cc-divider"></span>
+          <button class="cc-help-btn active">?</button>
+          <div class="cc-panel">
+            <div class="cc-block">
+              <div class="cc-block-label">Premise</div>
+              <p class="cc-roadmap">A third-generation mechanical contractor outgrows the systems that built it — and finds that modernizing the office was really about protecting the field.</p>
+            </div>
+            <div class="cc-block">
+              <div class="cc-block-label">Act 2 — The Breaking Point</div>
+              <p class="cc-roadmap">Manual processes buckling under growth: double entry, paper tickets, month-end blind spots. Build the cost of standing still before Epicor enters.</p>
+            </div>
+            <div class="cc-source">from Creative Context agent — fetched live, no rebuild <i class="ann">2</i></div>
+          </div>
+        </div>
+        <div class="win-block">
+          <span class="win-metric"><span class="val">29</span> entries · <span class="val">6:32</span></span>
+        </div>
+      </div>
+      <div class="hdr-filter-line">
+        <div class="filter-group">
+          <span class="group-label">Speaker</span>
+          <button class="chip active">All</button>
+          <button class="chip">Doug Duvall</button>
+          <button class="chip">Bryce Fager</button>
+          <button class="chip">Tim</button>
+          <span class="cc-divider"></span>
+          <button class="cc-help-btn" title="Who's who — speaker summaries">?</button>
+        </div>
+        <div class="reveal-block">
+          <div class="tl-mode-toggle">
+            <button class="active">Review</button>
+            <button>Edit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="viewer-body">
+    <div class="main">
+      <div class="act-section">
+        <div class="act-header">
+          <h2 class="act-title">Act 2 — The Breaking Point</h2>
+          <span class="act-sub">8 in Tight</span>
+        </div>
+
+        <div class="read-card tight-mark">
+          <div class="rc-head">
+            <span class="qid">#86</span>
+            <span class="speaker-tag" style="background:#dbeafe;color:#1e3a8a">Doug Duvall</span>
+            <span class="tc">00:14:22–00:14:41</span>
+            <span class="rc-tools"><button class="rc-tool">✎ Edit</button></span>
+          </div>
+          <p class="rc-quote">Every job ticket was paper. If a foreman needed to know what was ordered, he called the office, and the office dug through a folder. We were growing faster than that could survive.</p>
+          <div class="agent-note">
+            <b>Agent</b> Strongest "cost of standing still" beat — placed early in Act 2 so Bryce's #14 lands as escalation, not repetition.
+            <button class="note-comment-btn">💬 Comment <i class="ann">4</i></button>
+            <div class="comment-box">
+              <textarea>Good instinct — keep pairing a field voice before an owner voice at act opens. That order is the house style.</textarea>
+              <div class="comment-foot">
+                <button class="comment-send">File comment</button>
+                <span class="comment-meta">auto-context: Act 2 · entry #86 · round 1 · this note as it stands</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="read-card tight-mark">
+          <div class="rc-head">
+            <span class="qid">#14</span>
+            <span class="speaker-tag" style="background:#fce7f3;color:#9d174d">Bryce Fager</span>
+            <span class="tc">00:06:03–00:06:18</span>
+            <span class="rc-tools"><button class="rc-tool">✎ Edit</button></span>
+          </div>
+          <p class="rc-quote">I'd close the month and realize we'd been losing money on a job for six weeks. Nobody hid it — we just had no way to see it while it was happening.</p>
+          <div class="agent-note">
+            <b>Agent</b> Owner-level stakes. Trimmed the head per your Rule-1 pass; timecodes re-derived after the TC gate flagged this entry upstream.
+            <button class="note-comment-btn">💬 Comment</button>
+            <div class="comment-filed">
+              <span class="status">Logged → agent-feedback.json</span>
+              <b>YOUR COMMENT · </b> "Six weeks" is the number that sells the whole act — never trim inside this line.
+            </div>
+          </div>
+        </div>
+
+        <div class="read-card loose-mark">
+          <div class="rc-head">
+            <span class="qid">#91</span>
+            <span class="speaker-tag" style="background:#dbeafe;color:#1e3a8a">Doug Duvall</span>
+            <span class="tc">00:16:10–00:16:24</span>
+            <span class="mship-chip loose">loose</span>
+            <span class="rc-tools"><button class="rc-tool">✎ Edit</button></span>
+          </div>
+          <p class="rc-quote">Scheduling was a whiteboard. A good whiteboard, but a whiteboard.</p>
+        </div>
+
+        <div class="read-card tight-mark">
+          <div class="rc-head">
+            <span class="qid">#68</span>
+            <span class="speaker-tag" style="background:#ede9fe;color:#5b21b6">Tim</span>
+            <span class="tc">00:21:47–00:22:12</span>
+            <span class="fidelity-chip">⚠ interior cut — verify in/out in FCP</span>
+            <span class="rc-tools"><button class="rc-tool">✎ Edit</button></span>
+          </div>
+          <p class="rc-quote">The guys in the field didn't ask for software. They asked to stop doing everything twice. That's what we were really shopping for.</p>
+        </div>
+      </div>
+
+      <div class="act-section">
+        <div class="act-header">
+          <h2 class="act-title">Act 3 — The Epicor Way</h2>
+          <span class="act-sub">9 in Tight</span>
+        </div>
+        <div class="read-card tight-mark">
+          <div class="rc-head">
+            <span class="qid">#112</span>
+            <span class="speaker-tag" style="background:#fce7f3;color:#9d174d">Bryce Fager</span>
+            <span class="tc">00:31:02–00:31:19</span>
+            <span class="rc-tools"><button class="rc-tool">✎ Edit</button></span>
+          </div>
+          <p class="rc-quote">Now a foreman opens a tablet and sees the same job the office sees. Same numbers, same day. That changed the conversations more than it changed the paperwork.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── §5c chat surface, M1 scope ── -->
+    <div class="chat-panel">
+      <div class="chat-head">
+        <div class="chat-title">Project chat <i class="ann">3</i></div>
+        <div class="conn"><span class="dot"></span> Connected · reading your live edits</div>
+        <div class="conn-alt"><span class="dot"></span> When no local session is attached: "Agent offline — messages will queue" <i class="ann">5</i></div>
+      </div>
+      <div class="chat-scroll">
+        <div class="msg agent">
+          <span class="who">Edit Agent · local session via sync</span>
+          Act 2 pass done — rebuilt over-inclusive per the loop: 8 tight, 3 loose. Two seam flags: #86→#14 (checked, reads as escalation) and #68's interior cut (chip on the card; verify the out-point in FCP).
+        </div>
+        <div class="msg user">
+          <span class="who">Jeff</span>
+          Cut #91 — the whiteboard line is charming but it repeats what #86 already does.
+          <span class="ctxchip">context: Timeline · Act 2 · #91 selected</span>
+        </div>
+        <div class="msg agent">
+          <span class="who">Edit Agent</span>
+          Done — #91 → Loose. Act 2 is now 8 entries · 1:52. Your comment on #14 ("never trim inside this line") is logged and I'll hold it as standing feedback for this project.
+          <span class="ctxchip">wrote agent-cursor · synced</span>
+        </div>
+        <div class="msg-ack"><span class="tick">✓✓</span> Agent read your edits · 12s ago (staleness pill unchanged from the local viewer)</div>
+      </div>
+      <div class="chat-compose">
+        <textarea class="chat-input" placeholder="Message the Edit Agent… (structure questions route to Creative Context in A3)"></textarea>
+        <div class="chat-compose-foot">
+          <button class="chat-send">Send</button>
+          <span class="chat-ctx">sends with context: Timeline · Act 2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</html>

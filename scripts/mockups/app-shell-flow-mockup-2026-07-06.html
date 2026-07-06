@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App shell — 8-screen flow mockup</title>
+<style>
+  :root {
+    --bg:#fafaf9; --surface:#fff; --surface-2:#f5f5f4;
+    --border:#e7e5e4; --border-strong:#d6d3d1;
+    --text:#1c1917; --text-muted:#57534e; --text-subtle:#78716c;
+    --accent:#0369a1; --accent-soft:#e0f2fe; --accent-strong:#075985;
+    --must:#059669; --must-soft:#d1fae5;
+    --probable:#2563eb; --probable-soft:#dbeafe;
+    --warn:#d97706; --warn-soft:#fef3c7;
+    --danger:#dc2626; --danger-soft:#fee2e2;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.05);
+    color-scheme:light;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e7e5e4; color:var(--text);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif; }
+
+  /* mock chrome */
+  .mock-banner { background:#1c1917; color:#fafaf9; padding:14px 22px; font-size:12.5px; line-height:1.6; }
+  .mock-tag { background:#fde68a; color:#1c1917; font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:.05em; padding:2px 8px; border-radius:4px; }
+  .mock-banner b { color:#fde68a; font-weight:600; }
+  .patterns { display:flex; gap:16px; flex-wrap:wrap; margin-top:9px; padding-top:9px; border-top:1px solid #44403c; color:#d6d3d1; font-size:12px; }
+  .patterns b { color:#fafaf9; }
+  .toc { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .toc a { color:#7dd3fc; text-decoration:none; font-size:12px; background:#292524; border:1px solid #44403c; border-radius:6px; padding:3px 10px; }
+
+  .screen-wrap { max-width:1360px; margin:30px auto; padding:0 20px; }
+  .screen-label { display:flex; align-items:baseline; gap:12px; margin:0 0 10px 4px; flex-wrap:wrap; }
+  .screen-num { background:#1c1917; color:#fde68a; font-weight:800; font-size:12px; border-radius:6px; padding:3px 10px; }
+  .screen-title { font-size:16px; font-weight:700; margin:0; }
+  .screen-cap { color:#57534e; font-size:12.5px; }
+
+  .frame { border-radius:10px; overflow:hidden; box-shadow:0 10px 34px rgba(0,0,0,.16); background:var(--bg); }
+  .browser-bar { display:flex; align-items:center; gap:10px; background:#d6d3d1; padding:7px 12px; }
+  .traffic { display:flex; gap:6px; }
+  .traffic i { width:10px; height:10px; border-radius:50%; display:block; }
+  .traffic i:nth-child(1){background:#f87171} .traffic i:nth-child(2){background:#fbbf24} .traffic i:nth-child(3){background:#34d399}
+  .urlbox { flex:1; max-width:520px; background:#fafaf9; border-radius:6px; padding:3px 12px; font-size:11.5px; color:var(--text-muted); }
+  .urlbox b { color:var(--text); font-weight:600; }
+  .appbar { display:flex; align-items:center; gap:14px; background:#1c1917; color:#e7e5e4; padding:7px 18px; font-size:12px; }
+  .appbar .logo { font-weight:700; color:#fafaf9; } .appbar .logo em { font-style:normal; color:#7dd3fc; }
+  .proj-pill { background:#292524; border:1px solid #44403c; border-radius:6px; padding:2px 10px; color:#d6d3d1; }
+  .proj-pill b { color:#fafaf9; }
+  .appbar-right { margin-left:auto; display:flex; gap:12px; align-items:center; }
+  .avatar { width:24px; height:24px; border-radius:50%; background:#0369a1; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+
+  /* shell grid: rail | workspace | chat */
+  .shell { display:grid; grid-template-columns:215px 1fr 330px; min-height:480px; align-items:stretch; }
+
+  /* stage rail */
+  .rail { background:var(--surface-2); border-right:1px solid var(--border-strong); padding:14px 0; }
+  .rail-title { font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--text-subtle); padding:0 16px 8px; }
+  .stage { display:flex; align-items:center; gap:9px; padding:7px 16px; font-size:12.5px; color:var(--text-muted); border-left:3px solid transparent; }
+  .stage .ic { width:18px; height:18px; flex:none; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; }
+  .stage.done .ic { background:var(--must-soft); color:var(--must); }
+  .stage.run .ic { background:var(--accent-soft); color:var(--accent-strong); }
+  .stage.you .ic { background:var(--warn-soft); color:var(--warn); }
+  .stage.pend .ic { background:var(--surface); border:1px dashed var(--border-strong); color:var(--text-subtle); }
+  .stage.active { background:var(--surface); border-left-color:var(--accent); color:var(--text); font-weight:600; }
+  .stage .sub { display:block; font-size:10.5px; color:var(--text-subtle); font-weight:400; }
+
+  /* workspace */
+  .work { padding:18px 20px; min-width:0; }
+  .work-h { font-size:15px; font-weight:700; margin:0 0 3px; }
+  .work-sub { color:var(--text-muted); font-size:12.5px; margin:0 0 14px; }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:9px; box-shadow:var(--shadow); padding:14px 16px; margin-bottom:12px; }
+  .panel h4 { margin:0 0 8px; font-size:12.5px; }
+  .panel .lbl { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-subtle); display:block; margin-bottom:3px; }
+  .field { display:flex; gap:10px; margin-bottom:10px; align-items:center; }
+  .input { flex:1; border:1px solid var(--border-strong); border-radius:6px; padding:6px 10px; font:12.5px/1.4 inherit; font-family:inherit; color:var(--text); background:var(--surface); }
+  .drop { border:1.5px dashed var(--border-strong); border-radius:8px; padding:14px; text-align:center; color:var(--text-subtle); font-size:12px; margin-bottom:8px; background:var(--surface-2); }
+  .drop b { color:var(--text-muted); display:block; font-size:12.5px; margin-bottom:2px; }
+  .file-row { display:flex; align-items:center; gap:8px; font-size:12px; padding:6px 4px; border-bottom:1px dashed var(--border); }
+  .file-row:last-child { border-bottom:0; }
+  .file-ok { color:var(--must); font-weight:700; font-size:11px; }
+  .bar { height:7px; border-radius:4px; background:var(--surface-2); overflow:hidden; flex:1; }
+  .bar i { display:block; height:100%; background:var(--accent); border-radius:4px; }
+  .bar.done i { background:var(--must); }
+  .pct { font-size:11px; color:var(--text-subtle); font-variant-numeric:tabular-nums; width:74px; text-align:right; }
+  .status-chip { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:2px 8px; border-radius:999px; }
+  .status-chip.pass { background:var(--must-soft); color:var(--must); }
+  .status-chip.run { background:var(--accent-soft); color:var(--accent-strong); }
+  .status-chip.wait { background:var(--warn-soft); color:var(--warn); }
+  .btn { background:var(--surface-2); border:1px solid var(--border-strong); border-radius:6px; padding:5px 13px; font-size:12px; cursor:pointer; color:var(--text); }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  .btn.approve { background:var(--must); border-color:var(--must); color:#fff; font-weight:600; }
+  .acts-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .act-card { border:1px solid var(--border); border-radius:7px; padding:9px 11px; background:var(--surface); }
+  .act-card b { font-size:12px; display:block; }
+  .act-card p { margin:3px 0 0; font-size:11.5px; color:var(--text-muted); line-height:1.45; }
+  .dl-row { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+  .verify-pass { font-size:12px; color:var(--must); font-weight:600; }
+  .note { font-size:11px; color:var(--text-subtle); font-style:italic; margin-top:8px; }
+  /* screen 6: the real quote viewer embedded in the shell (compact scale) */
+  .work.viewer-embed { padding:0; }
+  .v-hdr { background:var(--surface); border-bottom:1px solid var(--border); padding:10px 16px 0; }
+  .v-row1 { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding-bottom:10px; }
+  .v-eyebrow { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-subtle); }
+  .v-title { font-size:14.5px; font-weight:700; margin:1px 0 0; }
+  .v-btn { background:var(--surface-2); border:1px solid var(--border-strong); border-radius:6px; padding:4px 11px; font-size:11.5px; cursor:pointer; color:var(--text); }
+  .v-autosave { font-size:10.5px; color:var(--text-subtle); display:inline-flex; gap:4px; align-items:center; }
+  .v-autosave .dot { width:6px; height:6px; border-radius:50%; background:var(--must); }
+  .v-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .v-mode { display:inline-flex; gap:2px; background:var(--surface-2); padding:2px; border-radius:7px; }
+  .v-mode button { background:transparent; border:0; padding:4px 10px; border-radius:5px; font-size:11.5px; color:var(--text-muted); font-weight:500; cursor:pointer; }
+  .v-mode button.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+  .v-export { background:var(--accent); border:1px solid var(--accent); color:#fff; font-weight:600; border-radius:6px; padding:4px 11px; font-size:11.5px; cursor:pointer; }
+  .v-row2 { border-top:1px solid var(--border); padding:8px 0; }
+  .v-filter-line { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:7px; }
+  .v-filter-line:last-child { margin-bottom:0; }
+  .v-group { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border:1px solid var(--border-strong); border-radius:8px; }
+  .v-glabel { color:var(--text-subtle); margin-right:3px; font-size:9px; text-transform:uppercase; letter-spacing:.05em; }
+  .v-chip { background:transparent; border:1px solid transparent; color:var(--text-muted); padding:2px 8px; border-radius:999px; font-size:11px; cursor:pointer; }
+  .v-chip.active { background:var(--text); color:#fff; }
+  .v-divider { width:1px; height:14px; background:var(--border); margin:0 2px; }
+  .v-help { width:17px; height:17px; border-radius:50%; border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text-subtle); font-size:10px; font-weight:700; cursor:pointer; line-height:1; }
+  .v-metric { margin-left:auto; border:1px solid var(--border-strong); border-radius:8px; padding:3px 10px; font-size:11px; font-variant-numeric:tabular-nums; }
+  .v-metric b { color:var(--must); }
+  .v-reveal { margin-left:auto; display:inline-flex; padding:2px 3px; border:1px solid var(--border-strong); border-radius:8px; gap:2px; }
+  .v-reveal button { background:transparent; border:0; padding:3px 10px; border-radius:5px; font-size:11px; color:var(--text-muted); cursor:pointer; }
+  .v-reveal button.active { background:var(--text); color:#fff; }
+  .v-main { padding:12px 16px 18px; }
+  .v-act-header { display:flex; align-items:baseline; gap:9px; padding:5px 0; margin-bottom:4px; border-bottom:2px solid var(--border-strong); }
+  .v-act-title { font-size:13.5px; font-weight:600; margin:0; }
+  .v-act-sub { color:var(--text-muted); font-size:11px; }
+  .v-card { padding:8px 10px 9px 12px; border-bottom:1px solid var(--border); border-left:3px solid transparent; background:var(--surface); }
+  .v-card.tight { border-left-color:var(--must); }
+  .v-card.loose { border-left-color:var(--probable); background:rgba(37,99,235,.03); }
+  .v-chead { display:flex; align-items:center; gap:7px; margin-bottom:3px; flex-wrap:wrap; }
+  .v-qid { font-weight:600; background:var(--surface-2); padding:0 6px; border-radius:4px; font-size:10.5px; }
+  .v-spk { font-size:10px; padding:1px 7px; border-radius:999px; font-weight:500; white-space:nowrap; }
+  .v-tc { color:var(--text-subtle); font-size:10px; font-family:ui-monospace,Menlo,monospace; }
+  .v-mchip { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:1px 7px; border-radius:999px; color:var(--probable); background:var(--probable-soft); }
+  .v-fid { font-size:9.5px; font-weight:600; color:var(--warn); background:var(--warn-soft); border:1px dashed var(--warn); border-radius:5px; padding:1px 6px; }
+  .v-tools { margin-left:auto; }
+  .v-tool { background:transparent; border:1px solid var(--border); color:var(--text-subtle); font-size:10.5px; padding:2px 7px; border-radius:5px; cursor:pointer; }
+  .v-quote { font-size:12.5px; line-height:1.55; margin:2px 0 0; }
+  .v-note { color:var(--text-muted); font-size:11px; margin-top:7px; padding:6px 8px 5px; border:1px dashed var(--border-strong); border-radius:6px; background:var(--surface-2); font-style:italic; position:relative; }
+  .v-note b { color:var(--text-subtle); font-style:normal; font-size:9px; text-transform:uppercase; letter-spacing:.05em; margin-right:4px; }
+  .v-note .cbtn { position:absolute; top:4px; right:6px; background:var(--surface); border:1px solid var(--border-strong); color:var(--text-subtle); font-size:9.5px; font-style:normal; border-radius:5px; padding:1px 6px; cursor:pointer; }
+  .diff { font-family:ui-monospace,Menlo,monospace; font-size:11px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; overflow-x:auto; }
+  .diff .add { color:var(--must); } .diff .del { color:var(--danger); text-decoration:line-through; }
+
+  /* chat column */
+  .chat { border-left:1px solid var(--border-strong); background:var(--surface); display:flex; flex-direction:column; }
+  .chat-head { padding:10px 14px 8px; border-bottom:1px solid var(--border); }
+  .chat-title { font-weight:600; font-size:12.5px; }
+  .conn { font-size:10.5px; margin-top:2px; display:flex; align-items:center; gap:5px; }
+  .conn .dot { width:6px; height:6px; border-radius:50%; }
+  .conn.ok { color:var(--must); } .conn.ok .dot { background:var(--must); }
+  .conn.off { color:var(--text-subtle); } .conn.off .dot { background:var(--warn); }
+  .chat-scroll { flex:1; padding:12px; display:flex; flex-direction:column; gap:9px; overflow-y:auto; }
+  .msg { max-width:92%; border-radius:9px; padding:7px 10px; font-size:11.5px; line-height:1.5; }
+  .msg.agent { background:var(--surface-2); border:1px solid var(--border); align-self:flex-start; border-bottom-left-radius:3px; }
+  .msg.user { background:var(--accent); color:#fff; align-self:flex-end; border-bottom-right-radius:3px; }
+  .msg .who { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; opacity:.65; display:block; margin-bottom:2px; }
+
+  /* decision cards inside the thread */
+  .dcard { align-self:stretch; background:var(--surface); border:1.5px solid var(--accent); border-radius:9px; padding:10px 12px; font-size:11.5px; box-shadow:var(--shadow); }
+  .dcard .dc-title { font-weight:700; font-size:11.5px; display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+  .dcard .dc-kind { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; background:var(--accent-soft); color:var(--accent-strong); border-radius:4px; padding:1px 6px; }
+  .dcard label { display:flex; gap:7px; align-items:flex-start; padding:4px 0; color:var(--text-muted); cursor:pointer; line-height:1.4; }
+  .dcard .dc-actions { display:flex; gap:6px; margin-top:8px; }
+  .dcard.decided { border-color:var(--border-strong); opacity:.92; }
+  .dc-outcome { margin-top:8px; font-size:10.5px; color:var(--must); font-weight:600; border-top:1px dashed var(--border); padding-top:6px; }
+  .chat-compose { border-top:1px solid var(--border); padding:8px 12px 10px; }
+  .chat-input { width:100%; border:1px solid var(--border-strong); border-radius:7px; padding:6px 9px; font:11.5px/1.4 inherit; font-family:inherit; resize:none; min-height:34px; color:var(--text-subtle); }
+</style>
+
+<div class="mock-banner">
+  <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap">
+    <span class="mock-tag">Mockup · App shell, 8 screens (regenerated 2026-07-06)</span>
+    <span><b>One shell for the whole project lifecycle</b> — new project → review. Not one window per agent: <b>one persistent project chat</b>, decisions as cards inside it, a <b>stage rail</b> driven by pipeline-state.json. Screen 6 is where the Milestone-1 viewer slots in.</span>
+  </div>
+  <div class="patterns">
+    <span><b>Pattern 1</b> — persistent project thread (routed, §5c)</span>
+    <span><b>Pattern 2</b> — decision cards in the thread (§5f)</span>
+    <span><b>Pattern 3</b> — pipeline stage rail (pending / running / needs-you / done)</span>
+    <span><b>Pattern 4</b> — upload surfaces (audio, caption XMLs, docs)</span>
+  </div>
+  <div class="toc">
+    <a href="#s1">1 · New project</a><a href="#s2">2 · Discovery</a><a href="#s3">3 · Transcription</a>
+    <a href="#s4">4 · Story structure</a><a href="#s5">5 · Tagging &amp; Synthesis</a><a href="#s6">6 · Edit</a>
+    <a href="#s7">7 · Export</a><a href="#s8">8 · Review</a>
+  </div>
+</div>
+
+<!-- ═════════ SCREEN 1 ═════════ -->
+<div class="screen-wrap" id="s1">
+  <div class="screen-label">
+    <span class="screen-num">Screen 1</span>
+    <h2 class="screen-title">New project — setup &amp; uploads</h2>
+    <span class="screen-cap">Pattern 4: the upload surfaces. Video never uploads — audio + caption XMLs only (settled media decision).</span>
+  </div>
+  <div class="frame">
+    <div class="browser-bar"><div class="traffic"><i></i><i></i><i></i></div><div class="urlbox">🔒 <b>app.storyboardops.com</b>/projects/new</div></div>
+    <div class="appbar"><span class="logo">Storyboard <em>Ops</em></span><span class="proj-pill">New project</span><div class="appbar-right"><span class="avatar">JB</span></div></div>
+    <div class="shell">
+      <div class="rail">
+        <div class="rail-title">Pipeline</div>
+        <div class="stage active you"><span class="ic">●</span><span>Setup<span class="sub">needs you</span></span></div>
+        <div class="stage pend"><span class="ic">○</span>Discovery</div>
+        <div class="stage pend"><span class="ic">○</span>Transcription</div>
+        <div class="stage pend"><span class="ic">○</span>Story structure</div>
+        <div class="stage pend"><span class="ic">○</span>Tagging &amp; Synthesis</div>
+        <div class="stage pend"><span class="ic">○</span>Edit</div>
+        <div class="stage pend"><span class="ic">○</span>Export</div>
+        <div class="stage pend"><span class="ic">○</span>Review</div>
+      </div>
+      <div class="work">
+        <h3 class="work-h">Set up the project</h3>
+        <p class="work-sub">Everything the pipeline needs before Discovery can start.</p>
+        <div class="panel">
+          <div class="field"><span class="lbl" style="width:70px;margin:0">Client</span><input class="input" value="Epicor"></div>
+          <div class="field"><span class="lbl" style="width:70px;margin:0">Project</span><input class="input" value="RF Fager testimonial"></div>
+          <div class="field"><span class="lbl" style="width:70px;margin:0">Slug</span><input class="input" value="epicor-rf-fager"></div>
+        </div>
+        <div class="panel">
+          <h4>Uploads <span style="font-weight:400;color:var(--text-subtle)">(video stays local — never uploaded)</span></h4>
+          <div class="drop"><b>Interview audio</b> .mp3 / .wav → transcription job</div>
+          <div class="drop"><b>Caption FCPXMLs + sample timeline</b> per speaker, exported from FCP → timecoding + export builds</div>
+          <div class="drop"><b>Background docs</b> briefs, one-pagers, prior scripts → Discovery</div>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="chat-head"><div class="chat-title">Project chat</div><div class="conn ok"><span class="dot"></span>Router active</div></div>
+        <div class="chat-scroll">
+          <div class="msg agent"><span class="who">Storyboard Ops</span>New project started. Upload interview audio and any background docs — I'll queue Discovery as soon as something lands. Caption XMLs can come later (they're only needed at Export).</div>
+        </div>
+        <div class="chat-compose"><textarea class="chat-input">Ask anything — one thread for the whole project…</textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ SCREEN 2 ═════════ -->
+<div class="screen-wrap" id="s2">
+  <div class="screen-label">
+    <span class="screen-num">Screen 2</span>
+    <h2 class="screen-title">Discovery — doc triage as a decision card</h2>
+    <span class="screen-cap">Pattern 2: "which docs should I ingest?" stops being a prose question in scrollback — it's a one-tap card with a recorded outcome.</span>
+  </div>
+  <div class="frame">
+    <div class="browser-bar"><div class="traffic"><i></i><i></i><i></i></div><div class="urlbox">🔒 <b>app.storyboardops.com</b>/p/epicor-rf-fager</div></div>
+    <div class="appbar"><span class="logo">Storyboard <em>Ops</em></span><span class="proj-pill">Project: <b>Epicor — RF Fager</b></span><div class="appbar-right"><span class="avatar">JB</span></div></div>
+    <div class="shell">
+      <div class="rail">
+        <div class="rail-title">Pipeline</div>
+        <div class="stage done"><span class="ic">✓</span>Setup</div>
+        <div class="stage active you"><span class="ic">●</span><span>Discovery<span class="sub">needs you</span></span></div>
+        <div class="stage pend"><span class="ic">○</span>Transcription</div>
+        <div class="stage pend"><span class="ic">○</span>Story structure</div>
+        <div class="stage pend"><span class="ic">○</span>Tagging &amp; Synthesis</div>
+        <div class="stage pend"><span class="ic">○</span>Edit</div>
+        <div class="stage pend"><span class="ic">○</span>Export</div>
+        <div class="stage pend"><span class="ic">○</span>Review</div>
+      </div>
+      <div class="work">
+        <h3 class="work-h">Discovery</h3>
+        <p class="work-sub">5 candidate documents found (uploads + connected sources). Triage happens in the chat →</p>
+        <div class="panel">
+          <div class="file-row">📄 epicor-rf-fager-brief.pdf <span class="status-chip pass">relevant</span></div>
+          <div class="file-row">📄 rf-fager-company-history.docx <span class="status-chip pass">relevant</span></div>
+          <div class="file-row">📄 epicor-brand-guidelines-2025.pdf <span class="status-chip wait">maybe</span></div>
+          <div class="file-row">📄 prior-testimonial-script-2023.pdf <span class="status-chip pass">relevant</span></div>
+          <div class="file-row">📄 invoice-folder-scan.pdf <span class="status-chip" style="background:var(--danger-soft);color:var(--danger)">skip</span></div>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="chat-head"><div class="chat-title">Project chat</div><div class="conn ok"><span class="dot"></span>Router active</div></div>
+        <div class="chat-scroll">
+          <div class="msg agent"><span class="who">Discovery</span>I found 5 candidate docs. My read on relevance is on the left — confirm what I should ingest:</div>
+          <div class="dcard">
+            <div class="dc-title"><span class="dc-kind">Decision</span> Ingest which documents?</div>
+            <label><input type="checkbox" checked> epicor-rf-fager-brief.pdf</label>
+            <label><input type="checkbox" checked> rf-fager-company-history.docx</label>
+            <label><input type="checkbox"> epicor-brand-guidelines-2025.pdf</label>
+            <label><input type="checkbox" checked> prior-testimonial-script-2023.pdf</label>
+            <label><input type="checkbox"> invoice-folder-scan.pdf</label>
+            <div class="dc-actions"><button class="btn primary">Ingest selected (3)</button><button class="btn">Skip all</button></div>
+          </div>
+        </div>
+        <div class="chat-compose"><textarea class="chat-input">Message…</textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ SCREEN 3 ═════════ -->
+<div class="screen-wrap" id="s3">
+  <div class="screen-label">
+    <span class="screen-num">Screen 3</span>
+    <h2 class="screen-title">Transcription — job progress + speaker confirm</h2>
+    <span class="screen-cap">The Terminal-launcher handoff disappears: audio → AssemblyAI runs as a cloud job. Only human touchpoint = confirming speaker names (a card).</span>
+  </div>
+  <div class="frame">
+    <div class="browser-bar"><div class="traffic"><i></i><i></i><i></i></div><div class="urlbox">🔒 <b>app.storyboardops.com</b>/p/epicor-rf-fager</div></div>
+    <div class="appbar"><span class="logo">Storyboard <em>Ops</em></span><span class="proj-pill">Project: <b>Epicor — RF Fager</b></span><div class="appbar-right"><span class="avatar">JB</span></div></div>
+    <div class="shell">
+      <div class="rail">
+        <div class="rail-title">Pipeline</div>
+        <div class="stage done"><span class="ic">✓</span>Setup</div>
+        <div class="stage done"><span class="ic">✓</span>Discovery</div>
+        <div class="stage active run"><span class="ic">▶</span><span>Transcription<span class="sub">running · 2 of 3</span></span></div>
+        <div class="stage pend"><span class="ic">○</span>Story structure</div>
+        <div class="stage pend"><span class="ic">○</span>Tagging &amp; Synthesis</div>
+        <div class="stage pend"><span class="ic">○</span>Edit</div>
+        <div class="stage pend"><span class="ic">○</span>Export</div>
+        <div class="stage pend"><span class="ic">○</span>Review</div>
+      </div>
+      <div class="work">
+        <h3 class="work-h">Transcription</h3>
+        <p class="work-sub">AssemblyAI jobs on the uploaded audio. Timecode-sanity gate runs on every output before handoff.</p>
+        <div class="panel">
+          <div class="file-row">🎙 doug-duvall-interview.wav <div class="bar done"><i style="width:100%"></i></div><span class="pct">done · 42:10</span></div>
+          <div class="file-row">🎙 bryce-fager-interview.wav <div class="bar done"><i style="width:100%"></i></div><span class="pct">done · 38:55</span></div>
+          <div class="file-row">🎙 tim-interview.wav <div class="bar"><i style="width:64%"></i></div><span class="pct">64%</span></div>
+          <div class="note">✓ TC gate (validate_timecodes.py) will hard-fail collapsed or non-monotonic timecodes here — at the source, not at export.</div>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="chat-head"><div class="chat-title">Project chat</div><div class="conn ok"><span class="dot"></span>Router active</div></div>
+        <div class="chat-scroll">
+          <div class="msg agent"><span class="who">Transcription</span>Two transcripts done, one running. Confirm the speaker names I detected:</div>
+          <div class="dcard">
+            <div class="dc-title"><span class="dc-kind">Confirm</span> Speaker names</div>
+            <label><input type="checkbox" checked> Speaker A → <b>&nbsp;Doug Duvall</b> (field ops)</label>
+            <label><input type="checkbox" checked> Speaker B → <b>&nbsp;Bryce Fager</b> (owner)</label>
+            <label><input type="checkbox" checked> Speaker C → <b>&nbsp;Tim</b> — surname? <input class="input" style="max-width:110px;padding:2px 7px;font-size:11px" placeholder="add"></label>
+            <div class="dc-actions"><button class="btn primary">Confirm names</button></div>
+          </div>
+        </div>
+        <div class="chat-compose"><textarea class="chat-input">Message…</textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ SCREEN 4 ═════════ -->
+<div class="screen-wrap" id="s4">
+  <div class="screen-label">
+    <span class="screen-num">Screen 4</span>
+    <h2 class="screen-title">Story structure — the first TRUE live chat</h2>
+    <span class="screen-cap">Creative Context is conversation-heavy by design: brief → act-structure proposal → iterate until explicit approval. The workspace shows the artifact; the thread carries the argument.</span>
+  </div>
+  <div class="frame">
+    <div class="browser-bar"><div class="traffic"><i></i><i></i><i></i></div><div class="urlbox">🔒 <b>app.storyboardops.com</b>/p/epicor-rf-fager</div></div>
+    <div class="appbar"><span class="logo">Storyboard <em>Ops</em></span><span class="proj-pill">Project: <b>Epicor — RF Fager</b></span><div class="appbar-right"><span class="avatar">JB</span></div></div>
+    <div class="shell">
+      <div class="rail">
+        <div class="rail-title">Pipeline</div>
+        <div class="stage done"><span class="ic">✓</span>Setup</div>
+        <div class="stage done"><span class="ic">✓</span>Discovery</div>
+        <div class="stage done"><span class="ic">✓</span>Transcription</div>
+        <div class="stage active you"><span class="ic">●</span><span>Story structure<span class="sub">proposal v2 — needs you</span></span></div>
+        <div class="stage pend"><span class="ic">○</span>Tagging &amp; Synthesis</div>
+        <div class="stage pend"><span class="ic">○</span>Edit</div>
+        <div class="stage pend"><span class="ic">○</span>Export</div>
+        <div class="stage pend"><span class="ic">○</span>Review</div>
+      </div>
+      <div class="work">
+        <h3 class="work-h">Act structure — proposal v2</h3>
+        <p class="work-sub">From the creative brief + 3 transcripts. Versioned artifact; approving it unlocks tagging.</p>
+        <div class="panel">
+          <span class="lbl">Premise</span>
+          <p style="margin:0 0 12px;font-size:12.5px;color:var(--text-muted)">A third-generation mechanical contractor outgrows the systems that built it — modernizing the office was really about protecting the field.</p>
+          <div class="acts-grid">
+            <div class="act-card"><b>Act 1 — Who Is RF Fager</b><p>Craft, family, three generations. Establish what's at stake before any software talk.</p></div>
+            <div class="act-card"><b>Act 2 — The Breaking Point</b><p>Paper tickets, double entry, month-end blind spots. The cost of standing still.</p></div>
+            <div class="act-card"><b>Act 3 — The Epicor Way</b><p>One system, field and office on the same numbers. Show, don't list features.</p></div>
+            <div class="act-card"><b>Act 4 — Payoff &amp; Future</b><p>Margins visible mid-job; the next generation inherits a modern shop.</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="chat-head"><div class="chat-title">Project chat</div><div class="conn ok"><span class="dot"></span>Creative Context · live</div></div>
+        <div class="chat-scroll">
+          <div class="msg agent"><span class="who">Creative Context</span>v1 had three acts. Doug and Tim keep circling one theme the brief underweights — the field crew's buy-in. I'd split it out: that's the four-act v2 on the left.</div>
+          <div class="msg user"><span class="who">Jeff</span>Agreed on four. But Act 4 shouldn't be "features paid off" — end on the generational thing. Bryce's kids.</div>
+          <div class="msg agent"><span class="who">Creative Context</span>Reworked — Act 4 roadmap now closes on succession, features demoted to evidence. That's v2 as shown. Sign off?</div>
+          <div class="dcard">
+            <div class="dc-title"><span class="dc-kind">Approval gate</span> Approve act-structure v2?</div>
+            <div class="dc-actions"><button class="btn approve">Approve v2 — unlock tagging</button><button class="btn">Keep iterating</button></div>
+          </div>
+        </div>
+        <div class="chat-compose"><textarea class="chat-input">Message…</textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ SCREEN 5 ═════════ -->
+<div class="screen-wrap" id="s5">
+  <div class="screen-label">
+    <span class="screen-num">Screen 5</span>
+    <h2 class="screen-title">Tagging &amp; Synthesis — plan card, then jobs run quiet</h2>
+    <span class="screen-cap">One confirmation (the fan-out plan), then progress — sub-agents are deliberately non-interactive. TC gate + synthesis validation report at the end.</span>
+  </div>
+  <div class="frame">
+    <div class="browser-bar"><div class="traffic"><i></i><i></i><i></i></div><div class="urlbox">🔒 <b>app.storyboardops.com</b>/p/epicor-rf-fager</div></div>
+    <div class="appbar"><span class="logo">Storyboard <em>Ops</em></span><span class="proj-pill">Project: <b>Epicor — RF Fager</b></span><div class="appbar-right"><span class="avatar">JB</span></div></div>
+    <div class="shell">
+      <div class="rail">
+        <div class="rail-title">Pipeline</div>
+        <div class="stage done"><span class="ic">✓</span>Setup</div>
+        <div class="stage done"><span class="ic">✓</span>Discovery</div>
+        <div class="stage done"><span class="ic">✓</span>Transcription</div>
+        <div class="stage done"><span class="ic">✓</span>Story structure</div>
+        <div class="stage active run"><span class="ic">▶</span><span>Tagging &amp; Synthesis<span class="sub">running · 3 of 4 jobs</span></span></div>
+        <div class="stage pend"><span class="ic">○</span>Edit</div>
+        <div class="stage pend"><span class="ic">○</span>Export</div>
+        <div class="stage pend"><span class="ic">○</span>Review</div>
+      </div>
+      <div class="work">
+        <h3 class="work-h">Tagging &amp; Synthesis</h3>
+        <p class="work-sub">Orchestrator fan-out per pipeline-state.json. Every tagger output passes the TC gate before synthesis.</p>
+        <div class="panel">
+          <div class="file-row">🏷 Transcript agent — Doug Duvall <div class="bar done"><i style="width:100%"></i></div><span class="pct">142 quotes ✓</span></div>
+          <div class="file-row">🏷 Transcript agent — Bryce Fager <div class="bar done"><i style="width:100%"></i></div><span class="pct">118 quotes ✓</span></div>
+          <div class="file-row">🏷 Transcript agent — Tim <div class="bar"><i style="width:78%"></i></div><span class="pct">78%</span></div>
+          <div class="file-row">⚙ FCPXML params <div class="bar done"><i style="width:100%"></i></div><span class="pct">done ✓</span></div>
+          <div class="note">✓ TC gate: doug-duvall-tagged-quotes-v1 · PASS — 142/142 monotonic, in-window (the Doug 86/87 class of bug dies here now)</div>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="chat-head"><div class="chat-title">Project chat</div><div class="conn ok"><span class="dot"></span>Orchestrator</div></div>
+        <div class="chat-scroll">
+          <div class="dcard decided">
+            <div class="dc-title"><span class="dc-kind">Decision</span> Fan-out plan</div>
+            <div style="color:var(--text-muted)">3 Transcript agents (Doug, Bryce, Tim) + FCPXML-params agent, against act-structure v2. Synthesis merges when all pass the TC gate.</div>
+            <div class="dc-outcome">✓ Proceeded — 2026-07-06 · recorded to pipeline-state.json</div>
+          </div>
+          <div class="msg agent"><span class="who">Orchestrator</span>3 of 4 jobs done. Tim's tagger is at 78% — synthesis starts automatically when it lands. Nothing needs you until then.</div>
+        </div>
+        <div class="chat-compose"><textarea class="chat-input">Message…</textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ SCREEN 6 ═════════ -->
+<div class="screen-wrap" id="s6">
+  <div class="screen-label">
+    <span class="screen-num">Screen 6</span>
+    <h2 class="screen-title">Edit — the Milestone-1 viewer, slotted into the shell</h2>
+    <span class="screen-cap">The real quote viewer fills the Edit stage — same header, filter rows, ?-popovers, and cards as the round-4 viewer mockup. The shell's one project chat is the live-partner channel.</span>
+  </div>
+  <div class="frame">
+    <div class="browser-bar"><div class="traffic"><i></i><i></i><i></i></div><div class="urlbox">🔒 <b>app.storyboardops.com</b>/p/epicor-rf-fager/edit</div></div>
+    <div class="appbar"><span class="logo">Storyboard <em>Ops</em></span><span class="proj-pill">Project: <b>Epicor — RF Fager</b></span><div class="appbar-right"><span class="avatar">JB</span></div></div>
+    <div class="shell">
+      <div class="rail">
+        <div class="rail-title">Pipeline</div>
+        <div class="stage done"><span class="ic">✓</span>Setup</div>
+        <div class="stage done"><span class="ic">✓</span>Discovery</div>
+        <div class="stage done"><span class="ic">✓</span>Transcription</div>
+        <div class="stage done"><span class="ic">✓</span>Story structure</div>
+        <div class="stage done"><span class="ic">✓</span>Tagging &amp; Synthesis</div>
+        <div class="stage active you"><span class="ic">●</span><span>Edit<span class="sub">round 1 · act 2 pass</span></span></div>
+        <div class="stage pend"><span class="ic">○</span>Export</div>
+        <div class="stage pend"><span class="ic">○</span>Review</div>
+      </div>
+      <div class="work viewer-embed">
+        <div class="v-hdr">
+          <div class="v-row1">
+            <div>
+              <div class="v-eyebrow">Epicor · RF Fager</div>
+              <div class="v-title">Tight cut v1</div>
+            </div>
+            <button class="v-btn">Save</button>
+            <button class="v-btn">Open</button>
+            <span class="v-autosave"><span class="dot"></span> Saved · just now</span>
+            <div class="v-right">
+              <div class="v-mode">
+                <button>Quote Library</button>
+                <button class="active">Timeline</button>
+                <button>Cuts</button>
+              </div>
+              <button class="v-export">Export to Final Cut</button>
+            </div>
+          </div>
+          <div class="v-row2">
+            <div class="v-filter-line">
+              <div class="v-group">
+                <span class="v-glabel">Act</span>
+                <button class="v-chip active">All</button>
+                <button class="v-chip">Act 1</button>
+                <button class="v-chip">Act 2</button>
+                <button class="v-chip">Act 3</button>
+                <button class="v-chip">Act 4</button>
+                <span class="v-divider"></span>
+                <button class="v-help" title="Creative context — act roadmaps">?</button>
+              </div>
+              <div class="v-metric"><b>29</b> entries · <b>6:32</b></div>
+            </div>
+            <div class="v-filter-line">
+              <div class="v-group">
+                <span class="v-glabel">Speaker</span>
+                <button class="v-chip active">All</button>
+                <button class="v-chip">Doug Duvall</button>
+                <button class="v-chip">Bryce Fager</button>
+                <button class="v-chip">Tim</button>
+                <span class="v-divider"></span>
+                <button class="v-help" title="Who's who — speaker summaries">?</button>
+              </div>
+              <div class="v-reveal">
+                <button class="active">Review</button>
+                <button>Edit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="v-main">
+          <div class="v-act-header"><h4 class="v-act-title">Act 2 — The Breaking Point</h4><span class="v-act-sub">8 in Tight</span></div>
+          <div class="v-card tight">
+            <div class="v-chead">
+              <span class="v-qid">#86</span>
+              <span class="v-spk" style="background:#dbeafe;color:#1e3a8a">Doug Duvall</span>
+              <span class="v-tc">00:14:22–00:14:41</span>
+              <span class="v-tools"><button class="v-tool">✎ Edit</button></span>
+            </div>
+            <p class="v-quote">Every job ticket was paper. If a foreman needed to know what was ordered, he called the office, and the office dug through a folder. We were growing faster than that could survive.</p>
+            <div class="v-note"><b>Agent</b> Strongest "cost of standing still" beat — placed early so #14 lands as escalation.<button class="cbtn">💬 Comment</button></div>
+          </div>
+          <div class="v-card tight">
+            <div class="v-chead">
+              <span class="v-qid">#14</span>
+              <span class="v-spk" style="background:#fce7f3;color:#9d174d">Bryce Fager</span>
+              <span class="v-tc">00:06:03–00:06:18</span>
+              <span class="v-tools"><button class="v-tool">✎ Edit</button></span>
+            </div>
+            <p class="v-quote">I'd close the month and realize we'd been losing money on a job for six weeks. Nobody hid it — we just had no way to see it while it was happening.</p>
+          </div>
+          <div class="v-card loose">
+            <div class="v-chead">
+              <span class="v-qid">#91</span>
+              <span class="v-spk" style="background:#dbeafe;color:#1e3a8a">Doug Duvall</span>
+              <span class="v-tc">00:16:10–00:16:24</span>
+              <span class="v-mchip">loose</span>
+              <span class="v-tools"><button class="v-tool">✎ Edit</button></span>
+            </div>
+            <p class="v-quote">Scheduling was a whiteboard. A good whiteboard, but a whiteboard.</p>
+          </div>
+          <div class="v-card tight">
+            <div class="v-chead">
+              <span class="v-qid">#68</span>
+              <span class="v-spk" style="background:#ede9fe;color:#5b21b6">Tim</span>
+              <span class="v-tc">00:21:47–00:22:12</span>
+              <span class="v-fid">⚠ interior cut</span>
+              <span class="v-tools"><button class="v-tool">✎ Edit</button></span>
+            </div>
+            <p class="v-quote">The guys in the field didn't ask for software. They asked to stop doing everything twice. That's what we were really shopping for.</p>
+          </div>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="chat-head"><div class="chat-title">Project chat</div><div class="conn ok"><span class="dot"></span>Edit Agent · reading your live edits</div></div>
+        <div class="chat-scroll">
+          <div class="msg agent"><span class="who">Edit Agent</span>Act 2 rebuilt over-inclusive: 8 tight, 3 loose. Two seam flags — #86→#14 reads as escalation (kept), #68 has an interior cut (chip on the card).</div>
+          <div class="msg user"><span class="who">Jeff</span>Cut #91 — charming but it repeats #86.</div>
+          <div class="msg agent"><span class="who">Edit Agent</span>Done — #91 → Loose. Act 2 now 8 · 1:52. ✓✓ read your edits 12s ago.</div>
+        </div>
+        <div class="chat-compose"><textarea class="chat-input">Message…</textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ SCREEN 7 ═════════ -->
+<div class="screen-wrap" id="s7">
+  <div class="screen-label">
+    <span class="screen-num">Screen 7</span>
+    <h2 class="screen-title">Export — choice card, cloud build job, verified download</h2>
+    <span class="screen-cap">A2 scope: the n8n job runs editcuts→segments → build_fcpxml → verify. The .fcpxml lands one click from FCP. (In M1, export produces the tight JSON for djed sync instead.)</span>
+  </div>
+  <div class="frame">
+    <div class="browser-bar"><div class="traffic"><i></i><i></i><i></i></div><div class="urlbox">🔒 <b>app.storyboardops.com</b>/p/epicor-rf-fager/export</div></div>
+    <div class="appbar"><span class="logo">Storyboard <em>Ops</em></span><span class="proj-pill">Project: <b>Epicor — RF Fager</b></span><div class="appbar-right"><span class="avatar">JB</span></div></div>
+    <div class="shell">
+      <div class="rail">
+        <div class="rail-title">Pipeline</div>
+        <div class="stage done"><span class="ic">✓</span>Setup</div>
+        <div class="stage done"><span class="ic">✓</span>Discovery</div>
+        <div class="stage done"><span class="ic">✓</span>Transcription</div>
+        <div class="stage done"><span class="ic">✓</span>Story structure</div>
+        <div class="stage done"><span class="ic">✓</span>Tagging &amp; Synthesis</div>
+        <div class="stage done"><span class="ic">✓</span>Edit</div>
+        <div class="stage active run"><span class="ic">▶</span><span>Export<span class="sub">build done · verify PASS</span></span></div>
+        <div class="stage pend"><span class="ic">○</span>Review</div>
+      </div>
+      <div class="work">
+        <h3 class="work-h">Export — tight cut v1</h3>
+        <p class="work-sub">Built server-side from the uploaded caption XMLs + sample timeline. Raw media untouched, as designed.</p>
+        <div class="panel">
+          <div class="file-row">⚙ editcuts_to_segments <span class="status-chip pass">✓ 29 entries converted</span></div>
+          <div class="file-row">⚙ validate_timecodes (ingest gate) <span class="status-chip pass">✓ pass</span></div>
+          <div class="file-row">⚙ build_fcpxml <span class="status-chip pass">✓ 56 clips · 6:32</span></div>
+          <div class="file-row">⚙ verify <span class="status-chip pass">VERIFY PASS</span></div>
+          <div class="note">2 fidelity warnings carried into the report (#68, #130 — interior cuts; tighten in/out in FCP).</div>
+          <div class="dl-row">
+            <button class="btn primary">⬇ epicor-rf-fager_tight_cut_v1.fcpxml</button>
+            <button class="btn">⬇ verify report</button>
+            <span class="verify-pass">→ import into Final Cut on the Mac (the hard-local step, by design)</span>
+          </div>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="chat-head"><div class="chat-title">Project chat</div><div class="conn ok"><span class="dot"></span>Export job</div></div>
+        <div class="chat-scroll">
+          <div class="dcard decided">
+            <div class="dc-title"><span class="dc-kind">Decision</span> Which cut to build?</div>
+            <div style="color:var(--text-muted)">Timeline cut (29 · 6:32) / Full timeline (32 · 7:18)</div>
+            <div class="dc-outcome">✓ Timeline cut — build queued 14:02, done 14:03</div>
+          </div>
+          <div class="msg agent"><span class="who">Export</span>Verify PASS — 56 clips, 6:32, frame-accurate against the caption XMLs. Two interior-cut warnings are in the report. Download is ready on the left.</div>
+        </div>
+        <div class="chat-compose"><textarea class="chat-input">Message…</textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ SCREEN 8 ═════════ -->
+<div class="screen-wrap" id="s8">
+  <div class="screen-label">
+    <span class="screen-num">Screen 8</span>
+    <h2 class="screen-title">Review — watch notes, Coach conversation, skill-diff approvals</h2>
+    <span class="screen-cap">The learning loop, in the same thread: review notes in, override-cluster conversation with the Coach, SKILL-edit diffs as approval cards. Feedback log (§5e) feeds this.</span>
+  </div>
+  <div class="frame">
+    <div class="browser-bar"><div class="traffic"><i></i><i></i><i></i></div><div class="urlbox">🔒 <b>app.storyboardops.com</b>/p/epicor-rf-fager/review</div></div>
+    <div class="appbar"><span class="logo">Storyboard <em>Ops</em></span><span class="proj-pill">Project: <b>Epicor — RF Fager</b></span><div class="appbar-right"><span class="avatar">JB</span></div></div>
+    <div class="shell">
+      <div class="rail">
+        <div class="rail-title">Pipeline</div>
+        <div class="stage done"><span class="ic">✓</span>Setup</div>
+        <div class="stage done"><span class="ic">✓</span>Discovery</div>
+        <div class="stage done"><span class="ic">✓</span>Transcription</div>
+        <div class="stage done"><span class="ic">✓</span>Story structure</div>
+        <div class="stage done"><span class="ic">✓</span>Tagging &amp; Synthesis</div>
+        <div class="stage done"><span class="ic">✓</span>Edit</div>
+        <div class="stage done"><span class="ic">✓</span>Export</div>
+        <div class="stage active you"><span class="ic">●</span><span>Review<span class="sub">round 1 watched</span></span></div>
+      </div>
+      <div class="work">
+        <h3 class="work-h">Review — round 1</h3>
+        <p class="work-sub">Watched in FCP. Notes come back here; the Coach mines them + the feedback log for promotable lessons.</p>
+        <div class="panel">
+          <span class="lbl">Review notes (round 1)</span>
+          <p style="margin:0;font-size:12.5px;color:var(--text-muted)">Act 2 lands. Act 3 drags in the middle — two demo-ish quotes back to back. #68's out-point tightened by hand as flagged. Overall: 30–40s over target.</p>
+        </div>
+        <div class="panel">
+          <span class="lbl">Coach — proposed SKILL-edit change (from 3 override clusters + agent-feedback.json)</span>
+          <div class="diff"><span class="del">- Sequence Act interiors by topic groups.</span><br><span class="add">+ Sequence Act interiors by voice alternation first, topic second — Jeff consistently reorders adjacent same-speaker pairs (9 of 11 overrides, rounds 1–3; see also standing feedback on field-voice-first act opens).</span></div>
+        </div>
+      </div>
+      <div class="chat">
+        <div class="chat-head"><div class="chat-title">Project chat</div><div class="conn ok"><span class="dot"></span>Editing Coach</div></div>
+        <div class="chat-scroll">
+          <div class="msg agent"><span class="who">Coach</span>Pattern across your round-1 tweaks: you split every adjacent same-speaker pair I sequenced. Was that pacing, or a rule I should hold always?</div>
+          <div class="msg user"><span class="who">Jeff</span>Always. Two voices in a row flattens the momentum — alternate unless the second quote completes the first thought.</div>
+          <div class="msg agent"><span class="who">Coach</span>That exception matters — added it to the diff. This would apply to every future project:</div>
+          <div class="dcard">
+            <div class="dc-title"><span class="dc-kind">Approval gate</span> Promote to SKILL-edit?</div>
+            <div style="color:var(--text-muted)">Voice-alternation sequencing rule (+ completes-the-thought exception) → permanent edit behavior.</div>
+            <div class="dc-actions"><button class="btn approve">Approve — promote</button><button class="btn">Decline</button></div>
+          </div>
+        </div>
+        <div class="chat-compose"><textarea class="chat-input">Message…</textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="max-width:1360px;margin:0 auto 50px;padding:0 24px;color:#57534e;font-size:12px;line-height:1.6">
+  <b style="color:#1c1917">Phasing reminder:</b> Milestone 1 builds Screen 6 only (viewer + chat panel, local Edit Agent over djed sync). Screens 1–5, 7 (cloud build), and 8 arrive with A2/A3/Phase B — this mockup exists so M1's screen slots into the shell instead of becoming a dead end (§5f).
+</div>
+
+</html>

@@ -2,7 +2,7 @@
 
 **This is the re-entry point.** Coming back after a break and not sure where things stand? Read this (2 min). Or just open a Claude session in this repo and say **"where are we?"** — I keep my own memory of this project and will reconstruct it for you.
 
-**Last updated:** 2026-07-02 — by Claude, at the close of the **Epicor / RF Fager** round-1 session (export delivered; viewer/Edit redesign + hardening fixes merged to `main`).
+**Last updated:** 2026-07-06 — by Claude, after **regenerating the two Milestone-1 mockups** (the 2026-07-02 versions lived only in that session and were lost). They are now saved in the repo — `scripts/mockups/m1-cloud-viewer-mockup-2026-07-06.html` and `scripts/mockups/app-shell-flow-mockup-2026-07-06.html` — and published as artifacts: [round-4 cloud viewer](https://claude.ai/code/artifact/c7d94b24-1c2f-4233-9771-8f8b7886cf15) · [8-screen app shell](https://claude.ai/code/artifact/be2f4c4a-a885-4676-bb92-1fc2a8eb534a).
 
 ---
 
@@ -15,13 +15,10 @@ Turn the `documentary-junior-editor` pipeline into a **SaaS app inside the Story
 - 🎬 **Epicor / RF Fager — round-1 export DONE (2026-07-02).** Full four-act cut assembled + winnowed to a 29-entry tight cut; FCPXML built and **verify PASS**: `XML/imports/epicor-rf-fager_tight_cut_v1.fcpxml` (56 clips, 6:32), import-ready. Hit an upstream **collapsed-timecode bug** (Doug Duvall 86/87, Bryce 14/46, from the Transcript stage) — patched inline by re-deriving TCs from the FCPXML captions into `tagged-quotes-v2.json`; text untouched (Rule 1 intact). Prevention guardrail **now built (2026-07-02):** a deterministic upstream **timecode-sanity gate** (`scripts/validate_timecodes.py` + `test_validate_timecodes.py`) catches collapsed/non-monotonic/out-of-window TCs at the source — wired into the Orchestrator (hard pre-handoff fail), Transcript (self-check before emit), and Edit (session-start warning) skills. The durable `_editCuts↔segments` export-conversion fix also landed (`88743d8`). Entries #68/#130 need a manual in/out tighten in FCP (mid-segment limitation). Handoffs at `handoffs/epicor-rf-fager/`.
 - ✅ **MERGED to `main` (2026-07-02, PR #1, merge `637e109`).** The whole viewer/Edit redesign plus the two hardening fixes — the **timecode-sanity gate** (`aea4c7f`) and the durable **`_editCuts→segments` export converter** (`88743d8`) — are now on `main`. Remaining hardening items are follow-up tasks (Transcript TC root cause; promote editorial lessons into SKILL-edit; FCPXML verify robustness; mid-segment viewer warning) — see `session-hardening-2026-07-02.md`. New work branches from `main`.
 - Strategically: we're at the decision of **whether/when to take the viewer to the cloud** (see the migration path — the viewer goes first).
+- ✅ **SaaS-readiness review DONE (2026-07-02):** `saas-readiness-review-2026-07-02.md` at the repo root — architecture map, per-component scorecard, Phase A target architecture (Vercel + Postgres/Blob + existing n8n; single-tenant), and the migration path. Key reframe: Phase A splits into **A1** hosted viewer (no agent), **A2** cloud FCPXML/transcription jobs, **A3** server-side Edit Agent; the hard part of Phase A is the live agent, not the viewer. Jeff's settled inputs recorded in the doc: leverage existing stack, single-tenant now, video stays local but audio + caption XMLs upload.
 
 ## 👉 THE NEXT ACTION (the one thing)
-Decide the immediate next move — pick one:
-- **(a)** Claude drafts the **target-architecture + migration doc** (the concrete plan for Phase A: cloud viewer), **or**
-- **(b)** Jeff lines up an **engineering owner** for the cloud build first.
-
-Everything else waits behind this choice.
+✅ **Jeff APPROVED both Milestone-1 mockups (2026-07-06)** — the round-4 cloud viewer and the 8-screen app shell (after one fix: the Edit screen now embeds the real quote viewer, not a placeholder). Mockups are durable in `scripts/mockups/` (`m1-cloud-viewer-mockup-2026-07-06.html` + `app-shell-flow-mockup-2026-07-06.html`). **Next action: start the Milestone 1 build** ("one project, in a browser, from anywhere" — §7 of the review doc; supervised Claude Code build). Increment 0 is housekeeping: commit the pending working-tree files on `main` (mockups, SaaS review doc, START-HERE/hardening edits, IBEW gen scripts). Then, per dev discipline (branch + small named increments): scaffold Next.js + auth + Postgres schema → API routes (save/read/list + project loader, same JSON contract) → port the viewer template to fetched data → chat panel + §5e comment affordance → `djed sync` CLI → load epicor-rf-fager and run the §7 done-means test end to end. Also settled 2026-07-02: the online system gets **one unified chat with a routing agent** (§5c of the review doc), a **mid-edit structure-revision workflow** — revise the act structure without redoing upstream tagging or losing edit state (§5d) — and **anytime feedback on agent work** — comment on any agent output in place, recorded to a durable feedback log that feeds the existing Coach/Skill-Review promotion loop (§5e; capture UI is in Milestone 1 scope, automated application is A3/Phase B). §5c/§5d are A3/Phase-B scope (§5d's deterministic migration tool can be built locally sooner if needed). Also mapped 2026-07-02: **the full-pipeline interaction audit (§5f)** — only 4 stages need true live chat (Creative Context, Edit, Coach, Skill Review); the rest become structured decision cards + a pipeline stage rail. The web app = one project thread + cards + rail, not one window per agent. The **full app-shell UI/flow mockup** (8 screens, new-project → review: one shell = stage rail + per-stage workspace + one persistent project chat with decision cards inside it) was regenerated 2026-07-06 into `scripts/mockups/` — awaiting Jeff's review alongside the round-4 viewer mockup.
 
 ## Settled — don't re-litigate these
 - **Edit = act-by-act, agent-goes-first, live-partner model.** (`SKILL-edit.md`)
@@ -30,10 +27,10 @@ Everything else waits behind this choice.
 - **Dev discipline:** freeze a known-good version; make changes on a branch; small named increments with a clear "done."
 
 ## Open / waiting on Jeff
-- Cloud go/no-go, and **who owns the engineering.**
-- The (a) vs (b) choice above.
+- Nothing — mockups approved 2026-07-06; the M1 build is green-lit and can start any session.
 
 ## Where the details live
+- `saas-readiness-review-2026-07-02.md` — the cloud plan: architecture map, readiness scorecard, Phase A target architecture, migration path.
 - `SPEC-viewer-edit-redesign.md` — the viewer/edit design spec.
 - `quotes-viewer-roadmap.md` — the viewer roadmap.
 - `cowork-session-guide.md` — how to run a full editing session start to finish.
