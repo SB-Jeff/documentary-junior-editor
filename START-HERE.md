@@ -2,7 +2,7 @@
 
 **This is the re-entry point.** Coming back after a break and not sure where things stand? Read this (2 min). Or just open a Claude session in this repo and say **"where are we?"** — I keep my own memory of this project and will reconstruct it for you.
 
-**Last updated:** 2026-07-06 — by Claude. Big session: the two Milestone-1 mockups were **regenerated, saved durably to `scripts/mockups/`, and APPROVED by Jeff** (artifacts: [round-4 cloud viewer](https://claude.ai/code/artifact/c7d94b24-1c2f-4233-9771-8f8b7886cf15) · [8-screen app shell](https://claude.ai/code/artifact/be2f4c4a-a885-4676-bb92-1fc2a8eb534a)), and increment 0 of the M1 build (housekeeping commits) is done — `main` is clean.
+**Last updated:** 2026-07-07 — by Claude. **M1 build increment 1 (scaffold) is DONE in the app repo** (`~/Desktop/storyboard-ops-app`, github.com/SB-Jeff/storyboard-ops-app): Next.js 16 + Clerk invite-only auth + Postgres schema (orgs→users→projects→artifacts), live at https://storyboard-ops-app.vercel.app with the schema migrated. The M1 build's you-are-here doc is now **that repo's START-HERE.md** (next: increment 2, API routes). Previous session (2026-07-06): both Milestone-1 mockups approved (artifacts: [round-4 cloud viewer](https://claude.ai/code/artifact/c7d94b24-1c2f-4233-9771-8f8b7886cf15) · [8-screen app shell](https://claude.ai/code/artifact/be2f4c4a-a885-4676-bb92-1fc2a8eb534a)); increment 0 (housekeeping) done — `main` is clean.
 
 ---
 
