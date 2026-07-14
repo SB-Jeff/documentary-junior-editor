@@ -305,6 +305,36 @@ for the Editing Coach. That is *why* you go first.
   this"** action, which tags the exact quote (speaker + first words + hidden id)
   into his message; `viewer-state.json` carries it under `pending_message`.
 
+### The cloud loop — when Jeff is in the hosted viewer (Storyboard Ops)
+
+Jeff may be editing at `https://storyboard-ops-app.vercel.app/p/[project-slug]`
+instead of the local HTML viewer. Same files, same contract — they just live in
+the cloud store and travel via `djed sync`:
+
+- **Top of every turn sync down, end of every turn sync up.** Run
+  `~/Desktop/storyboard-ops-app/scripts/djed sync --slug [project-slug]
+  --ssd-root [ssd-root] --session-only` (token comes from the app repo's
+  `.env.local`). One command, both directions: it pulls Jeff's
+  `viewer-state.json`, saved cuts, exports, and the chat/feedback logs down to
+  `handoffs/`, and pushes your `agent-cursor.json`, chat replies, and new cut
+  files up. Then read state exactly as above. Run it again after you write your
+  reply + cursor, so Jeff sees them within the viewer's 4-second poll.
+- **The durable conversation is `handoffs/[project-slug]/project-chat.json`**
+  (`viewer-state.json` advertises it under `chat_log`). `pending_message` still
+  mirrors only Jeff's LATEST note; the chat log is the full thread — read every
+  `who: "jeff"` message newer than your last reply, not just the mirror.
+- **Reply by APPENDING to `messages`, never rewriting or removing entries.**
+  Shape: `{ "id": "m-<unique>", "who": "agent", "text": "…", "ts": "<ISO now>" }`
+  (make the id unique: timestamp + random suffix). djed merges the log by `id`,
+  so concurrent appends can't clobber each other — but a rewritten entry is
+  lost history. Keep writing `agent-cursor.json` every turn exactly as above;
+  it drives the viewer's "Connected · reading your live edits" state.
+- **`handoffs/[project-slug]/agent-feedback.json`** (`feedback_log`) carries
+  Jeff's 💬 comments on agent output, filed with full context and
+  `status: "new"`. Treat items that target your current round as input this
+  session; the status lifecycle (new → applied/promoted/declined) belongs to
+  the Editing Coach and Skill Review — don't move it here.
+
 ### Narrative coherence as seam-flags (Cardinal Rule 2)
 
 Surface coherence problems where Jeff reads them: as **seam-flags inside Review
