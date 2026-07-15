@@ -29,6 +29,25 @@ update the Status field to `Shipped` and reference the commit / PR.
 
 ## Open items (filed)
 
+### Always-on chat dialogue — every message gets a response
+**Source project:** epicor-rf-fager (2026-07-15, first live session in the hosted
+viewer during the M1 increment-6 shakeout).
+**Problem:** In Jeff's words: "The chat should operate much like it does here
+[a Claude conversation]. There should always be a response and an ongoing
+dialogue." In Phase A the responder is a local Edit Agent session bridged over
+`djed sync` — when no session is attached, messages queue silently against the
+"Agent offline" badge, and even when one is attached, responsiveness depends on
+its sync cadence. The dialogue expectation is conversational-grade, not
+queue-grade.
+**Proposed change:** Two horizons. (a) Phase A mitigation: a standing local
+watcher (the djed sync poll loop proven 2026-07-15) whenever a working session is
+open, so replies land inside a minute; possibly a launchd-style always-on local
+responder. (b) The real fix is the A3 milestone (saas-readiness review §5c):
+agent moves server-side, always-on, one unified project chat — this entry is
+field evidence for pulling A3's priority forward.
+**Priority:** P1 high-friction (it shapes whether the hosted viewer feels alive)
+**Status:** Filed
+
 ### Tweak-log persistence — dump override log on session end
 **Source project:** 2026 Nanos Boston brand-video (May 2026), and surfaced during
 v5.4 architecture work.
