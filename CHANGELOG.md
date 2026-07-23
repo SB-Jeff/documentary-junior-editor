@@ -1,5 +1,31 @@
 # Documentary Junior Editor — Changelog
 
+## Narrative roadmap = clean narrative outline — 2026-07-23 (Mounds View Rising session)
+
+Live Creative Context session feedback (Jeff, Mounds View Rising 2026 —
+community/staff edit). The v5.9 roadmap format ("one-line act summary with
+supporting points beneath") failed in review three ways: the one-line summary
+under each act label kept absorbing beat content and was cut ("the Act is the
+bucket"); bullets drifted into quote-like material; and bullet lists read as
+inventories rather than narrative progressions. SKILL-creative-context.md
+Phase 3 rewritten to v5.11:
+
+- **Act label is the bucket** — no subheader or summary line beneath it; just
+  the label, then bullets. Supersedes the v5.9 format.
+- **Bullets are narrative beats, not quote material** — no quotes, no
+  quote-like paraphrases, no speaker references. Test each bullet: is it a
+  beat, or is it describing quotes that support another beat? If the latter,
+  fold it in.
+- **Bullets must read as a logical progression** (an argument: e.g. the moment
+  is scary and high-stakes → why the stakes are real → who's most at risk →
+  the reframed response), and **bullet order is the Edit Agent's target** for
+  quote selection AND sequencing.
+- Model the deliverable on the project's interview guide: messaging headers
+  with clean thematic content beneath, nothing else.
+- Handoff template's "Narrative Roadmaps" section updated to the beats format
+  (six-dimension per-act template removed from the emitted doc; the six
+  dimensions remain an internal composing checklist only).
+
 ## Durable Edit→FCPXML export conversion — 2026-07-02 (`viewer-edit-redesign` branch)
 
 Makes the viewer-export → FCPXML handoff durable. The viewer's **Export**

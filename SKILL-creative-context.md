@@ -443,25 +443,36 @@ After Jeff approves the act structure and labels, develop a narrative roadmap fo
 each section. These roadmaps give the Edit Agent specific editorial direction
 beyond just act labels.
 
-**The review deliverable is a one-line act summary with supporting points beneath
-(Jeff feedback, v5.9).** What Jeff reviews and approves, for each act, is:
+**The review deliverable is a clean narrative outline (Jeff feedback, v5.11 —
+Mounds View Rising).** Model it on the project's interview guide: messaging
+headers with clean thematic content beneath, nothing else. The rules:
 
-- **One line** summarizing the act (its essence, in a single sentence).
-- **A few main supporting points underneath** (brief bullets — the beats or ideas that act
-  carries).
+1. **The act label is the bucket.** No subheader, no one-line summary, no
+   italic essence line beneath it — just the act label, then bullets. (This
+   supersedes v5.9's "one-line act summary with supporting points beneath";
+   the summary line kept absorbing beat content and got cut in review.)
+2. **Bullets are narrative beats, not quote material.** No quotes, no
+   quote-like paraphrases, no speaker references. Each bullet is an idea the
+   edit must land; quotes are what the Edit Agent selects *to prove* a beat,
+   and they live downstream in the tagged-quote pool.
+3. **The bullets must read as a logical progression** — an argument, not a
+   list (e.g., Act 1: the moment is scary and high-stakes → why the stakes
+   are real → who's most at risk → the reframed response). Test each bullet:
+   is this a beat, or is it describing quotes that support another beat? If
+   the latter, fold it into the beat it serves.
+4. **Bullet order = intended quote sequencing.** The Edit Agent treats the
+   order within each act as the narrative target for both quote selection
+   and arrangement. Order the bullets deliberately.
 
-That is the whole format. It does **NOT include quotes**, and it is not an exhaustive
-write-up of the six dimensions below. Two specific failures to avoid (Jeff, TC Pain Clinic
-organic variant): the deliverable runs **too long**, and it **pastes in verbatim quotes** —
-both belong downstream (the Edit Agent works from the full tagged-quote pool; the roadmap
-references material by speaker name and topic only, never by quoting it). Keep it to the
-one-line-plus-bullets format so Jeff can approve or critique each act at a glance; reserve
-any expanded direction for long-form documentary/testimonial work, and only when Jeff asks
-for more.
+Two older failures that remain in force (Jeff, TC Pain Clinic organic variant):
+the deliverable runs **too long**, and it **pastes in verbatim quotes** — both
+belong downstream. Keep the outline tight enough that Jeff can approve or
+critique each act at a glance.
 
-**Internal checklist — six dimensions the supporting bullets may draw on.** This is a
-*menu* to think through per act, not a template to fill out in full, and not the
-deliverable format:
+**Internal checklist — six dimensions the beats may draw on.** This is a
+*menu* to think through per act while composing the beats, not a template to
+fill out, and never the deliverable format (do not emit these dimension labels
+in the roadmap):
 
 1. **Opening:** How should this section begin? What should the viewer's first impression
    be? Which speaker or moment should set the tone?
@@ -513,13 +524,15 @@ run is v1; later runs increment). Never overwrite an existing version.
 
 ### Narrative Roadmaps
 
+(Clean narrative outline — v5.11 format. Act label is the bucket; beneath it,
+ordered narrative beats only. No summary line, no quotes, no speaker
+references. Bullet order is the Edit Agent's target for quote selection and
+sequencing.)
+
 **[Act 1 label]:**
-- Opening: [How this section should begin]
-- Emotional arc: [The journey through this section]
-- Speaker assignments: [Which speakers currently planned to carry it, in what order]
-- Key moments: [Specific quotes or topics that should appear — currently planned]
-- What it accomplishes: [What the viewer should understand/feel]
-- Closing: [How this section ends and transitions]
+- [Beat 1 — first step of the act's argument]
+- [Beat 2 — next step]
+- [Beat 3 — ...]
 
 **[Act 2 label]:**
 [Same format]
@@ -616,7 +629,9 @@ provides the launch prompt for the Synthesis Agent (sonnet-4.6) per
 
 ---
 
-*Creative Context Agent — documentary-junior-editor v5.10*
+*Creative Context Agent — documentary-junior-editor v5.11*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
-*v5.9: review deliverable is a one-line act summary with main supporting points beneath, no
-quotes — concise and approvable at a glance (Jeff feedback, TC Pain Clinic organic variant).*
+*v5.11: narrative roadmap is a clean narrative outline — act label as bucket, ordered
+narrative beats beneath, no summary line, no quotes or quote-like content; bullet order is
+the Edit Agent's quote-sequencing target (Jeff feedback, Mounds View Rising). Supersedes
+the v5.9 one-line-summary-plus-points format.*
