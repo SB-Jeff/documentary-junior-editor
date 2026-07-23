@@ -736,9 +736,12 @@ the artifact. Do not share this internal assessment with Jeff yet. Use it to
 inform your first pass.
 
 Use the narrative roadmaps from `act-structure.md` as editorial direction when
-forming your point of view. Each roadmap describes how a section should open,
-its emotional arc, which speakers should carry it, and what it needs to
-accomplish.
+forming your point of view. As of Creative Context v5.11, each roadmap is a
+clean narrative outline: the act label as the bucket, with ordered narrative
+beats beneath it — no summary line, no quotes, no speaker assignments. The
+beats are the act's argument; the beat order is your target for both quote
+selection and sequencing. (Speaker roles and editorial weighting live in
+`creative-brief-summary-v[N].md`, not in the roadmap.)
 
 ### Session setup — start the persistent app server
 
@@ -1382,22 +1385,29 @@ on the table.
 
 The narrative roadmaps from the Creative Context Agent are not background
 context — they are the editorial plan that Jeff approved. Treat them as
-instructions, not suggestions. When selecting and ordering entries for each
-section, consult the roadmap for that section in `act-structure-v[N].md`:
+instructions, not suggestions. As of Creative Context v5.11, each act's
+roadmap is a **clean narrative outline**: the act label, then ordered
+narrative beats (no summary line, no quotes, no speaker references). Consume
+it like this:
 
-- **Opening guidance:** Which speaker or quote type should lead the section?
-- **Emotional arc:** Does your selection build the journey the roadmap
-  describes?
-- **Speaker assignments:** Does your selection weight the speakers as the
-  roadmap recommends?
-- **Key moments:** Are the specific quotes or topics flagged in the roadmap
-  included?
-- **Redundancy handling:** Use the redundancy report from
-  `transcript-summary.md` to choose the strongest version when multiple
-  speakers cover the same ground.
-- **Gap awareness:** Use the gap report to flag sections that may be thin —
-  if a roadmap describes content that no speaker covers well, flag it
-  explicitly to Jeff.
+- **Each beat is a quote-selection target.** A beat states an idea the act
+  must land; your job is to find the quote(s) from the tagged pool that
+  *prove* that beat. Every entry you select should be traceable to a beat;
+  an entry that proves no beat needs an explicit rationale or belongs out.
+- **Beat order is the sequencing target.** Assemble the act so it reads
+  top-to-bottom in beat order. Within a beat, choose the strongest single
+  proof (or a deliberate pair) — the beats form an argument, and your cut
+  should make that argument in that order.
+- **Speaker choice is yours, guided by the brief.** The roadmap deliberately
+  names no speakers. Use the speaker roles and weighting in
+  `creative-brief-summary-v[N].md` (advisory) plus the material itself to
+  decide who proves each beat.
+- **Redundancy handling:** When multiple speakers cover the same beat, use
+  the redundancy report from `transcript-summary.md` to pick the strongest
+  version — one beat does not need every speaker who touched it.
+- **Gap awareness:** If no speaker proves a beat well, that is a gap — flag
+  it explicitly to Jeff with a title-card / interstitial / context-beat
+  suggestion rather than stretching a weak quote to cover it.
 
 **When your suggestion conflicts with a roadmap, flag the conflict
 explicitly.** If the material doesn't support what the roadmap calls for,
@@ -2105,5 +2115,9 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.10 (June 2026)*
+*Edit Agent — documentary-junior-editor v5.11 (July 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
+*v5.11: roadmap consumption updated for the clean-narrative-outline format from
+Creative Context v5.11 — beats are quote-selection targets, beat order is the
+sequencing target, speaker weighting comes from the creative brief (Jeff
+feedback, Mounds View Rising).*

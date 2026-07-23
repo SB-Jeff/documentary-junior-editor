@@ -1,5 +1,22 @@
 # Documentary Junior Editor — Changelog
 
+## Edit Agent consumes the clean-outline roadmap — 2026-07-23 (Mounds View Rising session)
+
+Companion to the Creative Context v5.11 roadmap change. `SKILL-edit.md`'s two
+roadmap-consumption sections (editorial point-of-view setup and "Using
+Narrative Roadmaps") rewritten for the new format:
+
+- **Each beat is a quote-selection target** — every selected entry should be
+  traceable to a beat it proves; entries proving no beat need explicit
+  rationale or belong out.
+- **Beat order is the sequencing target** — assemble each act to read
+  top-to-bottom in beat order; within a beat, pick the strongest proof.
+- **Speaker choice is the Edit Agent's** — roadmaps no longer carry speaker
+  assignments or key-moment flags; speaker roles/weighting come from
+  `creative-brief-summary-v[N].md` (advisory) and the material.
+- Redundancy and gap handling retained, restated per-beat (a gap = no quote
+  proves a beat; flag with title-card/interstitial suggestion).
+
 ## Narrative roadmap = clean narrative outline — 2026-07-23 (Mounds View Rising session)
 
 Live Creative Context session feedback (Jeff, Mounds View Rising 2026 —
