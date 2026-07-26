@@ -268,11 +268,13 @@ For each act, in order (Intro, then Act 1, 2, 3 …):
    the Quote Library, via the act pill. In the Timeline, dragging reorders *within*
    an act; moving a quote to another act = retag it in the Library.)
 2. **Build the over-inclusive Timeline — you go first.** Propose the first pass
-   for this act: deliberately wide (1.5×–2× target; see Phase 3). For every quote
-   you pull in, give the reason; for every plausible quote you leave out, **write
-   an `agent_note`** so the omission is visible in the Library, never silent
-   ("Left out — overlaps #3/#9, weaker delivery"). Seed this by emitting the
-   `editing-versions` JSON and running the build (Phase 2); Jeff opens it.
+   for this act: deliberately wide (3×–4× the finished length — Jeff's rubric;
+   see Phase 3). For every quote you pull in, give the reason; for **every**
+   quote you leave out — plausible or not — **write an `agent_note`** so the
+   omission is visible in the Library, never silent ("Left out — overlaps
+   #3/#9, weaker delivery"). And every entry you later Cut carries its cut
+   reason in `notes` (see Phase 5's three dispositions). Seed this by emitting
+   the `editing-versions` JSON and running the build (Phase 2); Jeff opens it.
 3. **Refine — continuous.** Order, cut/add-back (the selection keeps changing),
    split, and trim all happen at once. You propose adjustments; Jeff applies them
    in the viewer; you re-read `viewer-state.json` on your next turn and respond.
@@ -892,7 +894,12 @@ Two of your outputs render in the viewer only if you write them to
 
 - **`by_num`** maps a source quote's number → the reason it is **not used**.
   These render as the inline `agent_note` on not-used Library cards — this is how
-  omissions stop being silent. Write one for every plausible quote you leave out.
+  omissions stop being silent. **Write one for EVERY quote you never pull into the
+  Timeline — no exceptions, not just the "plausible" ones (Jeff, eci-growth
+  2026-07-26).** Jeff reads the Library to audit your selection; a card with no
+  why-not line is a silent omission, which is the exact failure this file exists
+  to prevent. One-line reasons are fine ("slate — lower-third utility"; "covered
+  better by #43"); silence is not.
 - **`seam_flags`** are the narrative-coherence breaks you found reading the cut
   (Cardinal Rule 2). Each sits **before** the entry whose `entry_id` you give
   (read it from `viewer-state.json`); it renders inline in Review mode at that
@@ -1508,15 +1515,25 @@ ticks down; the quote stays in play (visible in the Cuts view) if the next
 round's discussion changes your mind. Cut-not-destroy preserves the editorial
 signal across rounds.
 
-Three dispositions — keep them distinct:
+Three dispositions — keep them distinct, and **every one of them carries a
+written reason** (Jeff, eci-growth 2026-07-26):
 
 - **Never-add** — material you considered but don't recommend. It stays in the
   **Quote Library** as not-used, carrying your `agent_note` (why it's out); it
-  never enters the Timeline.
+  never enters the Timeline. No never-add without a `by_num` reason.
 - **Cut (→ Cuts)** — the default for "this beat is expendable for runtime." The
-  quote moves to the Cuts bin; fully recoverable.
+  quote moves to the Cuts bin; fully recoverable. **When YOU cut an entry, set
+  its `notes` field to the cut reason at the moment you flip it to loose** —
+  the Library card for an in-Cuts quote renders that note inline as
+  "Not selected — …" (viewer behavior added 2026-07-26), so a reasonless cut is
+  as silent as a reasonless omission. When JEFF cuts an entry in the viewer, the
+  card keeps whatever note it already carried — if the Discussion reveals his
+  reason differed from the stale note, update the entry's `notes` in the next
+  bake so the Library reads true.
 - **Discard** — clear a quote out of the Cuts bin back to the not-used Library.
   Still not a delete (the Library keeps everything); just tidies the Cuts bin.
+  On discard, make sure a `by_num` reason exists — the quote is now in
+  not-used territory and falls under the every-omission-noted rule.
 
 Trimming, splitting into sub-quotes, and entry reordering still happen
 during Reduction alongside the demotion work — they're complementary, not
