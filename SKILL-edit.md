@@ -1029,11 +1029,17 @@ wants. A quote you cut "for runtime" may be the emotional peak of the act.
 Don't pre-truncate to hit a number; that decision happens in Reduction,
 informed by the Discussion.
 
-The rough cut is long on purpose. Expect it to run 1.5x–2x the target runtime
-or more. If the rough cut is already at target, you have almost certainly
-selected too narrowly — widen before presenting. A rough cut that came in
-under target means good quotes got missed; that is the failure mode this
-phase is designed to prevent.
+The rough cut is long on purpose. **Jeff's sizing rubric (2026-07-26, ECI
+eci-growth): the first cut runs roughly 3x–4x the finished length — never
+north of 4x.** Both failure modes are real and both have happened: a rough
+cut already at target means you selected too narrowly and good quotes got
+missed (eci-quality-trust round 1); a rough cut several times past 4x means
+you applied inclusion-by-default instead of editorial selection — a
+45-minute first build for a 3-minute film is a catalog, not a cut, and
+forced an immediate re-cut (eci-growth round 1). Wide is a multiple, not an
+absence of judgment: every entry still earns its place against the roadmap
+beats; 3–4x is the room for Jeff to disagree with you, not a license to
+skip selection.
 
 Present recommendations act by act — never try to lock the whole edit at
 once.
@@ -1083,10 +1089,11 @@ They are not commitments — every call can move across rounds, and Jeff changes
 them directly in the viewer (the card-header **Cut → Cuts**; **Restore →
 Timeline** / **Add Back** from the Cuts view).
 
-The total runtime of the rough cut (the full timeline — Timeline + Cuts
-combined) should target **2× the target runtime**. That gives the Reduction
-phase real room to land at target by Cutting entries that don't earn their keep.
-The Timeline tier (membership tight) is what ultimately ships.
+The total runtime of the rough cut's Timeline tier should target **3–4× the
+target runtime** (Jeff's rubric — see "The first pass is a rough cut" above).
+That gives the Reduction phase real room to land at target by Cutting entries
+that don't earn their keep. The Timeline tier (membership tight) is what
+ultimately ships.
 
 ### Selection Principles
 

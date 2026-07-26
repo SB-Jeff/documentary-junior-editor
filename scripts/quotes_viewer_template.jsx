@@ -2410,6 +2410,16 @@ export default function QuotesView() {
               <span className="agent-note-glyph" aria-hidden="true">🤖</span> {q.agent_note}
             </div>
           )}
+          {status === "cuts" && (() => {
+            // Why-not-selected, visible in the Library (Jeff, 2026-07-26): a quote
+            // sitting in Cuts surfaces its cut reason here, not only on the Cuts card.
+            const noted = srcEntries.find((e) => membershipOf(e) === "loose" && e.notes);
+            return noted ? (
+              <div className="agent-note cut-reason">
+                <span className="agent-note-glyph" aria-hidden="true">✂️</span> Not selected — {noted.notes}
+              </div>
+            ) : null;
+          })()}
           {q.rationale && (
             <div className="rationale">
               <span className="rationale-label">Why:</span> {q.rationale}
