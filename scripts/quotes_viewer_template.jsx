@@ -913,9 +913,21 @@ export default function QuotesView() {
   // The note Jeff is composing for the agent right now ("tell me now" — it rides
   // in viewer-state.json and is consumed when the agent next reads). NOT a queue.
   const [batchNote, setBatchNote] = useState("");
-  // Quotes Jeff tagged with "Point at this" — { entry_id, label }. Travel in the
-  // live state alongside the note; cleared when the agent catches up.
+  // Quotes Jeff tagged with "Point at this" — { entry_id, label }. Staged as
+  // chips in the composer; they ride the next Send and clear immediately.
   const [pointedAt, setPointedAt] = useState([]);
+  // === Ongoing chat (project-chat.json) ===
+  // The durable two-way thread. Send appends {id, who, text, ts, pointed_at}
+  // to handoffs/<slug>/project-chat.json (merge-by-id, matching the hosted
+  // viewer's contract); the agent appends who:"agent" replies. Polled like
+  // agent-cursor.json so replies appear without a reload.
+  const [chatLog, setChatLog] = useState([]);
+  const [chatSending, setChatSending] = useState(false);
+  // Mirror of the LAST SENT message — viewer-state.json's pending_message keeps
+  // advertising Jeff's latest note (the skill contract) even though the
+  // composer clears on Send. The full thread is the chat log.
+  const [lastSent, setLastSent] = useState(null);
+  const chatEndRef = useRef(null);
 
   // Staleness, honest edition (M5). Instead of a flag cleared by a manual Send,
   // we compare the time of Jeff's last edit (per cut) against the time the Edit
@@ -1225,15 +1237,13 @@ export default function QuotesView() {
         cuts: tl.filter((e) => membershipOf(e) === "loose").length,
         pending_ops: ops.length,
       },
-      // What Jeff is telling the agent right now — a free-text note plus any
-      // quotes he tagged with "Point at this" (exact entry_id handles). This is
-      // "tell me now," consumed when the agent next reads. Null when nothing.
-      pending_message: (batchNote.trim() || pointedAt.length)
-        ? {
-            note: batchNote.trim() || null,
-            pointed_at: pointedAt.map((p) => ({ entry_id: p.entry_id, ref: p.label })),
-          }
-        : null,
+      // Jeff's LATEST SENT message (the composer clears on Send; the full
+      // thread lives in the chat log below). Kept as pending_message so the
+      // agent's read contract is unchanged: this mirrors only the newest note.
+      pending_message: lastSent,
+      // The durable two-way conversation — read every who:"jeff" message newer
+      // than your last reply, not just the pending_message mirror.
+      chat_log: `handoffs/${PROJECT_META.slug}/project-chat.json`,
       // A Final Cut export Jeff queued — the agent launches the FCPXML Agent for
       // it (authority is export-request.json; this mirrors it for visibility).
       pending_export: pendingExport,
@@ -1274,7 +1284,7 @@ export default function QuotesView() {
     }, 700);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, batchNote, pointedAt, dirtySinceSend, sourceActOverrides, pendingExport]);
+  }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, lastSent, dirtySinceSend, sourceActOverrides, pendingExport]);
 
   // ====== Export ======
 
@@ -1631,16 +1641,70 @@ export default function QuotesView() {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  // When the agent catches up (transition behind → caught-up), consume the
-  // staged note + pointed-at chips — they were "tell me now," and now it knows.
-  const prevBehindRef = useRef(false);
+  // ====== Ongoing chat: poll + send (project-chat.json) ======
+  // Poll the thread like agent-cursor.json so the agent's replies appear
+  // without a reload. (The old behind→caught-up auto-clear of the composer is
+  // gone — Send clears it explicitly, like any chat.)
   useEffect(() => {
-    if (prevBehindRef.current && agentConnected && !agentBehind) {
+    if (typeof fetch !== "function") return;
+    let cancelled = false;
+    const rel = `handoffs/${PROJECT_META.slug}/project-chat.json`;
+    async function poll() {
+      try {
+        const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent(rel)}`);
+        if (!res.ok) return;  // 404 → no thread yet
+        const data = await res.json();
+        if (!cancelled && data && data.ok && data.data && Array.isArray(data.data.messages)) {
+          setChatLog(data.data.messages);
+        }
+      } catch (_) { /* server down — thread stays as-is */ }
+    }
+    poll();
+    const id = setInterval(poll, 4000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  // Auto-scroll the thread to the newest message.
+  useEffect(() => {
+    if (chatEndRef.current) chatEndRef.current.scrollIntoView({ block: "nearest" });
+  }, [chatLog.length]);
+
+  // Send = append to the thread (merge-by-id against the on-disk file so a
+  // concurrent agent append can't be clobbered), then clear the composer.
+  async function sendChatMessage() {
+    const text = batchNote.trim();
+    if ((!text && pointedAt.length === 0) || chatSending) return;
+    setChatSending(true);
+    const rel = `handoffs/${PROJECT_META.slug}/project-chat.json`;
+    let msgs = [];
+    try {
+      const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent(rel)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.ok && data.data && Array.isArray(data.data.messages)) msgs = data.data.messages;
+      }
+    } catch (_) { /* no thread yet — start one */ }
+    const seen = new Set(msgs.map((m) => m.id));
+    chatLog.forEach((m) => { if (m && m.id && !seen.has(m.id)) { msgs.push(m); seen.add(m.id); } });
+    const message = {
+      id: `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      who: "jeff",
+      text: text || null,
+      ts: new Date().toISOString(),
+      pointed_at: pointedAt.map((p) => ({ entry_id: p.entry_id, ref: p.label })),
+    };
+    msgs.push(message);
+    msgs.sort((a, b) => String(a.ts || "").localeCompare(String(b.ts || "")));
+    const res = await persistFile(rel, JSON.stringify({ schema_version: 1, messages: msgs }, null, 2),
+      { allowDownload: false });
+    if (res.ok) {
+      setChatLog(msgs);
+      setLastSent({ note: message.text, pointed_at: message.pointed_at });
       setBatchNote("");
       setPointedAt([]);
     }
-    prevBehindRef.current = agentBehind;
-  }, [agentBehind, agentConnected]);
+    setChatSending(false);
+  }
 
   // ====== Add a title card ======
 
@@ -3245,11 +3309,31 @@ export default function QuotesView() {
                   </ul>
                 </div>
               )}
-              <div className="sp-section">
+              <div className="sp-section sp-chat">
                 <div className="sp-section-head">
-                  <span className="sp-section-title">Tell the agent now</span>
-                  <span className="sp-optional">rides with your next message</span>
+                  <span className="sp-section-title">Chat</span>
                 </div>
+                {chatLog.length > 0 ? (
+                  <div className="sp-thread">
+                    {chatLog.slice(-60).map((m) => (
+                      <div key={m.id} className={`sp-msg ${m.who === "agent" ? "theirs" : "mine"}`}>
+                        {(m.pointed_at || []).map((p) => (
+                          <span className="sp-msg-point" key={p.entry_id}>
+                            <span aria-hidden="true">⌖</span> {p.ref}
+                          </span>
+                        ))}
+                        {m.text && <span className="sp-msg-text">{m.text}</span>}
+                        <span className="sp-msg-ts">
+                          {m.who === "agent" ? "Agent · " : ""}
+                          {(() => { const t = Date.parse(m.ts); return isNaN(t) ? "" : new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); })()}
+                        </span>
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                ) : (
+                  <div className="sp-thread sp-thread-empty">No messages yet — say something below.</div>
+                )}
                 {pointedAt.length > 0 && (
                   <div className="sp-points">
                     {pointedAt.map((p) => (
@@ -3263,14 +3347,24 @@ export default function QuotesView() {
                 <textarea
                   id="send-textarea"
                   className="sp-textarea"
-                  placeholder="A note for the agent — it reads this next turn. Or just talk to it in chat."
+                  placeholder="Message the agent — Enter to send, Shift+Enter for a new line."
                   value={batchNote}
                   onChange={(e) => setBatchNote(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+                  }}
                 />
+                <div className="sp-sendrow">
+                  <button
+                    className="sp-send"
+                    disabled={chatSending || (!batchNote.trim() && pointedAt.length === 0)}
+                    onClick={sendChatMessage}
+                  >{chatSending ? "Sending…" : "Send"}</button>
+                </div>
               </div>
             </div>
             <div className="sp-foot">
-              <span className="sp-batchnote">No Send button — your edits autosave to disk and the agent reads them when you message it in chat.</span>
+              <span className="sp-batchnote">Timeline edits autosave on their own — Send is just for messages.</span>
             </div>
           </>
         )}
@@ -3427,7 +3521,7 @@ export default function QuotesView() {
     .cc-block:last-of-type { margin-bottom:0; }
     .cc-block-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
       color: var(--text-subtle); margin-bottom:3px; }
-    .cc-roadmap { margin:0; font-size:13px; line-height:1.55; color: var(--text); }
+    .cc-roadmap { margin:0; font-size:13px; line-height:1.55; color: var(--text); white-space: pre-line; }
     .cc-empty { margin:0; font-size:13px; color: var(--text-muted); font-style:italic; }
     .cc-source { margin-top:14px; padding-top:10px; border-top:1px solid var(--border);
       font-size:11px; color: var(--text-subtle); }
@@ -3510,6 +3604,25 @@ export default function QuotesView() {
     .sp-point-x { margin-left:auto; border:none; background:transparent; cursor:pointer;
       color: var(--text-subtle); font-size:11px; padding:0 4px; line-height:1; }
     .sp-point-x:hover { color: var(--text); }
+    /* Ongoing chat thread */
+    .sp-thread { display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto;
+      padding:2px 2px 8px; margin-bottom:8px; }
+    .sp-thread-empty { font-size:12px; color: var(--text-subtle); font-style:italic; padding:4px 2px 10px; }
+    .sp-msg { display:flex; flex-direction:column; gap:3px; max-width:88%; border-radius:10px;
+      padding:7px 10px; font-size:12px; line-height:1.45; }
+    .sp-msg.mine { align-self:flex-end; background: var(--surface-2); border:1px solid var(--border);
+      color: var(--text); border-bottom-right-radius:3px; }
+    .sp-msg.theirs { align-self:flex-start; background: rgba(124,58,237,.07);
+      border:1px solid rgba(124,58,237,.22); color: var(--text); border-bottom-left-radius:3px; }
+    .sp-msg-text { white-space:pre-line; }
+    .sp-msg-point { font-size:11px; color: var(--probable); }
+    .sp-msg-ts { font-size:10px; color: var(--text-subtle); align-self:flex-end; }
+    .sp-msg.theirs .sp-msg-ts { align-self:flex-start; }
+    .sp-sendrow { display:flex; justify-content:flex-end; margin-top:6px; }
+    .sp-send { border:1px solid var(--border); background: var(--surface-2); color: var(--text);
+      font-size:12px; font-weight:600; border-radius:8px; padding:5px 16px; cursor:pointer; }
+    .sp-send:hover:not(:disabled) { background: var(--surface-3, var(--surface-2)); border-color: var(--text-subtle); }
+    .sp-send:disabled { opacity:.45; cursor:default; }
   `;
 
   return (

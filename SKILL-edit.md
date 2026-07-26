@@ -1118,6 +1118,16 @@ Three failure modes to cut firmly:
 - **Material covered better elsewhere.** A beat two speakers both deliver, or
   a segment mistagged into the wrong act — keep the stronger instance, drop
   the duplicate.
+- **Adoption-chronology violations.** When the story arcs around adopting a
+  product or system (need → choice → life with it), each act sits at a point
+  in that chronology — and a segment that shows the product already in use
+  cannot play in an act that sits BEFORE the adoption, even when its topic
+  matches the act. (ECI arc series 2026: Act 1 stated the need; Drew's
+  traceability thesis ended "…and we're able to do that through Deacom" —
+  on-topic, but it reveals the system already running, so the tail had to
+  go.) Check tense and product references against where the act sits in the
+  arc, not just against the act's subject. This is the act-level version of
+  the forward-reference rule. (Jeff, eci-quality-trust, 2026-07-24.)
 
 **This does not contradict "the rough cut is broad."** Broad applies at the
 *entry* level — include every plausible quote, err on keeping. Light hand

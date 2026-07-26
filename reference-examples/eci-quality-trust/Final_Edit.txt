@@ -1,0 +1,103 @@
+ECI-CONCEPT LABS — "LOCKED UNTIL IT'S RIGHT" (eci-quality-trust)
+Final narrative edit — reconstructed from "Quality Narrative - Final Cut Final.fcpxmld" (Jeff, 2026-07-26)
+Runtime 2:44 · 38 clips · 16 spoken entries + 3 act-boundary titles (structural, stripped at finishing)
+
+NOTE ON TEXT FIDELITY: entry text below is the viewer-locked verbatim trim (Round 5 / round-1 emit);
+"FCP:" percentages show how much of that trim survived Jeff's finishing pass against picture
+(computed clip-by-clip from source-timecode overlap). Word-exact final trims live in the .fcpxmld
+bundle (handoffs/eci-quality-trust/). Transcript garbles of the product name (DECOM/DiaCom/G-Com)
+= Deacom on audio.
+
+=== ACT 1 — QUALITY IS THE WHOLE GAME ===
+
+#10 · Drew DeMartinis (FCP: 77%)
+"Concept Laboratories is a personal care manufacturer."
+
+#13 · Drew DeMartinis (FCP: 57% — tightened further against picture)
+"We are a family-owned business. A lot of the manufacturers in our space, you know, they're owned by
+big, big companies that have a lot of moving parts that, you know, a lot of mistakes can be hidden.
+we are, Manufacturers with integrity, that we are doing things correctly for the best product for
+their customer."
+
+#15 · Drew DeMartinis (FCP: 84%)
+"when we're talking quality, everything comes down, everything comes down to a lot traceability,
+right? So really ensuring our customers that we are tracking everything from the time it hits our
+door to the time it hits their door."
+
+#41 · Drew DeMartinis (FCP: 75%)
+"working with larger companies requires a lot more compliance."
+
+#106 · Jordan Heifetz (FCP: 40% — cut hard for runtime)
+"also need to demonstrate that you have quality controls in place, of which we had areas for
+improvement. And the prior system, you know, had limited features in both of those features, in both
+of those regards. So it required a more robust system."
+
+[DROPPED IN FCP: #14 Drew "we treat every customer as a partnership..." · #103 Jordan "We win on
+quality, ensuring that no matter what we make..." — both assertion beats lost to runtime; Act 1
+became Drew-only until Jordan's need statement.]
+
+=== ACT 2 — THE SYSTEM WON'T LET IT SHIP WRONG ===
+
+#115 · Henry Hong (RESTORED IN FCP — was in the Cuts bin; ~9s kept of the 44s source)
+Kept core (by clip mapping): "Our ERP system when I first got here comprised of a financial module
+that was QuickBooks" / "Quality was on a separate system, mainly managed through PDFs, Excel files."
+/ "Inventory management done the same way." / "So everything was just scattered about, so."
+
+#116 · Henry Hong (FCP: 24% — compressed to the punchline)
+Surviving core: the search goal and "Deacom offered us the best of all 5 worlds."
+
+#130 · Vlad (FCP: 64%)
+"It's definitely more convenient when you have everything in the same place and quantity, quality
+can actually see what's going on with inventory. Imagine you have to do quality testing on things
+which exist in a separate system. How do you even tie them together? It's a challenge. I don't have
+that challenge. It's so much easier."
+
+#87 · Drew DeMartinis (FCP: 63%)
+"So when we're talking about our manufacturing process and how DECOM is really guiding us through
+the entire lifecycle of a product, it starts with the component that's hitting the door. it goes
+through QC. We can't have any chemicals or any packaging that doesn't align with our standards. So
+now we have packaging chemicals on QC hold that then get released. Amazing, right? That's all
+happening within DiaCom."
+
+#43 · Drew DeMartinis (FCP: 80%)
+"being able to say to these larger companies now, like, hey, actually we have a full system Again,
+I can track your chemical from when it went to the door. I know exactly which bottle it's in. It's
+crazy."
+
+#92 · Drew DeMartinis (FCP: 69%)
+"Now that we have DECOM, we're able to put in more quality checks because we trust the system,"
+
+#85 · Drew DeMartinis (FCP: 95% — highest survival in the film)
+"My QC department, they're running micro tests, they're doing stability, they're doing
+compatibility. If any of those things fail, that product cannot go out the door."
+
+=== ACT 3 — PROOF, NOT PROMISES ===
+
+#111 · Jordan Heifetz (FCP: 63%)
+"it has the workflows and features that allow us to be confident, pass audits, pass customer
+expectations, and the quality piece was a big part of using DEACOM."
+
+#40 · Drew DeMartinis (FCP: 85% — the marquee anchor, essentially intact)
+"I think a really great example is one of our largest customers, You know, they came to us and they
+said, we're going through an audit, which means you're going through an audit, right? So they said,
+we're going to come and we're going to audit our inventory at your facility. If it's not within
+99.5% accuracy, then we're charging you for the audit. We had 99.99% accuracy. Thank you very much."
+
+#93 · Drew DeMartinis (FCP: 65%)
+"If you wanna work with the best brands, you have to have the highest level of requirements, period.
+So, you know, we wanna work with a certain class of brands that make a certain class of product.
+They're going to require things that, you know, maybe wasn't done 30 years ago, but that's okay,
+'cause now we have something that can support it."
+
+#94 · Drew DeMartinis (FCP: 21% — ~0.8s button)
+"And now we have something that can support it, which is G-Com." [audio: Deacom]
+
+[DROPPED AT FINISHING: the "Zero recalls. Ever." title card (and #83's zero-recall line was already
+cut in the viewer) — the zero-recall proof beat vanished entirely; the audit story carries the act's
+proof alone.]
+
+=== SESSION LINEAGE ===
+Wide 3-act build (47 entries, ~17 min) → Jeff hones Act 1 (chronology rule born here) → Act 2 pass 2
+→ Act 2 two-movement restructure (traceability → quality-on-top) → Act 3 pass 2 → Round 5 saved →
+FCPXML round 1 (4:04) → Jeff finishes in FCP (2:44). Full working history in
+handoffs/eci-quality-trust/ (editing-versions v1–v5, tweak logs, project-chat.json).

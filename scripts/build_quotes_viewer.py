@@ -208,6 +208,30 @@ def parse_act_roadmaps_md(text: str):
     if not text:
         return roadmaps, premise
 
+    # v5.11 pass (runs FIRST so its keys win): a "### Narrative Roadmaps"
+    # section holding the clean narrative outline per act —
+    #   **Quality Is the Whole Game:**
+    #   - beat one
+    #   - beat two
+    # The bullets ARE the roadmap (Creative Context v5.11 format). Join with
+    # newlines; the viewer renders .cc-roadmap with white-space:pre-line.
+    nr = re.search(
+        r"^###\s*Narrative Roadmaps.*?$(.*?)(?=^###\s|\Z)",
+        text, re.MULTILINE | re.DOTALL,
+    )
+    if nr:
+        for em in re.finditer(
+            r'\*\*\s*([^*\n]+?)\s*\*\*\s*\n((?:[ \t]*[-•]\s+.+\n?)+)',
+            nr.group(1),
+        ):
+            label = em.group(1).strip().rstrip(":").strip()
+            bullets = [
+                re.sub(r"^[ \t]*[-•]\s+", "", ln).strip()
+                for ln in em.group(2).splitlines() if ln.strip()
+            ]
+            if label and bullets and label not in roadmaps:
+                roadmaps[label] = "\n".join("• " + b for b in bullets)
+
     # Isolate the "### Structure" section body (up to the next ### heading).
     m = re.search(
         r"^###\s*Structure.*?$(.*?)(?=^###\s|\Z)",
