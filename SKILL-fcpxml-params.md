@@ -87,6 +87,26 @@ Before starting, confirm the following exist in the project folder:
 
 If the source FCPXMLs are missing, stop and report. You cannot proceed without them.
 
+### Source exports must match the CURRENT library — the duplicate-multicam trap
+
+FCP matches imported media to library objects by **UID**. The multicam `<media>`
+definitions that the FCPXML build embeds come verbatim from these source
+exports — so if the library's multicams have changed since the exports were
+made (the editor duplicated them, reorganized, or modified audio
+configuration), the embedded UIDs no longer exist in the library and **every
+import creates a fresh duplicate multicam**, losing the editor's corrections
+each round. (ECI arc series 2026-08-03: June 8 exports vs. an August library —
+the library walked from "Drew" to "Drew 2" across imports, and Jeff had to
+redo audio corrections per video.)
+
+**Standing rule:** whenever the editor modifies a multicam in FCP, the
+per-interview source XMLs are re-exported from the current library BEFORE the
+next build, and this agent re-runs against them. **Symptom to ask about at
+session start:** if the editor reports duplicate multicams appearing on
+import ("Drew 1", "Drew 2"...), the source exports are stale — refresh them
+first; a rebuild against fresh exports relinks to the corrected multicams
+automatically.
+
 ---
 
 ## Pipeline State on Launch
