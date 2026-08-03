@@ -2858,6 +2858,13 @@ export default function QuotesView() {
                 );
                 setEditingEntryId(null);
                 setEditCuts([]);
+                // Save trim also collapses the card — no separate "Done" click
+                // needed (Jeff, 2026-07-27).
+                setRevealedIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(entry.entry_id);
+                  return next;
+                });
               }}
               onCancel={() => { setEditingEntryId(null); setEditCuts([]); }}
             />
