@@ -107,6 +107,15 @@ import ("Drew 1", "Drew 2"...), the source exports are stale — refresh them
 first; a rebuild against fresh exports relinks to the corrected multicams
 automatically.
 
+**AND the import-side half of the rule (confirmed ECI 2026-08-04): FCP
+deduplicates imported media only within the TARGET EVENT.** Even a
+byte-perfect uid/modDate match duplicates if the XML is imported while a
+different event is selected. The editor must select the event that CONTAINS
+the original multicams (e.g. "Interview Multicams") before File → Import →
+XML, then drag the imported project to the working event afterward (moving a
+project between events does not duplicate media). Put this instruction in
+every edit-handoff's finishing flags.
+
 ---
 
 ## Pipeline State on Launch
