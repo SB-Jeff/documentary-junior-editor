@@ -2041,7 +2041,11 @@ export default function QuotesView() {
             window is identifiable when several deliverables share a project. */}
         <div className="hdr-identity">
           <div className="hdr-eyebrow">
-            {[PROJECT_META.client, PROJECT_META.project].filter(Boolean).join(" · ") || PROJECT_TITLE}
+            {/* The text span ellipsizes; the switcher sits OUTSIDE the overflow
+                so it can never be clipped when the project name truncates. */}
+            <span className="hdr-eyebrow-text">
+              {[PROJECT_META.client, PROJECT_META.project].filter(Boolean).join(" · ") || PROJECT_TITLE}
+            </span>
             {/* Project switcher (multi-project SSDs): jump to any sibling edit's
                 built viewer via the server's /view/<slug> route. Safe to switch
                 any time — each viewer autosaves its state to its own slug. */}

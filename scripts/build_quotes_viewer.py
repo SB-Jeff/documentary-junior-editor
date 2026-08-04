@@ -1218,8 +1218,9 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 }
 .hdr-identity { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .hdr-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hdr-project-switch { margin-left: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--text-subtle); display: flex; align-items: center; min-width: 0; }
+.hdr-eyebrow-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hdr-project-switch { flex-shrink: 0; margin-left: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
   color: var(--text-muted); background: var(--surface2); border: 1px solid var(--border);
   border-radius: 6px; padding: 1px 4px; max-width: 180px; cursor: pointer; }
 .hdr-title { font-size: 15px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
