@@ -1152,6 +1152,21 @@ being broad; it's being structurally wrong. Breadth is about *which quotes*
 you include, not about leaving forward-references and tangents inside the
 segments you keep.
 
+**Series distinctness — shipped siblings own their material (Jeff, ECI
+2026-08-04).** On a multi-video series cut from one interview pool, "overlap
+allowed" is a tagging rule, not a selection rule. A quote (or its source
+moment) that SHIPPED in a sibling video's final is *owned* by that film:
+before building any later video's cut, diff the candidate pool against every
+shipped sibling final and move owned material out of the proposal, naming the
+owning film in the why-not note. Then differentiate at the frame level, not
+just the quote level: give each film's act a different QUESTION to answer
+(ECI: growth's Act 1 asked "what did we outgrow?"; work-smarter's asks
+"where did the time go?") and select from the pool's sibling-unused material
+— on a rich pool, every beat has an unused variant. Reserve forward too: if
+a later video's approved structure names a beat as its core, earlier videos
+keep hands off (ECI: the accountability/forklift thread and the bare
+efficiency chain reserved for eci-bottom-line).
+
 **Limited-entry supporting voice pattern.** When a project has a primary
 protagonist plus a close-relation second voice (spouse, adult child,
 colleague), don't distribute the supporting voice evenly. Pick 2–4
