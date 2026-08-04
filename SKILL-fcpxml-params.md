@@ -107,7 +107,24 @@ import ("Drew 1", "Drew 2"...), the source exports are stale — refresh them
 first; a rebuild against fresh exports relinks to the corrected multicams
 automatically.
 
-**THE SETTLED MODEL (ECI 2026-08-04, after four controlled import tests):
+**THE FINAL WORKFLOW (proven ECI 2026-08-04): the XML-Wash import ritual.**
+Direct XML import always duplicates multicams, but FCP's INTER-LIBRARY copy
+path deduplicates by uid. So the editor never imports pipeline XMLs directly
+into the master library. Ritual: (1) keep a disposable "XML Wash" library;
+(2) File → Import → XML into the Wash library (duplicates quarantine there);
+(3) drag the imported PROJECT into the master library's edit event, choosing
+**"Project without media"** in the copy dialog — FCP relinks the timeline's
+clips to the master library's existing multicams by uid; (4) empty the Wash
+library whenever. Result: zero duplicates in the master library, every
+deliverable references the same master multicams, and any later treatment
+(audio, color, crop) applied once to a master propagates to all timelines.
+Retroactive fallbacks if ever needed: an adjustment layer per timeline for
+global passes; fix-one-clip + select-all + Paste Attributes for clip-level
+passes. Keep embedding corrected multicam definitions in the sources
+(belt-and-braces: even an accidentally direct-imported dupe arrives
+treated).
+
+**The superseded direct-import model (kept for context)**  (ECI 2026-08-04, after four controlled import tests):
 Final Cut ALWAYS re-creates multicams as new browser items on XML import —
 matching uid, modDate, and target event do not make it reuse an existing
 multicam (it only deduplicates primary source assets). Duplicates per import
