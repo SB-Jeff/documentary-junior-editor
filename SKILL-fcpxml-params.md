@@ -107,9 +107,23 @@ import ("Drew 1", "Drew 2"...), the source exports are stale — refresh them
 first; a rebuild against fresh exports relinks to the corrected multicams
 automatically.
 
-**AND the import-side half of the rule (confirmed ECI 2026-08-04): FCP
-deduplicates imported media only within the TARGET EVENT — and the TARGET
-EVENT IS DICTATED BY THE XML ITSELF, not the editor's selection.** The built
+**THE SETTLED MODEL (ECI 2026-08-04, after four controlled import tests):
+Final Cut ALWAYS re-creates multicams as new browser items on XML import —
+matching uid, modDate, and target event do not make it reuse an existing
+multicam (it only deduplicates primary source assets). Duplicates per import
+are therefore inherent and accepted. The mitigation that eliminates the real
+cost (re-doing the editor's audio work): keep master multicams in one event,
+apply ALL audio corrections there, re-export the four multicam XMLs after any
+correction, and SPLICE the corrected `<media>` definitions into the canonical
+captioned sources (preserving uids and remapping internal resource refs) so
+every imported duplicate arrives with corrections already applied. Route the
+import to the editor's edit event via the XML's event wrapper. Housekeeping:
+delete a video's duplicate set only when its timeline is retired.**
+
+Historical detail (kept for context — these were necessary discoveries even
+though relinking proved impossible): FCP routes the import to the event named
+in the XML's own `<event name uid>` wrapper, overriding the editor's
+selection — The built
 FCPXML inherits an `<event name uid>` wrapper from the source exports; FCP
 routes the import to that event (uid first, then name), silently overriding
 whatever event is selected. If that inherited event is not where the original
