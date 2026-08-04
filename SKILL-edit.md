@@ -129,6 +129,39 @@ bridge, often works better than on-screen text.
 
 ---
 
+## Hard Constraints vs. Editorial Judgment
+
+*(Added 2026-08-05 after the eci-bottom-line miss, and in line with how the
+newest Claude models are best instructed: state intent, reserve hard rules
+for true invariants, use judgment on everything else.)*
+
+This skill contains two kinds of guidance. Read them differently.
+
+**Hard constraints — obey without exception.** The two Cardinal Rules,
+sensitive-material handling (uncleared figures never ship unflagged), and
+anything Jeff marks permanent. Judgment never overrides these.
+
+**Editorial heuristics — defaults with reasons, never filters.** Everything
+else in this skill — series distinctness, speaker patterns, act sizing,
+reservations, the lessons promoted from past finals — encodes Jeff's
+demonstrated taste. Each states *why* it exists so you can tell when it
+applies. Working rules:
+
+- Heuristics are selection **advice, not pre-filters**. Never silently
+  remove material from consideration because a heuristic disfavors it —
+  propose the best cut you can see and FLAG where it bends a heuristic,
+  naming the reason. (The eci-bottom-line failure: ~40% of Jeff's final had
+  been pre-filtered out of the agent's candidate set as "sibling-owned."
+  A flagged reuse costs Jeff one line of attention; a silent exclusion
+  costs the edit.)
+- A concept pivot (a "greatest hits" ask, a montage framing, a capstone)
+  changes the *shape* of the video, not the standards. Show-don't-say,
+  earned setups, a single button — the storytelling judgment applies to
+  every framing. Don't execute a brief more literally than Jeff would.
+- When heuristics conflict, or one fights your read of the story, choose
+  with judgment and say so in the proposal notes. Jeff prefers a confident
+  cut with named tradeoffs over a defensive cut shaped by rule-avoidance.
+
 ## The Viewer Is the Source of Truth
 
 The viewer is a **persistent local app** (served by `scripts/viewer_save_server.py`,
@@ -1152,24 +1185,33 @@ being broad; it's being structurally wrong. Breadth is about *which quotes*
 you include, not about leaving forward-references and tangents inside the
 segments you keep.
 
-**Series distinctness — shipped siblings own their material (Jeff, ECI
-2026-08-04).** On a multi-video series cut from one interview pool, "overlap
-allowed" is a tagging rule, not a selection rule. A quote (or its source
-moment) that SHIPPED in a sibling video's final is *owned* by that film:
-before building any later video's cut, diff the candidate pool against every
-shipped sibling final and move owned material out of the proposal, naming the
-owning film in the why-not note. Then differentiate at the frame level, not
-just the quote level: give each film's act a different QUESTION to answer
-(ECI: growth's Act 1 asked "what did we outgrow?"; work-smarter's asks
-"where did the time go?") and select from the pool's sibling-unused material
-— on a rich pool, every beat has an unused variant. Reserve forward too: if
-a later video's approved structure names a beat as its core, earlier videos
-keep hands off (ECI: the accountability/forklift thread and the bare
-efficiency chain reserved for eci-bottom-line). *Capstone exception (single
-sighting, eci-bottom-line 2026-08-04):* on a series' short closing/recap
-video, Jeff deliberately reprised ~36s of footage shipped in a sibling —
-a finale may recap; mid-series videos may not. Still run the diff and flag
-every reprise; let Jeff choose them knowingly rather than silently allow.
+**Series overlap — classify the video before applying distinctness (Jeff,
+2026-08-05; supersedes the 08-04 "shipped siblings own their material"
+wording).** On a multi-video series cut from one interview pool, how much
+overlap matters depends on what kind of video you're building. Ask at
+kickoff:
+
+1. **Is this video an ORIGINAL with its own messaging, or a CUT-DOWN /
+   recap of the series' material?** Distinct originals (the first three ECI
+   videos) get teased apart with as little overlap as possible: prefer
+   sibling-unused variants, give parallel acts different QUESTIONS to
+   answer (growth's Act 1 asked "what did we outgrow?"; work-smarter's
+   asked "where did the time go?"), and keep hands off beats a later
+   video's approved structure names as its core. A cut-down/recap
+   (eci-bottom-line) reuses freely — reuse is its nature.
+2. **What is a given overlap FOR?** Even between distinct originals,
+   overlap serving *context or narrative flow* (an identity beat, a setup
+   line) is acceptable; overlap repeating a sibling's *payload* — the same
+   story doing the same job — is not.
+3. **Will the videos be watched back-to-back by the same audience?** The
+   tighter the shared audience, the more repetition costs.
+
+If the classification isn't obvious from the brief, ask Jeff — it's one
+question and it sets the whole selection posture. Mechanics either way:
+diff candidates against every shipped sibling final, but the diff produces
+**flags on the proposal, never exclusions** (see Hard Constraints vs.
+Editorial Judgment above) — name the owning film and the reason to reuse
+or avoid.
 
 **Assertion vs. demonstration — prefer quotes that SHOW over quotes that
 SAY (promoted after 4 consecutive ECI finals, 2026-08-04).** When a beat's
