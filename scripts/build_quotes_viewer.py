@@ -439,6 +439,7 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
             "membership": entry.get("membership"),
             "_editCuts": entry.get("_editCuts", []),
             "notes": entry.get("notes", ""),
+            "why": entry.get("why", ""),
         }
 
     # Build full original text (join all segments with single space, matching
@@ -539,6 +540,7 @@ def migrate_entry_trims(entry: dict, source_quotes_by_num: dict) -> dict:
         "membership": entry.get("membership"),
         "_editCuts": cuts,
         "notes": entry.get("notes", ""),
+        "why": entry.get("why", ""),
     }
 
 
@@ -977,6 +979,7 @@ def assemble_data_block(data: dict) -> dict:
                     "membership": e.get("membership"),
                     "_editCuts": [],
                     "notes": e.get("notes", ""),
+                    "why": e.get("why", ""),
                     "text": e.get("text", ""),
                 })
                 continue
@@ -1514,6 +1517,8 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
 .rc-quote { font-size: 15px; line-height: 1.6; margin: 2px 0 0; color: var(--text); }
 .rc-quote.rc-interstitial { font-style: italic; color: var(--text-muted); }
+.rc-why { font-size: 12px; line-height: 1.5; color: var(--text-muted); margin-top: 6px; }
+.rc-why-label { color: var(--text-subtle); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
 .mship-chip { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px; border-radius: 999px; }
 .mship-chip.tight { color: var(--must); background: var(--must-soft); }
 .mship-chip.loose { color: var(--probable); background: var(--probable-soft); }

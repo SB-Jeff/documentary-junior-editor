@@ -105,6 +105,8 @@ const SOURCE_QUOTES = [];
 //         _editCuts: [[startChar, endChar], ...],    // character-range trims
 //         _subLabel: "a" | "b" | null,
 //         notes: "Editorial note.",
+//         why: "Placement rationale.",               // why selected + why HERE in the order;
+//                                                    // rendered on Timeline cards as "Why here:"
 //         text: "..."                                // for non-spoken entry types
 //       }
 //     ]
@@ -2976,6 +2978,11 @@ export default function QuotesView() {
             {tools}
           </div>
           <p className="rc-quote rc-interstitial">{insText}</p>
+          {entry.why && (
+            <div className="rc-why">
+              <span className="rc-why-label">Why here:</span> {entry.why}
+            </div>
+          )}
         </div>
       );
     }
@@ -2995,6 +3002,11 @@ export default function QuotesView() {
           {tools}
         </div>
         <p className="rc-quote">"{trimmedQuoteText(entry)}"</p>
+        {entry.why && (
+          <div className="rc-why">
+            <span className="rc-why-label">Why here:</span> {entry.why}
+          </div>
+        )}
       </div>
     );
   };

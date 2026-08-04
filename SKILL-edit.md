@@ -942,6 +942,20 @@ Two of your outputs render in the viewer only if you write them to
 Write this sidecar before you rebuild so the Library reasons and Review seam-flags
 show up when Jeff opens the act. Bump the `-v[N]` to match the round.
 
+**Timeline entries carry their own logic — the `why` field (Jeff, 2026-08-05).**
+The why-not notes cover what's *out*; the Timeline must explain what's *in*. Every
+timeline entry you build gets a `why` — one or two sentences covering BOTH halves
+of the decision: what the quote does for the story (selection) and why it sits at
+this point in the order, usually relative to its neighbors (placement). Example:
+`"The survival stakes — escalates #106's complexity claim to 'you're just
+surviving'; must precede any Deacom mention so the need lands before the answer."`
+The viewer renders it on the card as "Why here:". Keep it current: when an entry
+moves, or its neighbors change, rewrite its `why` at the next round save — a stale
+placement rationale describing an order that no longer exists is worse than none.
+Title cards and interstitials get one too (what gap they bridge). This is the
+Timeline mirror of the Library rule above: Jeff audits selection in the Library
+and *sequence* on the Timeline; both audits need your reasoning visible inline.
+
 ### Viewer persistence — persistFile()'s tiers
 
 All viewer disk writes (saved cuts, exports, the tweak log, the live
