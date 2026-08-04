@@ -956,6 +956,24 @@ def validate_project_metadata(project_meta: dict, source: str) -> None:
         raise BuildContractError(msg)
 
 
+def discover_sibling_viewers(ssd_root) -> list:
+    """List every slug under <ssd_root>/handoffs/ that has a built viewer.
+
+    Returns [{"slug": ..., "label": ...}] sorted by slug. The label is the
+    slug itself — short, unambiguous, and what Jeff calls the edits anyway.
+    Missing handoffs dir (tests, scratch roots) → [].
+    """
+    out = []
+    try:
+        handoffs = Path(ssd_root) / "handoffs"
+        for d in sorted(handoffs.iterdir()):
+            if d.is_dir() and (d / f"{d.name}_quotes_view.html").is_file():
+                out.append({"slug": d.name, "label": d.name})
+    except OSError:
+        pass
+    return out
+
+
 def assemble_data_block(data: dict) -> dict:
     """Convert auto-discovered data into the shape the template's data block expects.
 
@@ -1011,6 +1029,10 @@ def assemble_data_block(data: dict) -> dict:
         # act_labels; each {label, roadmap}. Defensive defaults ([] / "").
         "acts": data.get("acts", []),
         "premise": data.get("premise", ""),
+        # Sibling built viewers on the same SSD (multi-project layout). Powers
+        # the header project switcher; served by viewer_save_server at
+        # /view/<slug>. Includes self so the switcher shows where you are.
+        "sibling_projects": discover_sibling_viewers(data["ssd_root"]),
     }
 
     return {
@@ -1197,6 +1219,9 @@ kbd { background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 0 4
 .hdr-identity { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .hdr-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hdr-project-switch { margin-left: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--text-muted); background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1px 4px; max-width: 180px; cursor: pointer; }
 .hdr-title { font-size: 15px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .round-select {
   background: var(--surface); border: 1px solid var(--border); border-radius: 6px;

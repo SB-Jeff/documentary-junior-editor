@@ -2042,6 +2042,24 @@ export default function QuotesView() {
         <div className="hdr-identity">
           <div className="hdr-eyebrow">
             {[PROJECT_META.client, PROJECT_META.project].filter(Boolean).join(" · ") || PROJECT_TITLE}
+            {/* Project switcher (multi-project SSDs): jump to any sibling edit's
+                built viewer via the server's /view/<slug> route. Safe to switch
+                any time — each viewer autosaves its state to its own slug. */}
+            {(PROJECT_META.sibling_projects || []).length > 1 && (
+              <select
+                className="hdr-project-switch"
+                value={PROJECT_META.slug}
+                title="Open another edit on this SSD"
+                onChange={(e) => {
+                  if (e.target.value !== PROJECT_META.slug)
+                    window.location.href = `/view/${e.target.value}`;
+                }}
+              >
+                {PROJECT_META.sibling_projects.map((p) => (
+                  <option key={p.slug} value={p.slug}>{p.label}</option>
+                ))}
+              </select>
+            )}
           </div>
           <h1 className="hdr-title">
             {currentCut

@@ -49,6 +49,7 @@ to run save-only (the viewer is served some other way, e.g. another tab).
 
 import argparse
 import json
+import re
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -95,6 +96,8 @@ class SaveHandler(BaseHTTPRequestHandler):
             self._read_json(parse_qs(parsed.query))
         elif path == "/list":
             self._list_cuts(parse_qs(parsed.query))
+        elif path.startswith("/view/"):
+            self._serve_sibling(path[len("/view/"):])
         elif path in ("", "/index.html") and self.serve_file is not None:
             self._serve_viewer()
         else:
@@ -160,10 +163,31 @@ class SaveHandler(BaseHTTPRequestHandler):
             return
         self._json(200, {"ok": True, "data": data})
 
+    def _serve_sibling(self, slug: str):
+        """Serve a sibling project's built viewer at /view/<slug>.
+
+        Only ``handoffs/<slug>/<slug>_quotes_view.html`` under --root is
+        reachable — no directory access, no arbitrary paths. Powers the header
+        project switcher on multi-project SSDs: every viewer served through
+        this server saves to its own slug's handoffs paths, so switching
+        projects is plain navigation.
+        """
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", slug or ""):
+            self._json(400, {"ok": False, "error": "bad slug"})
+            return
+        target = self.root / "handoffs" / slug / f"{slug}_quotes_view.html"
+        if not target.is_file():
+            self._json(404, {"ok": False, "error": f"no built viewer for '{slug}'"})
+            return
+        self._serve_html(target)
+
     def _serve_viewer(self):
         """Serve the single built viewer file at /. No directory access."""
+        self._serve_html(self.serve_file)
+
+    def _serve_html(self, file: Path):
         try:
-            body = self.serve_file.read_bytes()
+            body = file.read_bytes()
         except OSError as e:
             self._json(500, {"ok": False, "error": f"cannot read viewer: {e}"})
             return
