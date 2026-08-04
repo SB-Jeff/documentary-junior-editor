@@ -108,13 +108,23 @@ first; a rebuild against fresh exports relinks to the corrected multicams
 automatically.
 
 **AND the import-side half of the rule (confirmed ECI 2026-08-04): FCP
-deduplicates imported media only within the TARGET EVENT.** Even a
-byte-perfect uid/modDate match duplicates if the XML is imported while a
-different event is selected. The editor must select the event that CONTAINS
-the original multicams (e.g. "Interview Multicams") before File → Import →
-XML, then drag the imported project to the working event afterward (moving a
-project between events does not duplicate media). Put this instruction in
-every edit-handoff's finishing flags.
+deduplicates imported media only within the TARGET EVENT — and the TARGET
+EVENT IS DICTATED BY THE XML ITSELF, not the editor's selection.** The built
+FCPXML inherits an `<event name uid>` wrapper from the source exports; FCP
+routes the import to that event (uid first, then name), silently overriding
+whatever event is selected. If that inherited event is not where the original
+multicams live, EVERY import duplicates, no matter how perfect the media
+uids are. The complete fix, all three parts (each confirmed necessary on
+ECI, 2026-08-03/04):
+1. Source-export media uid/modDate must exactly match the current library
+   (refresh exports after any multicam change).
+2. The built XML's `<event>` must NAME the event containing the original
+   multicams (e.g. "2 | Interview Multicams") with the stale event `uid`
+   attribute REMOVED — until `build_fcpxml.py` grows an `--event-name`
+   option, the Edit Agent patches the output at export fulfillment.
+3. Editors then import normally; the XML routes itself to the right event
+   and clips relink to the corrected originals. Moving the imported project
+   to a working event afterward is safe (no media duplication).
 
 ---
 
