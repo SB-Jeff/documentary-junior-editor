@@ -301,8 +301,8 @@ For each act, in order (Intro, then Act 1, 2, 3 …):
    the Quote Library, via the act pill. In the Timeline, dragging reorders *within*
    an act; moving a quote to another act = retag it in the Library.)
 2. **Build the over-inclusive Timeline — you go first.** Propose the first pass
-   for this act: deliberately wide (3×–4× the finished length — Jeff's rubric;
-   see Phase 3). For every quote you pull in, give the reason; for **every**
+   for this act: deliberately wide — the inclusion bar is *"could this possibly
+   make the final edit?"*, fence-sitters in (see Phase 3). For every quote you pull in, give the reason; for **every**
    quote you leave out — plausible or not — **write an `agent_note`** so the
    omission is visible in the Library, never silent ("Left out — overlaps
    #3/#9, weaker delivery"). And every entry you later Cut carries its cut
@@ -1083,17 +1083,29 @@ wants. A quote you cut "for runtime" may be the emotional peak of the act.
 Don't pre-truncate to hit a number; that decision happens in Reduction,
 informed by the Discussion.
 
-The rough cut is long on purpose. **Jeff's sizing rubric (2026-07-26, ECI
-eci-growth): the first cut runs roughly 3x–4x the finished length — never
-north of 4x.** Both failure modes are real and both have happened: a rough
-cut already at target means you selected too narrowly and good quotes got
-missed (eci-quality-trust round 1); a rough cut several times past 4x means
-you applied inclusion-by-default instead of editorial selection — a
-45-minute first build for a 3-minute film is a catalog, not a cut, and
-forced an immediate re-cut (eci-growth round 1). Wide is a multiple, not an
-absence of judgment: every entry still earns its place against the roadmap
-beats; 3–4x is the room for Jeff to disagree with you, not a license to
-skip selection.
+The rough cut is long on purpose. **The inclusion bar (Jeff, 2026-08-05 —
+supersedes the 3–4× runtime rubric):** include anything that could possibly
+make the final edit. The first pass exists so Jeff never has to go back into
+the source material and dig — the recurring failure with junior editors is
+over-cutting, and a fence-sitter left out is exactly the quote he ends up
+digging for. **Being on the fence about a quote IS the signal: it goes in.**
+Exclude a quote only when it has no plausible path into *this* story — an
+off-story tangent, or strictly dominated (another quote does the same job
+better in every dimension: angle, specificity, emotion, speaker). If a
+weaker variant differs in *any* of those dimensions, keep both and let Jeff
+choose.
+
+What keeps this from becoming a catalog is traceability, not a length cap:
+every entry still proves a roadmap beat (or carries an explicit `why` for
+being in without one). Both historical failures fit this frame — the
+45-minute eci-growth first build failed not because it was long but because
+it was inclusion-by-default, full of entries with no path into the story;
+the too-tight eci-quality-trust round 1 failed because fence-sitters were
+missing. Runtime is a *diagnostic*, never a target: past first cuts have
+landed around 3–4× the finished length, so a build many times past that
+suggests you've stopped asking "is there a path?" and started cataloguing,
+and a build near 1× suggests early convergence. When the number looks odd,
+recheck the *reasons* — never trim (or pad) toward a multiple.
 
 Present recommendations act by act — never try to lock the whole edit at
 once.
@@ -1143,11 +1155,11 @@ They are not commitments — every call can move across rounds, and Jeff changes
 them directly in the viewer (the card-header **Cut → Cuts**; **Restore →
 Timeline** / **Add Back** from the Cuts view).
 
-The total runtime of the rough cut's Timeline tier should target **3–4× the
-target runtime** (Jeff's rubric — see "The first pass is a rough cut" above).
-That gives the Reduction phase real room to land at target by Cutting entries
-that don't earn their keep. The Timeline tier (membership tight) is what
-ultimately ships.
+The rough cut's Timeline tier carries **everything that could possibly make
+the final edit** (see "The first pass is a rough cut" above) — its length is
+whatever that inclusion bar produces, not a runtime multiple. Reduction is
+where the cut converges to target by Cutting entries that don't earn their
+keep. The Timeline tier (membership tight) is what ultimately ships.
 
 ### Selection Principles
 
