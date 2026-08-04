@@ -1165,7 +1165,25 @@ just the quote level: give each film's act a different QUESTION to answer
 — on a rich pool, every beat has an unused variant. Reserve forward too: if
 a later video's approved structure names a beat as its core, earlier videos
 keep hands off (ECI: the accountability/forklift thread and the bare
-efficiency chain reserved for eci-bottom-line).
+efficiency chain reserved for eci-bottom-line). *Capstone exception (single
+sighting, eci-bottom-line 2026-08-04):* on a series' short closing/recap
+video, Jeff deliberately reprised ~36s of footage shipped in a sibling —
+a finale may recap; mid-series videos may not. Still run the diff and flag
+every reprise; let Jeff choose them knowingly rather than silently allow.
+
+**Assertion vs. demonstration — prefer quotes that SHOW over quotes that
+SAY (promoted after 4 consecutive ECI finals, 2026-08-04).** When a beat's
+job is a claim ("the product is the best," "we're more efficient," "quality
+matters"), Jeff consistently keeps the quote that *demonstrates* the claim
+through a concrete scene or mechanism and cuts the one that merely asserts
+it. The clearest case: eci-bottom-line was framed as a "recommendation
+montage," yet Jeff's final used exactly ONE explicit recommendation — as the
+closing button — and built the body from demonstrations (the how-we-chose-it
+selection story, a day-in-the-life PO walkthrough, the ERP-as-foundation
+mechanism). Stacked endorsements dilute; one emphatic endorsement after an
+earned, demonstrated setup lands. In selection: for every claim beat, hunt
+the pool for the scene that proves it before reaching for the sentence that
+states it, and never program two same-claim assertions back to back.
 
 **Limited-entry supporting voice pattern.** When a project has a primary
 protagonist plus a close-relation second voice (spouse, adult child,

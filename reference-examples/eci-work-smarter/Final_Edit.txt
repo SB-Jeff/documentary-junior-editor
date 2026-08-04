@@ -1,0 +1,60 @@
+ECI-CONCEPT LABS — "BRAINS, NOT FINGERS" (eci-work-smarter)
+Final edit — reconstructed from "Work Smarter - Final.fcpxmld" (Jeff, 2026-08-04)
+Runtime 2:21 · 44 clips · 15 of 19 emitted entries survived finishing, order preserved
+
+NOTE: text below is the viewer-locked verbatim trim; "FCP:" = share of that trim surviving
+Jeff's finishing pass (source-timecode overlap, interpolated TCs — approximate). Product name = Deacom on audio despite transcript garbles.
+
+=== Gathering Data Was the Job ===
+
+#16 · Drew DeMartinis (FCP: ~53%)
+"So before DEACOM, you know, we did have an inventory management system and a production system. The main issue I would say was that it didn't actually tie to the financials. So in terms of accountability and all of that, everything was able to kind of stay in a separate system. From, you know, where our cash was being reported. So before DECOM, we just didn't have the level of control in terms of inventory accuracy."
+
+#18 · Drew DeMartinis (FCP: ~83%)
+"But in terms of inventory accuracy, understanding what we had on hand, what wasn't on hand, that got a little messy with our old system."
+
+#28 · Drew DeMartinis (FCP: ~53%)
+"You know, when everything is sort of directionally correct, every question becomes an analysis, a specific analysis for that to make sure make sure that what you're saying is actually correct."
+
+#119 · Henry Hong (FCP: ~54%)
+"But then it's actually getting, you know, when you're in a small business, right, you're wearing a lot of hats. So you have to do all these jobs, right? And understanding, pulling everything together, right? Is that a valuable use of, is that a valuable use of my time? Is that a valuable use of any, any upper level management's time? Yeah. Not at all."
+
+#120 · Henry Hong (FCP: ~34%)
+"So first goal, get them the proper tools so they can actually do their job, not just mining data and gathering data, right? You know, you getting those, getting all that data together, you know, that's not the job. You know, using the data, analyzing the data, and going to strategy. So That's the job. That's the job, so."
+
+=== One System Puts the Data to Work ===
+
+#124 · Henry Hong (FCP: ~29%)
+"So I think understanding like the basic principles of the ERP system, everything is built off data tables, right? The most impressive part was the front end of it, which is basically the, call it the user interface, right? I think the using the tables and then Writing the query, I think they had great queries, which equals a great interface. So the data tables were pretty much the same as our old system, but a lot more enhancements."
+
+#149 · Vlad (FCP: ~60%)
+"Well, rating it would be difficult, but what I really like about it is the degree of customization you can introduce to it. Way literally lets you change almost everything, so you can tailor it to the specific user, to the specific purpose, to the specific anything. Absolutely everything is fully customizable and it's amazing. I do not need to go to DCOM, ACI for every single little thing I need to have changed. I can just change it myself. And that is the strongest trait I can find in DCOM."
+
+#30 · Drew DeMartinis (FCP: ~62%)
+"I think one of the biggest things that we did was change from a weighted average costing model to a standard costing model. And what this does is it really gave us the opportunity opportunity to look at what we think is directionally correct and what's actually happening, right? And actually seeing those variances come through. So what we were able to do was check that, right? See, oh, this chemical is actually a lot more. We actually need to see if we can get that cost down, right?"
+
+#36 · Drew DeMartinis (FCP: ~38%)
+"Another great thing too, I mean, I think for me especially, just being able to have live data, especially when I'm constantly forecasting, reforecasting, reforecasting, I always want to know what is going to happen. And the fact that I have a system that is as close to real time as I can possibly get without having my actual vendors in my system has been huge."
+
+#38 · Drew DeMartinis (FCP: ~75%)
+"I'm not seeing everything in the past, I'm actually able to see things in the future and not just the top line sale, but how it's gonna go to the bottom line."
+
+#100 · Drew DeMartinis (FCP: ~81%)
+"I see DECOM being a great tool for automation. It's already been so helpful in terms of streamlining a lot of our processes. Especially in accounts receivable. I'd say that's where a lot of time is spent, even more so than accounts payable, believe it or not, because you want that money in. So, you know, with automation and DECOM, there's no way we would be able to do it without it. You know, I was able to have DECOM sync to my EDI system, essentially removing about 80 hours of work a month for a single individual."
+
+=== Better Decisions, Shared Wins ===
+
+#127 · Henry Hong (FCP: ~29%)
+"Well, we were at the point of scale already, so it might have been a year too late. So I think it really helped me free up my time and get more on the strategic side. Provided a lot of the information that I needed to make the right decisions. So hopefully we made the right decisions."
+
+#130 · Henry Hong (FCP: ~18%)
+"Um, it's made us a little bit more efficient, right? So yeah, maybe for clients, right? Turnaround time is huge, right? It's made us, even on the front end side of it, right? All the way from quoting out a product, right? You know, it's made us, our turnaround time has become a lot faster. So I mean, I could kind of equate that to, Yeah."
+
+#155 · Vlad (FCP: ~81%)
+"Efficiency equals savings. Savings means cheaper product. Cheaper product means more customers."
+
+#128 · Henry Hong (FCP: ~49%)
+"Continue to grow. Decam still gives us great data, great sales data, great inventory data. You know, it really kind of hones in on actually where we are, even on the financial side, right? It gives us an idea of where can we actually invest our, our great profits that we're making, so."
+
+=== Emitted but cut in finishing ===
+#103, #101, #34, #129

@@ -1,0 +1,69 @@
+ECI-CONCEPT LABS — "BUILT TO GROW" (eci-growth)
+Final edit — reconstructed from "Growth Narrative - Final.fcpxmld" (Jeff, 2026-08-04)
+Runtime 3:19 · 44 clips · 19 of 19 emitted entries survived finishing, order preserved
+
+NOTE: text below is the viewer-locked verbatim trim; "FCP:" = share of that trim surviving
+Jeff's finishing pass (source-timecode overlap, interpolated TCs — approximate). Product name = Deacom on audio despite transcript garbles.
+
+=== Growth Outpaced the Old Way of Working ===
+
+#3 · Drew DeMartinis (FCP: ~78%)
+"Concept Laboratories is a personal care manufacturer. So we make things, skincare, haircare, anything that's going on top of your body, essentially. The company has had a history. They, I think, started actually industrials, more cleaners and those types of things. We even still have some legacy things like that that we still make. However, now our main focus is more on the creams, the serums, the shampoos, conditioners, all of the good stuff that you're using every day."
+
+#4 · Drew DeMartinis (FCP: ~40%)
+"We are a family-owned business. A lot of the manufacturers in our space, you know, they're owned by private equity or even, you know, just big, big companies that have a lot of moving parts that, you know, a lot of mistakes can be hidden. We don't have that. We don't even, like, there's nowhere to hide with us and we like that. And we make sure all of our customers know that we are, Manufacturers with integrity, that we are doing things correctly for the best product for their customer. And every, you know, we treat every customer as a partnership. We are taking a stake in their business. We need to make sure that we have a great relationship outside of the numbers, right? Ensuring that we're in touch. How can we do things better for you? How can, you know, if your product development, how is that going? How can we automate it for you? All of that kind of stuff. And I think that's really what we offer."
+
+#9 · Drew DeMartinis (FCP: ~23%)
+"we used to use a term a lot called directionally correct. We always knew, somebody always knew around what was going on. And honestly, it worked. It absolutely worked. There are more than a million ways to run a business. I know people who check their AR in their bank account and that's good enough for them. They don't even look at their P&L. And they're very successful. So, you know, to say that one way is better than the other is, uh, I've learned is not really fair."
+
+#36 · Drew DeMartinis (FCP: ~76%)
+"I would say between, you know, again, before my time, however, between 2020 and 2023, where those were really big years for Concept, that was really when the growth started hitting and it happened. I don't want to say overnight, but it to a point felt like that. And I think that was a big push, right? Once you hit a certain amount of revenue and a certain amount of volume, you know you can't do it the same way you've been doing it before. It doesn't work anymore. So, you know, Constable Labs was able to recognize that pretty early."
+
+#103 · Vlad (FCP: ~90%)
+"So what we used, and it's kind of a stale some remnants over there. Obviously ERP is many modules which bring everything together, but before we had a separate system for separate purpose. As an example, we had a BatchMaster for inventory purposes, we had a QuickBooks for the accounting purposes, we had FIX for maintenance purposes, we had a QISS for quality purposes. So million programs, we don't talk to each other. Yes. Difficult, not pleasant. Consolidating it?"
+
+#104 · Vlad (FCP: ~94%)
+"But that applies to literally any company what does not have an ERP in place, because everyone has to compensate for it by having multiple systems."
+
+#107 · Vlad (FCP: ~85%)
+"Well, once again, efficiency equals savings, savings equals better product. And if you don't have efficiencies on the most basic operational level, you're not really competing in the industry, you're just surviving. So if not for GECOM, having ERP as a manufacturer is of an asset. If you want to become like a competitive manufacturer, you need to have an ERP."
+
+#56 · Jordan Heifetz (FCP: ~96%)
+"The prior systems that we were using weren't fully integrated end-to-end, and therefore it was difficult to have real-time reporting, real-time data, accurate data, which at the end of the day is required to make decisions."
+
+=== The Rebuild: Systems, Team, Facility ===
+
+#58 · Jordan Heifetz (FCP: ~60%)
+"Like I said, the system allows us to really scale. So any business needs a strong foundation, and the foundation starts with your ERP system, which is enterprise-wide and touches everything. In a manufacturing environment, having an integrated system that ties your inventory to your accounting system, which we did not previously have, is very important. It's a very inventory-intensive business, so a system that can integrate the planning function, the accounting function, the quality function, and the operation function all in one is extremely important, and without it, you wouldn't be able to scale and compete at a higher level."
+
+#55 · Jordan Heifetz (FCP: ~56%)
+"We, since I took over the company, we were just on a mission to, effectively professionalize the processes, the systems, the data, in order to allow us to scale and continue growing."
+
+#61 · Jordan Heifetz (FCP: ~57%)
+"I mean, we ran a competitive RFQ. I think we talked to 3 or 4 different vendors. DEACOM, at the end of the day, we had input from planning, we had input from accounting, we had input from quality, We had input from finance and operations, and, you know, from what I recall, I believe this was 3 years ago, you know, no system was perfect. Some systems are stronger in one regard or the other, but the general feedback from the team was that this system had the best capabilities across all those domains. And so the team was really spearheaded at the time by the folks you're interviewing today, Henry, Jim, David, and Drew and Vlad are also power users, but I believe they came in after it was selected. And those decision makers ultimately convinced me that this was the right decision, and here we are."
+
+#99 · Henry Hong (FCP: ~35%)
+"I think the good part is having one source of, you know, one data source, one truthful source of data. So, I can kind of connect that dot where everybody is working off the same single truth, right? But pulling everybody together, I guess there's a lot of dependencies, right? Because it is front all the way to the backend, so."
+
+#12 · Drew DeMartinis (FCP: ~58%)
+"to go from directionally correct to a level of accuracy that the company hasn't seen before, you know, it's— the decisions we're able to make now are above and beyond anything we would have been able to do before with a lot less work. You know, when everything is sort of directionally correct, every question becomes an analysis, a specific analysis for that to make sure make sure that what you're saying is actually correct. So, you know, so prior to that implementation, we were doing great. We were doing just fine. I would say that now we're able to do much better. And I don't think we actually understood the potential of what we were going to be able to do until we enacted the system."
+
+#16 · Drew DeMartinis (FCP: ~11%)
+"The data, I mean, anything is possible, right? So I think a big thing, you know, that we did was, like, really understanding the capacity of our lines, right? Really understanding what our labor costs should be and also what it actually is when we're trying to, you know, test against, you know, industry standards, or not even just industry standards, our own standards of what we want to do, of the success that we want to have."
+
+#14 · Drew DeMartinis (FCP: ~55%)
+"I would say the other really great thing that DECOM did for us was the MRP. So the manufacturing resource planning tool, right?"
+
+#15 · Drew DeMartinis (FCP: ~7%)
+"So really ensuring that we're not overbuying That was a huge thing for our procurement, right? We were constantly, you know, the packaging especially, just understanding what we needed and when. You know, I don't want to say it was based on vibes, but now is based on actual orders in the system. And, you know, we have actual inventory levels that we can be confident in."
+
+=== Built to Say Yes ===
+
+#23 · Drew DeMartinis (FCP: ~43%)
+"Constable Labs has always been, we work really hard, we're always gonna make it happen. What DECOM has given us now, Is the confidence that we're actually gonna pull it off. So, you know, to, you know, we'll always make it happen and everyone, you know, everyone knows what it's like to do something that you're like, "I'm not exactly sure if this is gonna work, but I'm confident in myself and that should be enough." Now we have confidence in the system that's supporting our ideas. And I think that's probably the biggest shift where we can just easily go, "Yeah, we can do that." Yeah, no, no, no, that's fine. We don't even have to think about it anymore."
+
+#69 · Jordan Heifetz (FCP: ~53%)
+"Like I said, it's obviously the ERP system is the foundation for any business, whether it's your small business or big business. Without it, you can't scale. So it has amplified our ability to go after bigger business, more complex supply chains, more complex bill of materials, more complex, planning and scheduling. So to do that manually or without the right system in place, you wouldn't be able to do it effectively. So we've had a lot of success since we've implemented this tool, and hopefully it'll allow us to continue to grow."
+
+#43 · Drew DeMartinis (FCP: ~16%)
+"what I see happening from here with this new facility and our new system is working with companies are as disruptive as we are, you know what I mean? I think that, you know, working with some of these up-and-coming brands, you know, the ones that are just starting to get their target placements, their Sephora, Ulta placements, you know, that's who we're here to serve. We're here to serve the people that really care about their consumer 'cause we really care about our consumer, which is our partners. So, you know, I see us really Being able to serve a wider audience that, like, with a level of quality and experience and professionalism that they're not going to receive in addition to the white glove service we're able to bring as well."

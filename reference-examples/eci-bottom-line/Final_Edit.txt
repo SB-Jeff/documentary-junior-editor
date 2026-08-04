@@ -1,0 +1,35 @@
+ECI-CONCEPT LABS — "THE RECOMMENDATION" (eci-bottom-line)
+Final edit — reconstructed from "Recommendation - Final.fcpxmld" (Jeff, 2026-08-04)
+Runtime 1:25 · 40 clips · 9 quotes — assembled by Jeff DIRECTLY in FCP
+(no emit round survived; the Edit Agent Round 3 proposal was largely replaced — see lessons-learned.md)
+
+NOTE: quote text below is the FULL pool quote; "kept:" lists the segments Jeff actually used
+(source-timecode overlap, interpolated TCs — approximate). Heavy micro-cutting throughout:
+avg clip length 1.9s — Jeff intercuts within sentences.
+
+#174 · Jordan Heifetz (7s on screen)
+kept: "and within that, we develop or concept, formulate, package, manufacture, and fulfill products that are liquid-based and within the personal care categories of skincare, body care, and hair care. So that would include for skincare treatments, serums, creams, masks, hair care, shampoos, conditioners, treatments, styling products, and then body care, body lotions, body washes, body oils, body scrubs."
+
+#106 · Jordan Heifetz (4s on screen)
+kept: "But it's very complex operations, so without the right systems, it wouldn't, you know, it wouldn't be possible."
+
+#63 · Drew DeMartinis (8s on screen)
+kept: "Once you hit a certain amount of revenue and a certain amount of volume, you know you can't do it the same way you've been doing it before. It doesn't work anymore."
+
+#102 · Jordan Heifetz (8s on screen)
+kept: "We, since I took over the company, we were just on a mission to, effectively professionalize the processes, the systems, the data, in order to allow us to scale and continue growing. The prior systems that we were using weren't fully integrated end-to-end,"
+
+#121 · Henry Hong (10s on screen)
+kept: "A lot of systems, a lot of ERPs were really good at one thing, not so great at the other. Some were bolt-ons, which, you know, I won't mention any names, but some are great at the accounting and the financial, and the production module was basically a bolt-on, which kind of disqualified that, right? So, Deacom offered us the best of all 5 worlds that I was looking for to actually bring everything, bring everything together."
+
+#104 · Jordan Heifetz (14s on screen)
+kept: "It's a very inventory-intensive business, so a system that can integrate the planning function, the accounting function, the quality function, and the operation function all in one is extremely important, and without it, you wouldn't be able to scale and compete at a higher level."
+
+#37 · Drew DeMartinis (7s on screen)
+kept: "If it's in my system, I know it's real. I know what my profit margin's gonna be. I know everything as before anything's even made. It's amazing."
+
+#107 · Jordan Heifetz (10s on screen)
+kept: "So it has amplified our ability to go after bigger business, more complex supply chains, more complex bill of materials, more complex, planning and scheduling. So to do that manually or without the right system in place, you wouldn't be able to do it effectively. So we've had a lot of success since we've implemented this tool, and hopefully it'll allow us to continue to grow."
+
+#78 · Drew DeMartinis (7s on screen)
+kept: "This is a system that is absolutely required to scale your business."
