@@ -505,7 +505,14 @@ async function callBash(command) {
 // that should NOT spam a download on every call when no writer is available.
 // ============================================================================
 
+// When the page is served over http (the app server), talk to the server that
+// served it — this keeps sibling pages at /view/<slug> and test sandboxes on
+// other ports saving to their own server, never to a hardcoded port. file://
+// opens fall back to the configured/default helper.
 const SAVE_HELPER_URL =
+  (typeof window !== "undefined" && /^https?:$/.test(window.location.protocol)
+    ? window.location.origin
+    : null) ||
   (typeof PROJECT_META !== "undefined" && PROJECT_META.save_helper_url) ||
   "http://127.0.0.1:8765";
 
@@ -987,6 +994,86 @@ export default function QuotesView() {
   // All shows every voice's summary; one speaker selected shows just theirs.
   const [speakerCtxOpen, setSpeakerCtxOpen] = useState(false);
 
+  // === Display names (client / project / edit) — handoffs/project-names.json ===
+  // The header's hierarchy (Client · Project / Edit) is renamable in place; the
+  // names live in ONE file shared by every edit on the SSD, edited only through
+  // this UI. Baked values from the build are the fallback; the live file wins so
+  // a rename made on any sibling page shows up here on next load.
+  const [names, setNames] = useState({
+    client: PROJECT_META.client || "",
+    project: PROJECT_META.project || "",
+    edit: PROJECT_META.edit_display || PROJECT_META.slug,
+  });
+  const [siblingLabels, setSiblingLabels] = useState({});
+  const [namesEditing, setNamesEditing] = useState(false);
+  const [namesDraft, setNamesDraft] = useState({ client: "", project: "" });
+  const [editRenaming, setEditRenaming] = useState(false);
+  const [editNameDraft, setEditNameDraft] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent("handoffs/project-names.json")}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data || !data.ok || !data.data) return;
+        const f = data.data;
+        setNames((prev) => ({
+          client: f.client || prev.client,
+          project: f.project || prev.project,
+          edit: (f.edits && f.edits[PROJECT_META.slug]) || prev.edit,
+        }));
+        if (f.edits) setSiblingLabels(f.edits);
+      } catch (_) { /* no server / no file yet — baked names stand */ }
+    })();
+  }, []);
+
+  // Merge-write the names file: read the latest copy first so a rename on this
+  // page never clobbers a sibling's display name written from another tab.
+  async function writeNamesFile(patch) {
+    let current = {};
+    try {
+      const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent("handoffs/project-names.json")}`);
+      if (res.ok) { const d = await res.json(); if (d && d.ok && d.data) current = d.data; }
+    } catch (_) {}
+    const merged = {
+      client: patch.client !== undefined ? patch.client : (current.client || names.client),
+      project: patch.project !== undefined ? patch.project : (current.project || names.project),
+      edits: { ...(current.edits || {}) },
+    };
+    if (patch.edit !== undefined) merged.edits[PROJECT_META.slug] = patch.edit;
+    const { ok } = await persistFile("handoffs/project-names.json",
+      JSON.stringify(merged, null, 2), { allowDownload: false });
+    if (ok && merged.edits) setSiblingLabels(merged.edits);
+    return ok;
+  }
+
+  async function commitNames() {
+    const client = namesDraft.client.trim();
+    const project = namesDraft.project.trim();
+    setNames((p) => ({ ...p, client, project }));
+    setNamesEditing(false);
+    await writeNamesFile({ client, project });
+  }
+
+  async function commitEditRename() {
+    const name = editNameDraft.trim();
+    if (!name) { setEditRenaming(false); return; }
+    setNames((p) => ({ ...p, edit: name }));
+    setEditRenaming(false);
+    setTopMenu(null);
+    await writeNamesFile({ edit: name });
+  }
+
+  // === Unsaved-changes signal for the Save button dot ===
+  // "Dirty" = tweaks made to the current cut since it was last explicitly saved
+  // (or since it was first viewed this session). The viewer-state autosave is a
+  // separate, always-on channel — this dot is about the ROUND FILE.
+  const [savedMarks, setSavedMarks] = useState({});
+  function markRoundSaved(idx, len) {
+    setSavedMarks((prev) => ({ ...prev, [idx]: len }));
+  }
+
   // === Drag-to-reorder state (pointer-events based) ===
   // Native HTML5 drag-and-drop is unreliable inside Cowork's sandboxed artifact
   // iframe. Pointer events + setPointerCapture work in every context and are
@@ -1157,7 +1244,8 @@ export default function QuotesView() {
     const stem = round.version || `v${round.round_number}`;
     const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/${stem}.json`;
     const payload = buildCutPayload(round.round_number, round.cut_name || round.round_label);
-    await persistCut(relPath, `${stem}.json`, payload, `Saved “${round.round_label}”`);
+    const ok = await persistCut(relPath, `${stem}.json`, payload, `Saved “${round.round_label}”`);
+    if (ok) markRoundSaved(roundIndex, getPendingOps().length);
   }
 
   // Write a NEW named deliverable to editing-versions/<slug>.json, keyed on a
@@ -1172,8 +1260,18 @@ export default function QuotesView() {
     const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/${stem}.json`;
     const payload = buildCutPayload(round ? round.round_number : cuts.length + 1, name);
     const ok = await persistCut(relPath, `${stem}.json`, payload, `Saved new cut “${name}”`);
-    if (ok) { setNewCutName(""); refreshDiskCuts(); }
+    if (ok) { setNewCutName(""); refreshDiskCuts(); markRoundSaved(roundIndex, getPendingOps().length); }
   }
+
+  // Baseline the dirty-dot when a round is first viewed this session, so a page
+  // load (which restores prior tweaks) doesn't open showing "unsaved".
+  useEffect(() => {
+    setSavedMarks((prev) => prev[roundIndex] === undefined
+      ? { ...prev, [roundIndex]: getPendingOps().length }
+      : prev);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundIndex]);
+  const roundDirty = getPendingOps().length !== (savedMarks[roundIndex] ?? getPendingOps().length);
 
   // Switch the viewer to a saved cut (Open panel). Disk-only cuts (saved this
   // session / in another tab / by the pipeline) lazy-load their entries from the
@@ -1947,7 +2045,7 @@ export default function QuotesView() {
     const map = {
       idle:    { cls: "idle",    glyph: "○", text: "Live state" },
       saving:  { cls: "saving",  glyph: "◌", text: "Saving…" },
-      saved:   { cls: "saved",   glyph: "●", text: "Saved" },
+      saved:   { cls: "saved",   glyph: "●", text: "Synced" },
       offline: { cls: "offline", glyph: "○", text: "Offline" },
       error:   { cls: "error",   glyph: "▲", text: "Save failed" },
     };
@@ -2032,92 +2130,96 @@ export default function QuotesView() {
   };
 
   const renderHeader = () => (
+   <>
     <div className="hdr">
+      {/* Context strip — hierarchy levels 1–2 (Client · Project). Quiet, and
+          renamable in place via the ✎ (stored in handoffs/project-names.json).
+          The autosave-health indicator keeps its honest corner here. */}
+      <div className="hdr-strip">
+        {namesEditing ? (
+          <span className="strip-form">
+            <input className="strip-input" value={namesDraft.client} placeholder="Client" autoFocus
+              onChange={(e) => setNamesDraft((d) => ({ ...d, client: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") commitNames(); if (e.key === "Escape") setNamesEditing(false); }} />
+            <span className="strip-sep">·</span>
+            <input className="strip-input" value={namesDraft.project} placeholder="Project"
+              onChange={(e) => setNamesDraft((d) => ({ ...d, project: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") commitNames(); if (e.key === "Escape") setNamesEditing(false); }} />
+            <button className="strip-btn" onClick={commitNames}>Save</button>
+            <button className="strip-btn quiet" onClick={() => setNamesEditing(false)}>Cancel</button>
+          </span>
+        ) : (
+          <span className="hdr-eyebrow">
+            <span className="hdr-eyebrow-text">
+              {[names.client, names.project].filter(Boolean).join(" · ") || PROJECT_TITLE}
+            </span>
+            <button className="strip-pencil" title="Rename client / project"
+              onClick={() => { setNamesDraft({ client: names.client, project: names.project }); setNamesEditing(true); }}
+            >✎</button>
+          </span>
+        )}
+        <span className="strip-right">{renderPersistIndicator()}</span>
+      </div>
       <div className="hdr-row1">
        <div className="hdr-row1-inner">
-        {/* Header identity (option 2): eyebrow "Client · Project" over the edit
-            name (the open cut). Eyebrow falls back to PROJECT_TITLE when client/
-            project aren't set; the headline names whichever cut is open so a
-            window is identifiable when several deliverables share a project. */}
-        <div className="hdr-identity">
-          <div className="hdr-eyebrow">
-            {/* The text span ellipsizes; the switcher sits OUTSIDE the overflow
-                so it can never be clipped when the project name truncates. */}
-            <span className="hdr-eyebrow-text">
-              {[PROJECT_META.client, PROJECT_META.project].filter(Boolean).join(" · ") || PROJECT_TITLE}
-            </span>
-            {/* Project switcher (multi-project SSDs): jump to any sibling edit's
-                built viewer via the server's /view/<slug> route. Safe to switch
-                any time — each viewer autosaves its state to its own slug. */}
-            {(PROJECT_META.sibling_projects || []).length > 1 && (
-              <select
-                className="hdr-project-switch"
-                value={PROJECT_META.slug}
-                title="Open another edit on this SSD"
-                onChange={(e) => {
-                  if (e.target.value !== PROJECT_META.slug)
-                    window.location.href = `/view/${e.target.value}`;
-                }}
-              >
-                {PROJECT_META.sibling_projects.map((p) => (
-                  <option key={p.slug} value={p.slug}>{p.label}</option>
-                ))}
-              </select>
-            )}
-          </div>
-          <h1 className="hdr-title">
-            {currentCut
-              ? (currentCut.cut_name || currentCut.round_label || `Round ${currentCut.round_number}`)
-              : PROJECT_TITLE}
-          </h1>
-        </div>
-        {/* Top-bar actions (M3 §5): Save · Open · Export to Final Cut. Replaces
-            the legacy Round <select> — its load/save jobs move to Open/Save. */}
-        <div className="topbar-actions" data-topbar="1">
-          <button
-            className={`tb-btn${topMenu === "save" ? " active" : ""}`}
-            onClick={() => toggleTopMenu("save")}
-          >Save</button>
-          <button
-            className={`tb-btn${topMenu === "open" ? " active" : ""}`}
-            onClick={() => toggleTopMenu("open")}
-          >Open</button>
-          {topMenu === "save" && (
+        {/* Hierarchy level 3 — the EDIT. The headline IS the switcher: click to
+            list every edit on this SSD (served at /view/<slug>) or rename this
+            one. Safe to switch any time — each page autosaves its own state. */}
+        <div className="edit-ident" data-topbar="1">
+          <button className="edit-name" onClick={() => toggleTopMenu("edits")}>
+            {names.edit} <span className="chev">▾</span>
+          </button>
+          {topMenu === "edits" && (
             <div className="tb-panel" data-topbar="1">
-              <div className="tb-panel-title">Save</div>
-              <div className="tb-panel-sub">
-                Current cut: <strong>{currentCut ? (currentCut.round_label || `Round ${currentCut.round_number}`) : "—"}</strong>
-              </div>
-              <button
-                className="btn tb-panel-btn"
-                disabled={!currentCut}
-                onClick={saveChangesToCut}
-              >Save changes to this cut</button>
-              <div className="tb-panel-divider"><span>or</span></div>
-              <div className="tb-saveas">
-                <input
-                  className="tb-input"
-                  type="text"
-                  placeholder="New cut name (e.g. Social short)"
-                  value={newCutName}
-                  onChange={(e) => setNewCutName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") saveAsNamedCut(); }}
-                />
+              <div className="tb-panel-title">Edits on this SSD</div>
+              <ul className="tb-cutlist">
+                {(PROJECT_META.sibling_projects || [{ slug: PROJECT_META.slug, label: names.edit }]).map((p) => (
+                  <li key={p.slug} className={p.slug === PROJECT_META.slug ? "current" : ""}>
+                    <span className="tb-cutname">
+                      {p.slug === PROJECT_META.slug ? names.edit : (siblingLabels[p.slug] || p.label)}
+                      {p.slug === PROJECT_META.slug && <span className="tb-current-tag">current</span>}
+                    </span>
+                    <button
+                      className="btn tb-open-btn"
+                      disabled={p.slug === PROJECT_META.slug}
+                      onClick={() => { window.location.href = `/view/${p.slug}`; }}
+                    >Open</button>
+                  </li>
+                ))}
+              </ul>
+              <div className="tb-panel-divider"><span></span></div>
+              {editRenaming ? (
+                <div className="tb-saveas">
+                  <input className="tb-input" type="text" value={editNameDraft} autoFocus
+                    onChange={(e) => setEditNameDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") commitEditRename(); if (e.key === "Escape") setEditRenaming(false); }} />
+                  <button className="btn tb-panel-btn" onClick={commitEditRename}>Rename</button>
+                </div>
+              ) : (
                 <button
-                  className="btn tb-panel-btn"
-                  disabled={!newCutName.trim()}
-                  onClick={saveAsNamedCut}
-                >Save as new</button>
-              </div>
-              {saveStatus.text && <div className={`tb-status ${saveStatus.cls}`}>{saveStatus.text}</div>}
+                  className="btn tb-panel-btn tb-panel-btn-secondary"
+                  onClick={() => { setEditNameDraft(names.edit); setEditRenaming(true); }}
+                >✎ Rename “{names.edit}”…</button>
+              )}
             </div>
           )}
-
+        </div>
+        {/* Hierarchy level 4 — the VERSION chip (the one capsule in the header).
+            Clicking it IS the Open menu; the old Open button is gone. */}
+        <div className="ver-wrap" data-topbar="1">
+          <button
+            className={`ver-chip${topMenu === "open" ? " active" : ""}`}
+            onClick={() => toggleTopMenu("open")}
+          >
+            {currentCut
+              ? (currentCut.cut_name || currentCut.round_label || `Round ${currentCut.round_number}`)
+              : PROJECT_TITLE} <span className="chev">▾</span>
+          </button>
           {topMenu === "open" && (
             <div className="tb-panel" data-topbar="1">
-              <div className="tb-panel-title">Open a saved cut</div>
+              <div className="tb-panel-title">Versions of {names.edit}</div>
               {cuts.length === 0 ? (
-                <div className="tb-empty">No saved cuts yet.</div>
+                <div className="tb-empty">No saved versions yet.</div>
               ) : (
                 <ul className="tb-cutlist">
                   {cuts.map((r, i) => (
@@ -2135,15 +2237,14 @@ export default function QuotesView() {
                   ))}
                 </ul>
               )}
+              <div className="tb-footnote">Opening a version never deletes another — every save stays on disk.</div>
             </div>
           )}
-
         </div>
-        {/* Autosave status — quiet, beside the save controls (M4). */}
-        {renderPersistIndicator()}
+        <div className="hdr-grow" aria-hidden="true"></div>
 
-        {/* RIGHT CLUSTER: the work — view tabs (dividers kept) + export the
-            Timeline. Export lives here because it acts on the Timeline. */}
+        {/* RIGHT CLUSTER: views · cut metric · Save (with dirty dot) · Export.
+            Save state lives ON the Save button; the version chip replaced Open. */}
         <div className="hdr-right">
           <div className="mode-toggle">
             {[
@@ -2160,7 +2261,46 @@ export default function QuotesView() {
               </button>
             ))}
           </div>
-          <span className="hdr-right-sep" aria-hidden="true"></span>
+          <span className="hdr-meta">
+            {activeEntries} entries · {fmtSec(activeSec)}
+          </span>
+          <div className="topbar-actions" data-topbar="1">
+            <button
+              className={`tb-btn tb-save${roundDirty ? " dirty" : ""}${topMenu === "save" ? " active" : ""}`}
+              title={roundDirty ? "Unsaved changes on this version" : "All changes saved to this version"}
+              onClick={() => toggleTopMenu("save")}
+            ><span className={`save-dot${roundDirty ? " warn" : ""}`}></span> Save ▾</button>
+            {topMenu === "save" && (
+              <div className="tb-panel" data-topbar="1">
+                <div className="tb-panel-title">
+                  Save changes to “{currentCut ? (currentCut.cut_name || currentCut.round_label || `Round ${currentCut.round_number}`) : "—"}”
+                </div>
+                <button
+                  className="btn tb-panel-btn"
+                  disabled={!currentCut}
+                  onClick={saveChangesToCut}
+                >Save changes</button>
+                <div className="tb-panel-divider"><span>or save as a new version</span></div>
+                <div className="tb-saveas">
+                  <input
+                    className="tb-input"
+                    type="text"
+                    placeholder="New version name (e.g. Trying shorter act 1)"
+                    value={newCutName}
+                    onChange={(e) => setNewCutName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveAsNamedCut(); }}
+                  />
+                  <button
+                    className="btn tb-panel-btn"
+                    disabled={!newCutName.trim()}
+                    onClick={saveAsNamedCut}
+                  >Save new</button>
+                </div>
+                <div className="tb-footnote">The version you branched from stays untouched — experiment freely.</div>
+                {saveStatus.text && <div className={`tb-status ${saveStatus.cls}`}>{saveStatus.text}</div>}
+              </div>
+            )}
+          </div>
           <div className="topbar-actions tb-export-wrap" data-topbar="1">
             <button
               className={`tb-btn tb-export${topMenu === "export" ? " active" : ""}`}
@@ -2187,10 +2327,11 @@ export default function QuotesView() {
         </div>
        </div>
       </div>
-      {(
-        <div className="hdr-row2">
-         <div className="hdr-row2-inner">
-          {/* Line 1: Act filter + Cut block */}
+    </div>
+      {/* Filters sit OUTSIDE the elevated header, on the page background — the
+          shadowed .hdr is "the app", this zone is "the workspace". */}
+      <div className="hdr-filters">
+          {/* Line 1: Act filter + Speaker dropdown, one line of "what's included" */}
           <div className="hdr-filter-line">
             <div className="filter-group">
               <span className="group-label">Act</span>
@@ -2249,39 +2390,20 @@ export default function QuotesView() {
                 )}
               </div>
             </div>
-            {/* Timeline metric (Timeline view only), right-aligned on the Act
-                line. Export moved to the top-bar "Export to Final Cut" menu
-                (M3 §5) — both FCPXML flows (Timeline → -tight, Full timeline →
-                non-suffixed) are consolidated there. */}
-            {view === "timeline" && (
-              <div className="win-block">
-                <span className="win-metric tight">
-                  <span className="val">{activeEntries}</span> entries · <span className="val">{fmtSec(activeSec)}</span>
-                </span>
-              </div>
-            )}
-          </div>
-          {/* Line 2: Speaker filter, beneath Act */}
-          <div className="hdr-filter-line">
-            <div className="filter-group">
+            {/* Speaker — a compact dropdown on the same line as Act (single-
+                choice, same behavior the pills had). Who's-who ? kept beside. */}
+            <div className="filter-group speaker-group">
               <span className="group-label">Speaker</span>
-              <button
-                className={`chip${speakerFilter === "all" ? " active" : ""}`}
-                onClick={() => setSpeakerFilter("all")}
-              >All</button>
-              {(PROJECT_META.speakers || []).map((s) => (
-                <button
-                  key={s.slug}
-                  className={`chip${speakerFilter === s.slug ? " active" : ""}`}
-                  onClick={() => setSpeakerFilter(s.slug)}
-                >
-                  {s.name}
-                </button>
-              ))}
-              {/* "Who's who" — a compact "?" mirroring the Creative-context
-                  affordance on the Act line. Speaker-scoped: All shows every
-                  voice, one speaker shows just theirs. data-topbar keeps the
-                  outside-click close working. */}
+              <select
+                className="speaker-select"
+                value={speakerFilter}
+                onChange={(e) => setSpeakerFilter(e.target.value)}
+              >
+                <option value="all">All</option>
+                {(PROJECT_META.speakers || []).map((s) => (
+                  <option key={s.slug} value={s.slug}>{s.name}</option>
+                ))}
+              </select>
               {(PROJECT_META.speakers || []).some((s) => s.summary) && (
                 <>
                   <span className="cc-divider" aria-hidden="true"></span>
@@ -2302,9 +2424,13 @@ export default function QuotesView() {
                 </>
               )}
             </div>
-            {view === "timeline" && (
-              <div className="reveal-block">
-                {/* Review | Edit segmented toggle (M3 T2 §A) — Timeline only. */}
+          </div>
+          {/* Line 2 (Timeline only): Review|Edit, left-aligned under the Act
+              bar. The Quotes tray extends OUT OF the Edit side — options the
+              Edit mode grants, not free-floating buttons. */}
+          {view === "timeline" && (
+            <div className="hdr-filter-line">
+              <div className="mode-tray">
                 <div className="tl-mode-toggle" role="tablist" aria-label="Timeline mode">
                   {[
                     { m: "review", label: "Review" },
@@ -2322,21 +2448,19 @@ export default function QuotesView() {
                     >{label}</button>
                   ))}
                 </div>
-                {/* Open all / Collapse all live in Edit mode only. */}
                 {timelineMode === "edit" && (
-                  <>
-                    <span className="group-label">Quotes</span>
-                    <button onClick={() => revealAll(true)}>Open all</button>
-                    <button onClick={() => revealAll(false)}>Collapse all</button>
-                  </>
+                  <div className="tray-ext">
+                    <span className="tray-lbl">Quotes</span>
+                    <button className="tray-btn" onClick={() => revealAll(true)}>Open</button>
+                    <span className="tray-dot" aria-hidden="true">·</span>
+                    <button className="tray-btn" onClick={() => revealAll(false)}>Collapse</button>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-         </div>
-        </div>
-      )}
-    </div>
+            </div>
+          )}
+      </div>
+   </>
   );
 
   // ============================================================================
@@ -3674,6 +3798,72 @@ export default function QuotesView() {
       font-size:12px; font-weight:600; border-radius:8px; padding:5px 16px; cursor:pointer; }
     .sp-send:hover:not(:disabled) { background: var(--surface-3, var(--surface-2)); border-color: var(--text-subtle); }
     .sp-send:disabled { opacity:.45; cursor:default; }
+
+    /* === v5.12 — hierarchy header (Jeff's 2026-08-05 design pass) ===
+       Strip = Client · Project (renamable) · work row = Edit ▾ / version chip /
+       views / metric / Save (dirty dot) / Export · filters float on the page
+       background below the elevated header. Shapes: rounded squares everywhere;
+       the version chip is the one capsule. */
+    .hdr { border-bottom:1px solid var(--border-strong); box-shadow:0 3px 10px rgba(0,0,0,.07); }
+    .hdr-strip { background: var(--surface-2); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:10px; padding:4px 20px; min-height:24px; }
+    .strip-right { margin-left:auto; display:inline-flex; align-items:center; }
+    .strip-pencil { background:none; border:none; cursor:pointer; color: var(--text-subtle);
+      font:inherit; font-size:10px; padding:0 2px; margin-left:6px; flex-shrink:0; }
+    .strip-pencil:hover { color: var(--accent); }
+    .strip-form { display:inline-flex; align-items:center; gap:6px; }
+    .strip-input { font:inherit; font-size:11px; border:1px solid var(--border-strong); border-radius:6px;
+      padding:2px 7px; color: var(--text); background: var(--surface); width:190px; }
+    .strip-sep { color: var(--text-subtle); }
+    .strip-btn { font:inherit; font-size:10px; font-weight:700; border:1px solid var(--border-strong);
+      border-radius:6px; background: var(--surface); padding:2px 8px; cursor:pointer; color: var(--text); }
+    .strip-btn.quiet { border-color:transparent; color: var(--text-subtle); }
+    .hdr-row1 { background: var(--surface); border-bottom:none; }
+    .hdr-row1-inner { align-items:center; padding:10px 20px; }
+    .edit-ident { position:relative; }
+    .edit-name { background:none; border:none; cursor:pointer; padding:0; font-family:inherit;
+      font-size:18px; font-weight:750; letter-spacing:-0.01em; color: var(--text);
+      display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+    .edit-name:hover { color: var(--accent); }
+    .edit-name .chev { font-size:9px; color: var(--text-subtle); margin-top:3px; }
+    .edit-ident .tb-panel { left:0; right:auto; }
+    .ver-wrap { position:relative; }
+    .ver-wrap .tb-panel { left:0; right:auto; }
+    .ver-chip { display:inline-flex; align-items:center; gap:5px; font-family:inherit; font-size:12.5px;
+      font-weight:650; border:1px solid var(--border-strong); background: var(--surface);
+      border-radius:999px; padding:3px 11px; cursor:pointer; color: var(--text-muted); white-space:nowrap; }
+    .ver-chip:hover, .ver-chip.active { border-color: var(--accent); color: var(--accent); }
+    .ver-chip .chev { font-size:8px; }
+    .hdr-grow { flex:1; }
+    .hdr-meta { font-size:12.5px; color: var(--text-subtle); font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .save-dot { width:7px; height:7px; border-radius:99px; background: var(--must); display:inline-block; margin-right:3px; }
+    .save-dot.warn { background:#d97706; }
+    .tb-btn.tb-save.dirty { border-color: var(--accent); color: var(--accent); }
+    .tb-btn.tb-save.active .save-dot { background:#fff; }
+    .tb-footnote { font-size:11px; color: var(--text-subtle); padding-top:8px; line-height:1.4; }
+    .hdr-right { align-items:center; }
+    /* Filters float on the page background, outside the shadowed header */
+    .hdr-filters { max-width:1100px; margin:0 auto; padding:14px 20px 0;
+      display:flex; flex-direction:column; gap:8px; }
+    .hdr-filters .filter-group { background: var(--surface); border-radius:10px; }
+    .hdr-filters .chip { border-radius:7px; }
+    .hdr-filters .cc-help-btn { border-radius:6px; }
+    .speaker-select { font:inherit; font-size:12px; color: var(--text); background: var(--surface);
+      border:1px solid var(--border-strong); border-radius:7px; padding:3px 8px; cursor:pointer; }
+    /* Review|Edit + the Quotes tray: one container; the tray extends out of the
+       Edit side in accent blue — options the Edit mode grants. */
+    .mode-tray { display:inline-flex; align-items:stretch; border:1px solid var(--border-strong);
+      border-radius:10px; background: var(--surface); overflow:hidden; }
+    .mode-tray .tl-mode-toggle { border:none; border-radius:0; margin-right:0; }
+    .mode-tray .tl-mode-toggle button.active { background: var(--accent); }
+    .tray-ext { display:inline-flex; align-items:center; gap:4px; padding:3px 10px 3px 12px;
+      background: var(--accent-soft); border-left:1px solid var(--border-strong); }
+    .tray-lbl { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+      color: var(--accent); margin-right:6px; }
+    .tray-btn { font-family:inherit; font-size:12.5px; font-weight:600; color: var(--accent);
+      padding:3px 9px; border:none; background:none; border-radius:7px; cursor:pointer; }
+    .tray-btn:hover { background:rgba(255,255,255,.7); }
+    .tray-dot { color: var(--accent); opacity:.45; }
   `;
 
   return (

@@ -956,19 +956,35 @@ def validate_project_metadata(project_meta: dict, source: str) -> None:
         raise BuildContractError(msg)
 
 
-def discover_sibling_viewers(ssd_root) -> list:
+def read_project_names(ssd_root) -> dict:
+    """Read handoffs/project-names.json — the display names for the header
+    hierarchy (client, project, per-edit display names). Edited from the
+    viewer's ✎ / rename menu; this is just the baked fallback. Missing or
+    unparsable file → {}.
+    """
+    try:
+        p = Path(ssd_root) / "handoffs" / "project-names.json"
+        if p.is_file():
+            return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    return {}
+
+
+def discover_sibling_viewers(ssd_root, names=None) -> list:
     """List every slug under <ssd_root>/handoffs/ that has a built viewer.
 
-    Returns [{"slug": ..., "label": ...}] sorted by slug. The label is the
-    slug itself — short, unambiguous, and what Jeff calls the edits anyway.
-    Missing handoffs dir (tests, scratch roots) → [].
+    Returns [{"slug": ..., "label": ...}] sorted by slug. Labels prefer the
+    display names in project-names.json, falling back to the slug. Missing
+    handoffs dir (tests, scratch roots) → [].
     """
+    edits = (names or {}).get("edits", {}) or {}
     out = []
     try:
         handoffs = Path(ssd_root) / "handoffs"
         for d in sorted(handoffs.iterdir()):
             if d.is_dir() and (d / f"{d.name}_quotes_view.html").is_file():
-                out.append({"slug": d.name, "label": d.name})
+                out.append({"slug": d.name, "label": edits.get(d.name) or d.name})
     except OSError:
         pass
     return out
@@ -1012,13 +1028,17 @@ def assemble_data_block(data: dict) -> dict:
             "timeline": migrated_entries,
         })
 
+    # Display names (handoffs/project-names.json) — Jeff's renamable hierarchy.
+    # The file wins over auto-derived values; the viewer also re-reads it live.
+    names = read_project_names(data["ssd_root"])
     project_meta = {
         "slug": data["slug"],
         "ssd_root": data["ssd_root"],
-        # Header identity (option 2): eyebrow "Client · Project", edit name as the
-        # headline. Both optional; the template falls back to PROJECT_TITLE.
-        "client": data.get("client", ""),
-        "project": data.get("project", "") or data["project_name"],
+        # Header identity: eyebrow "Client · Project" (strip), edit display name
+        # as the headline. All renamable in the viewer; these are baked fallbacks.
+        "client": names.get("client") or data.get("client", ""),
+        "project": names.get("project") or data.get("project", "") or data["project_name"],
+        "edit_display": (names.get("edits", {}) or {}).get(data["slug"]) or data["slug"],
         "target_seconds": data["target_seconds"],
         # Keep only real act labels (Orphan filtered out — orphans live as flag
         # on quotes, not as an act). Preserve order.
@@ -1030,9 +1050,9 @@ def assemble_data_block(data: dict) -> dict:
         "acts": data.get("acts", []),
         "premise": data.get("premise", ""),
         # Sibling built viewers on the same SSD (multi-project layout). Powers
-        # the header project switcher; served by viewer_save_server at
-        # /view/<slug>. Includes self so the switcher shows where you are.
-        "sibling_projects": discover_sibling_viewers(data["ssd_root"]),
+        # the edit-name switcher menu; served by viewer_save_server at
+        # /view/<slug>. Includes self so the menu shows where you are.
+        "sibling_projects": discover_sibling_viewers(data["ssd_root"], names),
     }
 
     return {
