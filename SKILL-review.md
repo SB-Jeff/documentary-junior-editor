@@ -394,7 +394,7 @@ now possible:
 
 - Were any agents run as sub-agents from an orchestrator session
   (Nanos did this with Transcript + FCPXML Params)? Did it work? Should
-  it become a documented pattern in `cowork-session-guide.md` or in
+  it become a documented pattern in `editing-session-guide.md` or in
   `SKILL.md`?
 - Could any sequential agent invocations be parallelized?
 - Could any human-in-the-loop pause points be reduced (Coach feedback
@@ -526,7 +526,7 @@ approved-and-applied changes only — never on proposals.
 - `SKILL-synthesis.md`
 - `SKILL-fcpxml.md`
 - `SKILL-review.md` — only if Skill Review itself needs improvement
-- `cowork-session-guide.md` — check it for drift EVERY review pass; it
+- `editing-session-guide.md` — check it for drift EVERY review pass; it
   has gone stale twice
 
 ### What you must NOT update
@@ -676,7 +676,7 @@ skill updates to GitHub so they reach all his Macs (Mac mini, Mac
 Studio, MacBook Pro) before the next project.
 
 **Preferred path: the `commit-skill-changes` helper** at the repo root
-(usage documented in `cowork-session-guide.md`, "Push to GitHub" section).
+(usage documented in `editing-session-guide.md`, "Push to GitHub" section).
 It syncs SSD-side SKILL edits to the Desktop clone, reads a multi-line
 commit message from `.commit-message`, and pushes in one step:
 

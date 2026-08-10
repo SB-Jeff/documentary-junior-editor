@@ -20,7 +20,7 @@ description: |
 
   Start this agent after Creative Context's act-structure and creative-brief
   handoffs are approved by Jeff. Replaces Steps 2a (FCPXML Params solo) and
-  2b (Transcript Agents one-per-speaker) from the pre-v5.5 cowork-session-guide.
+  2b (Transcript Agents one-per-speaker) from the pre-v5.5 editing-session-guide.
 model: sonnet-4.6
 ---
 

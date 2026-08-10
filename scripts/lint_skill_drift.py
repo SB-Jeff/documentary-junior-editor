@@ -22,7 +22,7 @@ from pathlib import Path
 
 # Files that participate in the versioned skill system.
 SKILL_GLOB = "SKILL*.md"
-GUIDE = "cowork-session-guide.md"
+GUIDE = "editing-session-guide.md"
 
 # SKILL files exempt from the version-footer sync requirement, with the
 # marker string that must appear instead (near the top of the file).
@@ -68,6 +68,7 @@ BAD_COUNTS = re.compile(
 REF_PATTERNS = [
     re.compile(r"\b(SKILL-[A-Za-z0-9-]+\.md)\b"),
     re.compile(r"\b(cowork-session-guide[A-Za-z0-9-]*\.md)\b"),
+    re.compile(r"\b(editing-session-guide[A-Za-z0-9-]*\.md)\b"),
     re.compile(r"\b(quotes-viewer-roadmap\.md)\b"),
     re.compile(r"\bscripts/([A-Za-z0-9_]+\.(?:py|jsx))\b"),
 ]

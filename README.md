@@ -104,7 +104,7 @@ is the fallback path — the launcher above is the documented default.)
 
 Open Claude Desktop, reference the SKILL files from the project SSD's
 `documentary-junior-editor/` folder, and work through the pipeline
-conversationally. `cowork-session-guide.md` in this repo walks through how
+conversationally. `editing-session-guide.md` in this repo walks through how
 to structure the session from start to finish.
 
 ---
@@ -178,7 +178,7 @@ a candidate for a new reference example.
 
 ### Guides
 
-- `cowork-session-guide.md` — walks through how to structure a Cowork
+- `editing-session-guide.md` — walks through how to structure a Cowork
   session from the opening "let's start a new project" to the final FCPXML.
   Its troubleshooting section covers recovering a session that gets
   interrupted mid-project.

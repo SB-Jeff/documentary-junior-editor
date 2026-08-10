@@ -1,8 +1,8 @@
-# Edit-stage kickoff (viewer-edit-redesign)
+# Edit-stage kickoff
 
 How to start the redesigned **Edit Agent + live viewer** on a project that has
 already cleared the upstream pipeline. This is the act-by-act live-partner flow
-on the `viewer-edit-redesign` branch — see `SPEC-viewer-edit-redesign.md` and
+(merged to `main` 2026-07-02) — see `SPEC-viewer-edit-redesign.md` and
 `SKILL-edit.md`.
 
 ## When to use
@@ -18,8 +18,7 @@ the model we moved to, off Cowork's chat artifact.
   subdir `<ssd-root>/handoffs/<slug>/` or flat — the build handles both):
   `tagged-quotes-v*.json`, `act-structure-v*.md`, `creative-brief-summary-v*.md`,
   `transcript-summary-v*.md`, `orphan-quotes-v*.md`.
-- This repo checked out on branch **`viewer-edit-redesign`** (the redesign is not
-  on `main` yet).
+- This repo checked out on **`main`**, pulled current.
 - Python 3 and Node available (the build inlines vendored React + compiles the
   JSX via `scripts/vendor/@babel/standalone`).
 
@@ -48,8 +47,8 @@ the agent reads each turn. Leave this running for the whole session.
 ## 3 — Start the Edit Agent (a fresh Claude Code session, on the branch)
 Paste this to a new session:
 
-> You are the Edit Agent for the documentary-junior-editor pipeline, on the
-> `viewer-edit-redesign` branch. Read `SKILL-edit.md` end-to-end and follow it
+> You are the Edit Agent for the documentary-junior-editor pipeline. Read
+> `SKILL-edit.md` end-to-end and follow it
 > exactly — the act-by-act live-partner flow.
 >
 > Project slug: `<slug>`. Handoffs are on the mounted SSD at
@@ -82,6 +81,5 @@ Paste this to a new session:
   NOT need a rebuild — only the agent's notes do.)
 - **Export** never leaves the session: the viewer queues `export-request.json`;
   the Edit Agent fulfils it by launching the FCPXML Agent (Task tool).
-- This is the validation run for the live loop — the last unproven piece of the
-  redesign. If it holds up on a real project, that's the green light to merge
-  PR #1 to `main`.
+- The live loop is validated (H+S IBEW 2026-06-30; hosted §7 test 2026-07-17)
+  and merged to `main` — this doc is now the standing kickoff, not a test plan.

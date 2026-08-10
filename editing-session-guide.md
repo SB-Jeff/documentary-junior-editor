@@ -1,11 +1,11 @@
-# Documentary Junior Editor — Cowork Session Guide
-### Version 5.10 | June 2026
+# Documentary Junior Editor — Editing Session Guide
+### Version 5.12 | August 2026
 
 ## Overview
 
-This guide walks through running the full documentary editing pipeline from start to finish. Most agents run as a separate Cowork session, with **two exceptions**:
-- **Step 2 (Orchestrator)** launches the Transcript Agents and FCPXML Params Agent as parallel sub-agents from within a single Cowork session, collapsing what used to be N+1 sessions into 1.
-- **Step 4a (Edit)** runs as a **Claude Code session on the `viewer-edit-redesign` branch**, not a Cowork chat — it drives the persistent quote-viewer app (future: a standalone app). See "When to launch the viewer" in Step 4a.
+This guide walks through running the full documentary editing pipeline from start to finish. **Sessions run in Claude Code by default** (2026-08-10 decision — one tool, end to end); Cowork remains a valid host for any stage (its Drive/Gmail connectors can help Step 1 Discovery, and its sandbox notes below apply only there). The skills are host-agnostic — same prompts, same pause points, whichever app hosts the conversation. Structural notes:
+- **Step 2 (Orchestrator)** launches the Transcript Agents and FCPXML Params Agent as parallel sub-agents from one session via the Task tool (native to Claude Code; also works in Cowork).
+- **Step 4a (Edit)** always runs as a **Claude Code session** — it drives the persistent quote-viewer app (local or hosted in the browser). See Step 4a.
 
 Jeff drives every creative decision — the agents do the heavy lifting between decision points.
 
@@ -13,6 +13,13 @@ The pipeline has ten agents (v5.5):
 - **Step 0** Transcription · **Step 1** Creative Context · **Step 2** Orchestrator (launches FCPXML Params + Transcript ×N as sub-agents) · **Step 3** Synthesis · **Step 4** Edit ↔ FCPXML loop (multi-round, optionally with Editing Coach between rounds) · **Step 5a** Editing Coach (at-close) · **Step 5b** Skill Review
 
 Each agent declares its required model in its SKILL frontmatter. Every handoff document closes with a "Next agent + model + launch prompt" footer so transitions between sessions are paste-and-pick rather than reconstructed from memory.
+
+**Recommended session grouping — all Claude Code, three sessions:**
+1. **Session 1 (Opus): Transcription + Creative Context.** Run `transcribe.py`, confirm speakers, then roll straight into the Creative Context conversation in the same thread (brief, act structure, Jeff's approval).
+2. **Session 2 (Sonnet): Orchestrator + Synthesis.** Fan out Transcript ×N + FCPXML Params via the Task tool; once validated, run Synthesis in the same session (sub-agents carried the heavy reading, so context stays sane).
+3. **Session 3 (Opus): the Edit session** — fresh context, per `EDIT-SESSION-KICKOFF.md`, local or browser viewer. Keep this one separate always.
+
+Running each stage as its own session (the classic per-stage pattern below) also remains valid — the groupings are packaging, not architecture.
 
 ---
 
@@ -25,7 +32,7 @@ The repo lives at **github.com/SB-Jeff/documentary-junior-editor** and is normal
 - `~/Desktop/documentary-junior-editor/` — canonical machine-local copy (SSH remote)
 - `[Project SSD]/documentary-junior-editor/` — project-folder copy that travels with the SSD
 
-Whichever copy the new Cowork session will read from, make sure it's at the latest commit before launching the agent.
+Whichever copy the new session will read from, make sure it's at the latest commit before launching the agent.
 
 **Freshness check (run from the `documentary-junior-editor/` folder you're about to use):**
 
@@ -149,7 +156,7 @@ Before the editing pipeline can start, the Media Agent (or manual prep) must hav
 
 **Skill file:** `SKILL-transcription.md`
 **Model:** Sonnet 4.6
-**Session type:** Cowork — runs first when audio is present, no transcripts on disk
+**Session type:** Claude Code (or Cowork) — runs first when audio is present, no transcripts on disk. In Claude Code the host runs `transcribe.py` directly; the launcher/allowlist workaround below is a Cowork-sandbox concern only
 
 **What it does:** Detects audio files in `transcripts/audio/`, derives speaker names from filenames and confirms with Jeff, then presents a single bash command pointing at `documentary-junior-editor/start-editing` for Jeff to run in Terminal. After Jeff runs the command and reports back, the agent reads the new transcripts, validates each (non-empty, has timecodes, has speaker labels, plausible word count), and writes `handoffs/transcription-summary-v[N].md`.
 
@@ -165,7 +172,7 @@ original video file stays in place.
 
 **Why a launcher and not direct sandbox execution:** Cowork's outbound network allowlist does not include AssemblyAI. Any sandbox-side call to `api.assemblyai.com` returns 403 from the proxy. Until the allowlist changes, transcription runs on the host. The launcher consolidates everything to one bash command with no copy-paste hazards (path has no extension; no chat auto-linking).
 
-**Starter prompt — copy and paste into a new Cowork session (set model to Sonnet 4.6):**
+**Starter prompt — paste into a new session, Claude Code or Cowork (set model to Sonnet 4.6):**
 
 > Start editing. The project folder is mounted. Read `documentary-junior-editor/SKILL-transcription.md` and follow it exactly. Detect audio files in `transcripts/audio/`, confirm speaker names with me, then give me the single bash command to run the launcher. After I report back that it's done, validate the new transcripts and save `handoffs/transcription-summary-v1.md` (or higher version if running again). Update `handoffs/pipeline-state.json` accordingly.
 
@@ -183,7 +190,7 @@ original video file stays in place.
 
 **Skill file:** `SKILL-creative-context.md`
 **Model:** Opus 4.7
-**Session type:** Cowork — collaborative with Jeff
+**Session type:** Claude Code (or Cowork) — collaborative with Jeff. For Phase 0 Discovery, use a host with the Drive/Gmail connectors configured, or fall back to Jeff supplying the documents (the skill's connector fallback)
 
 **What's new in v5.0:** Phase 0 Discovery — the agent searches Google Drive (project folder by path or by keyword) and Gmail (project name + client domain) for relevant context, surfaces candidates with one-line summaries, and lets you approve which to ingest. Falls back to manual upload if Drive/Gmail connectors aren't connected.
 
@@ -191,7 +198,7 @@ original video file stays in place.
 - Interview transcripts in `transcripts/text/` (Transcription Agent produces these if needed; the Creative Context Agent will pause for it on launch if missing)
 - *Optional:* Creative Launch transcript or notes, interview guide, messaging framework — Discovery picks these up automatically if they're in your Drive project folder, or you can upload manually
 
-**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.7):**
+**Starter prompt — paste into a new session, Claude Code or Cowork (set model to Opus 4.7):**
 
 > You are the Creative Context Agent. Read `documentary-junior-editor/SKILL-creative-context.md` and follow it exactly. The project folder is mounted. First, run Phase 0 Discovery — search Google Drive and Gmail for project context (project name: [PROJECT NAME], client domain: [CLIENT DOMAIN if any]) and surface candidates for my approval. Then read all approved documents plus the interview transcripts in `transcripts/text/`, plus reference examples in `documentary-junior-editor/reference-examples/`. Work with me to develop and approve a 3-act narrative structure. Save `creative-brief-summary-v1.md` and `act-structure-v1.md` (or higher version) to `handoffs/`. Update `handoffs/pipeline-state.json`. If audio is detected without transcripts, pause and give me the Transcription Agent launch prompt before proceeding. If this SSD already hosts another project, establish the project slug for this deliverable up front and write all outputs to `handoffs/[project-slug]/` instead of flat `handoffs/`.
 
@@ -217,11 +224,11 @@ original video file stays in place.
 
 **Skill file:** `SKILL-orchestrator.md`
 **Model:** Sonnet 4.6
-**Session type:** Cowork — single coordination session that launches sub-agents
+**Session type:** Claude Code (or Cowork) — single coordination session that launches sub-agents via the Task tool
 
 **What's new in v5.5:** This step replaces the prior pattern of launching N+1 separate Cowork sessions (one Transcript Agent per speaker plus one FCPXML Params Agent). A single Orchestrator session launches all of those as parallel sub-agents, waits for completion, validates outputs exist on disk, and hands off to Synthesis. For a 10-speaker project, this collapses 11 manual session launches into 1.
 
-**Starter prompt — copy and paste into a new Cowork session (set model to Sonnet 4.6):**
+**Starter prompt — paste into a new session, Claude Code or Cowork (set model to Sonnet 4.6):**
 
 > Read `documentary-junior-editor/SKILL-orchestrator.md` and run the Orchestrator Agent for this project. Creative Context has emitted approved `act-structure-v[N].md` and `creative-brief-summary-v[N].md` at version [N]. Discover all speaker transcripts in `transcripts/text/`, plan the sub-agent fan-out (Transcript Agent per speaker + FCPXML Params Agent), surface the plan for my confirmation, then launch the sub-agents in parallel — Transcript Agents in ORCHESTRATED (non-interactive) mode per `SKILL-transcript.md`'s "Invocation Mode" section. Validate all expected output files exist on disk — including parsing each tagged-quotes JSON and checking its `segments[]` — before handing off to Synthesis. You are the single writer of `handoffs/[project-slug]/pipeline-state.json`: sub-agents report their entry data back to you and do not touch the file; write the orchestrator entry plus every sub-agent's entry yourself, only after validation passes.
 
@@ -256,11 +263,11 @@ The standalone session pattern (one Cowork session per Transcript Agent, one for
 
 **Skill file:** `SKILL-synthesis.md`
 **Model:** Sonnet 4.6
-**Session type:** Cowork — mostly autonomous, surfaces cross-interview insights
+**Session type:** Claude Code (or Cowork) — mostly autonomous, surfaces cross-interview insights; runs fine in the same session as Step 2
 
 **What's new in v5.0:** Segments preserved through the merge. Cross-speaker version-consistency check (warns if speakers based on different Creative Context versions).
 
-**Starter prompt — copy and paste into a new Cowork session (set model to Sonnet 4.6):**
+**Starter prompt — paste into a new session, Claude Code or Cowork (set model to Sonnet 4.6):**
 
 > You are the Synthesis Agent. Read `documentary-junior-editor/SKILL-synthesis.md` and follow it exactly. All per-speaker Transcript Agent sessions are complete. Discover all per-speaker files in `handoffs/`, validate all four required files per speaker plus that all speakers were tagged against the same Creative Context version, then merge into combined handoff documents preserving the per-quote `segments[]` arrays. Produce the cross-interview narrative assessment. Save versioned merged outputs (`tagged-quotes-v[N].json`, `orphan-quotes-v[N].md`, `discard-summary-v[N].md`, `transcript-summary-v[N].md`) to `handoffs/`. Update `handoffs/pipeline-state.json`.
 
@@ -282,13 +289,13 @@ The Edit Agent and FCPXML Agent run as a multi-round loop until Jeff approves th
 
 **Skill file:** `SKILL-edit.md`
 **Model:** Opus 4.7
-**Session type:** the redesigned edit step runs as a **persistent app**, not a Cowork chat artifact — see `EDIT-SESSION-KICKOFF.md`. Two surfaces, same contract: the **local viewer** (served from the SSD, below) or the **hosted viewer in any browser** (Storyboard Ops — see "Variant: edit in the browser" below). Either way, one Claude Code session is the agent engine; the upstream pipeline still runs in Cowork.
+**Session type:** the redesigned edit step runs as a **persistent app**, not a Cowork chat artifact — see `EDIT-SESSION-KICKOFF.md`. Two surfaces, same contract: the **local viewer** (served from the SSD, below) or the **hosted viewer in any browser** (Storyboard Ops — see "Variant: edit in the browser" below). Either way, one Claude Code session is the agent engine.
 
-**When to launch the viewer (where this sits in the pipeline).** The viewer is the Edit surface — it is **not** used in Steps 0–3. Run Steps 0–3 in Cowork first; the moment you can launch the viewer is when **Synthesis (Step 3)** has written the merged inputs to `handoffs/`:
+**When to launch the viewer (where this sits in the pipeline).** The viewer is the Edit surface — it is **not** used in Steps 0–3. Run Steps 0–3 first (sessions 1–2 of the recommended grouping); the moment you can launch the viewer is when **Synthesis (Step 3)** has written the merged inputs to `handoffs/`:
 - `tagged-quotes-v[N].json` (merged, **with `segments[]`** — this is what the viewer loads)
 - `act-structure-v[N].md`, `creative-brief-summary-v[N].md`, `transcript-summary-v[N].md`
 
-Once those exist, close out Cowork, open a **Claude Code session on `viewer-edit-redesign`**, and build + serve the viewer as the first thing you do (Session setup, below). That hand-off — Synthesis done in Cowork → viewer up in Claude Code — is the boundary between Steps 3 and 4a.
+Once those exist, close out Cowork, open a **Claude Code session** (repo on `main`, current), and build + serve the viewer as the first thing you do (Session setup, below). That hand-off — Synthesis done → viewer up — is the boundary between Steps 3 and 4a.
 
 **What's new — the act-by-act live-partner redesign (supersedes the in-Cowork artifact model of v5.0–v5.10):**
 - **Quotes are clay; the timeline is the work product.** Data model is segments + timeline entries; splitting is implicit (in the viewer, Split breaks #N → #Na/#Nb and Rejoin merges them back verbatim).
@@ -326,11 +333,11 @@ Keep the Mac session + SSD up for the whole edit — the browser is the surface,
 
 **Starter prompt — round 1 (set model to Opus 4.7; see `EDIT-SESSION-KICKOFF.md` for the full version):**
 
-> You are the Edit Agent on the `viewer-edit-redesign` branch. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly — the act-by-act live-partner flow. The viewer is built and served at http://127.0.0.1:8765/. Read the latest handoffs per `pipeline-state.json` (act structure, creative brief, transcript summary, merged tagged-quotes) plus the reference examples. Each turn: read `handoffs/<slug>/viewer-state.json`, then write `handoffs/<slug>/agent-cursor.json`. Work act by act, you first — categorize + flag low-confidence tags, build the over-inclusive Timeline with `agent_note` reasons for what you leave out, then refine with me. Preserve both Cardinal Rules. When I queue an Export (`export-request.json`), launch the FCPXML Agent yourself via the Task tool. Save `handoffs/edit-handoff-v1.md`, `handoffs/trimmed-quotes-v1.json`, and update `pipeline-state.json`. Start with the Intro act.
+> You are the Edit Agent. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly — the act-by-act live-partner flow. The viewer is built and served at http://127.0.0.1:8765/. Read the latest handoffs per `pipeline-state.json` (act structure, creative brief, transcript summary, merged tagged-quotes) plus the reference examples. Each turn: read `handoffs/<slug>/viewer-state.json`, then write `handoffs/<slug>/agent-cursor.json`. Work act by act, you first — categorize + flag low-confidence tags, build the over-inclusive Timeline with `agent_note` reasons for what you leave out, then refine with me. Preserve both Cardinal Rules. When I queue an Export (`export-request.json`), launch the FCPXML Agent yourself via the Task tool. Save `handoffs/edit-handoff-v1.md`, `handoffs/trimmed-quotes-v1.json`, and update `pipeline-state.json`. Start with the Intro act.
 
 **Re-entry prompt — round 2+ (after watching FCPXML in FCP):**
 
-> You are the Edit Agent on the `viewer-edit-redesign` branch. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly. This is round [N+1]. Read `handoffs/edit-handoff-v[N].md`, `handoffs/review-notes.md` (my notes from the FCPXML cut), the latest `handoffs/trimmed-quotes-v[N].json`, and `handoffs/pipeline-state.json`. Rebuild + re-serve the viewer (it carries the prior round forward as a saved cut); read `viewer-state.json` / write `agent-cursor.json` each turn as in round 1. Work the revisions act by act. Save `handoffs/edit-handoff-v[N+1].md`, `handoffs/trimmed-quotes-v[N+1].json`, and update `pipeline-state.json`.
+> You are the Edit Agent. Read `documentary-junior-editor/SKILL-edit.md` and follow it exactly. This is round [N+1]. Read `handoffs/edit-handoff-v[N].md`, `handoffs/review-notes.md` (my notes from the FCPXML cut), the latest `handoffs/trimmed-quotes-v[N].json`, and `handoffs/pipeline-state.json`. Rebuild + re-serve the viewer (it carries the prior round forward as a saved cut); read `viewer-state.json` / write `agent-cursor.json` each turn as in round 1. Work the revisions act by act. Save `handoffs/edit-handoff-v[N+1].md`, `handoffs/trimmed-quotes-v[N+1].json`, and update `pipeline-state.json`.
 
 **Outputs saved to `handoffs/` per round:**
 - `edit-handoff-v[N].md` — structured handoff for the FCPXML Agent (paper cut state, notes, key files)
@@ -347,7 +354,7 @@ Keep the Mac session + SSD up for the whole edit — the browser is the surface,
 
 **Skill file:** `SKILL-fcpxml.md` (+ `SKILL-fcpxml-params.md` for reference IDs)
 **Model:** Sonnet 4.6
-**Session type:** Cowork — mostly autonomous
+**Session type:** normally a sub-agent launched by the Edit Agent (Task tool, via `export-request.json`); standalone Claude Code (or Cowork) for surgical re-runs — mostly autonomous
 
 **What's new in v5.0:**
 - **Branched generation by `clip_type`.** Multicam → `<mc-clip>` references with angle selection (existing). Single-clip → `<asset-clip>` references directly with format, tcFormat, audioRole. Captions match against direct children of `<asset-clip>` in the single-clip case. Mixed projects handled per-interview.
@@ -380,11 +387,11 @@ Keep the Mac session + SSD up for the whole edit — the browser is the surface,
 
 **Skill file:** `SKILL-editing-coach.md`
 **Model:** Opus 4.7
-**Session type:** Cowork — conversational
+**Session type:** Claude Code (or Cowork) — conversational
 
 **What it does:** Reads the Edit Agent's session feedback (the quote viewer's override log + Jeff's reasoning), identifies patterns where the Edit Agent's defaults diverged from Jeff's judgment, and turns those patterns into targeted updates to `SKILL-edit.md` and quote-viewer roadmap entries. Writes the Editing and Quote Viewer sections of the project's `lessons-learned.md`. Hands off to Skill Review via `skill-review-notes.md`.
 
-**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.7):**
+**Starter prompt — paste into a new session, Claude Code or Cowork (set model to Opus 4.7):**
 
 > Read `documentary-junior-editor/SKILL-editing-coach.md` and run the Editing Coach Agent for this project in **at-close mode**. Jeff has approved the final FCPXML cut. Read the saved viewer state, the tweak log (or fall back to my memory if not persisted), and the trimmed-quotes JSON variants. Walk me through the override patterns one cluster at a time, capture my reasoning per cluster, propose SKILL-edit.md diffs for my approval, file viewer roadmap entries, and write the Editing + Quote Viewer sections of `handoffs/[project-slug]/lessons-learned.md`. Leave a handoff note at `handoffs/[project-slug]/skill-review-notes.md` for the Skill Review Agent.
 
@@ -398,7 +405,7 @@ Coach can also run **between-rounds** during Step 4 — invoke it after any Edit
 
 **Skill file:** `SKILL-review.md`
 **Model:** Opus 4.7
-**Session type:** Cowork — runs after Jeff approves the final cut
+**Session type:** Claude Code (or Cowork) — runs after Jeff approves the final cut
 
 **Scope (v5.4+): pipeline-wide concerns ONLY** — technical issues, system design observations, a Capability Audit, Jeff's forward-looking ideas, and the reference-example contribution. Editorial-pattern analysis (override patterns, rule promotion to `SKILL-edit.md`) is the Editing Coach's job; Skill Review reads Coach's `skill-review-notes.md` as an input but does not re-do that analysis. When Coach didn't run, it reads the Edit Agent's `edit-agent-lessons-v[N].md` directly and flags any editorial-philosophy items "→ Coach should fold into SKILL-edit.md."
 
@@ -407,7 +414,7 @@ Coach can also run **between-rounds** during Step 4 — invoke it after any Edit
 - **MANDATORY approval gate (v5.10, Phase 6):** no SKILL file is written before Jeff approves the specific change. The agent presents each proposed edit in chat as a diff-style before/after, waits for approval, and applies only approved edits.
 - **Drift linter (v5.10):** `python3 scripts/lint_skill_drift.py` runs before proposing edits and again after applying them — version footers, agent counts, dead file references, retired symbols. All findings must be clean or explicitly acknowledged by Jeff.
 
-**Starter prompt — copy and paste into a new Cowork session (set model to Opus 4.7):**
+**Starter prompt — paste into a new session, Claude Code or Cowork (set model to Opus 4.7):**
 
 > You are the Skill Review Agent. Read `documentary-junior-editor/SKILL-review.md` and follow it exactly. This project is complete and I've approved the final cut. Start with the Review Legibility summary — tell me what you're reading and which checks you'll run. Read Coach's `skill-review-notes.md` and the Coach-written `lessons-learned.md` sections if Coach ran; if not, read `handoffs/edit-agent-lessons-v[N].md` directly. Review `handoffs/pipeline-state.json` for the round-by-round trajectory plus the handoff files (all versions, not just latest). Your scope is pipeline-wide concerns only — Phase 1 technical issues, Phase 2 system design, Phase 3 Capability Audit, Phase 4 my forward-looking ideas — not Edit-Agent editorial analysis (that's Coach territory; flag anything editorial "→ Coach"). Write the System, Forward-Looking, and Reference Value sections of `lessons-learned.md`. Create `Final_Edit.txt` under `documentary-junior-editor/reference-examples/[project-name]/`, copy the raw transcripts there, and move the finished `lessons-learned.md` there. For skill-file updates: run `python3 scripts/lint_skill_drift.py` first, propose each edit to me as a diff-style before/after, wait for my approval, apply only approved edits, then re-run the linter until clean. End with the `commit-skill-changes` push block.
 
@@ -423,7 +430,7 @@ Coach can also run **between-rounds** during Step 4 — invoke it after any Edit
 | 1 | Creative Context | Opus 4.7 | Yes | act-structure-v[N].md (with Phase 0 Discovery) |
 | 2 | Orchestrator | Sonnet 4.6 | Light (plan confirmation only) | launches FCPXML Params + Transcript Agent (×N) as parallel sub-agents; validates 4N+1 output files |
 | 3 | Synthesis | Sonnet 4.6 | Light | merged tagged-quotes-v[N].json |
-| 4a | Edit (round N) — **Claude Code, `viewer-edit-redesign` branch** (not Cowork); viewer served locally | Opus 4.7 | Yes — heavy (live viewer app) | trimmed-quotes-v[N].json (+ -tight.json from Tight-window export) + edit-handoff-v[N].md |
+| 4a | Edit (round N) — **Claude Code** (viewer served locally or hosted); viewer served locally | Opus 4.7 | Yes — heavy (live viewer app) | trimmed-quotes-v[N].json (+ -tight.json from Tight-window export) + edit-handoff-v[N].md |
 | ↻ | (optional) Editing Coach between rounds | Opus 4.7 | Yes (conversational) | coach-briefing-v[N].md |
 | 4b | FCPXML (round N) | Sonnet 4.6 | Light (loose/tight/both cut confirmation) | rough_cut_v[N].fcpxml (and/or tight_cut) + .verify.json report |
 | ↺ | (Jeff watches; loops 4a → 4b until approved) |  |  |  |
@@ -492,13 +499,13 @@ git pull
 
 **Launcher returns 403 Forbidden from AssemblyAI:** The key in `.env` is invalid, revoked, or has hit a quota. Rotate the key in the AssemblyAI dashboard, update `.env`, re-run.
 
-**SSD disconnect / reconnect mid-session — agents keep asking for folder access:** The Cowork session's permission grant to the project folder is tied to the mount. If you unmount and remount the SSD partway through the pipeline, every subsequent agent session will need you to re-select the workspace folder, and any in-flight tool calls may fail. **Keep the SSD continuously mounted across the pipeline.** If a remount is unavoidable, expect to re-grant folder access on each agent's first turn, and verify the project's `pipeline-state.json` is intact before continuing.
+**SSD disconnect / reconnect mid-session — agents keep asking for folder access:** The session's permission grant to the project folder is tied to the mount. If you unmount and remount the SSD partway through the pipeline, every subsequent agent session will need you to re-select the workspace folder, and any in-flight tool calls may fail. **Keep the SSD continuously mounted across the pipeline.** If a remount is unavoidable, expect to re-grant folder access on each agent's first turn, and verify the project's `pipeline-state.json` is intact before continuing.
 
 **Transcription Agent skips files unexpectedly:** It skips audio files that already have a matching .txt in `transcripts/text/`. To force re-transcription, delete or rename the existing .txt first.
 
 **Creative Context Agent says "audio detected without transcripts":** Run the Transcription Agent first using the launch prompt the agent gave you. Then return to Creative Context and re-launch.
 
-**Creative Context Discovery doesn't find Drive/Gmail content:** Check that the Google Drive and Gmail MCP connectors are connected to this Cowork session. If not, connect them or paste the relevant docs manually — Discovery falls back gracefully.
+**Creative Context Discovery doesn't find Drive/Gmail content:** Check that the Google Drive and Gmail MCP connectors are connected to the session's host (Cowork or Claude Code). If not, connect them or paste the relevant docs manually — Discovery falls back gracefully.
 
 **Transcript Agent or Synthesis Agent surfaces a stale-state warning:** An upstream agent has run since this agent last did. Either re-run from the upstream version (the warning's recommendation), or proceed with the mismatch acknowledged. The warning includes both options.
 

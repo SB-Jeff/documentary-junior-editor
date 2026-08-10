@@ -432,7 +432,7 @@ selected window + output path, and sets the model to Sonnet 4.6. The payload car
 `window` + the window-filtered `entries`. Verified in a browser build (node transpile OK;
 button renamed, modal CSS present, download-degrade path present, no `build_fcpxml.py` /
 "Export XML" remnants).
-⚑ Cross-scope flag (NOT edited here): `cowork-session-guide.md` documents the old direct-build
+⚑ Cross-scope flag (NOT edited here): `editing-session-guide.md` documents the old direct-build
 export and the stale rough/tight viewer vocabulary — both are superseded (Tight/Loose windows
 + the FCPXML-Agent handoff). Surface to that guide's owner.
 

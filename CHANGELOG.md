@@ -1,5 +1,21 @@
 # Documentary Junior Editor — Changelog
 
+## Editing Session Guide (renamed) + all-Code sessions — 2026-08-10
+
+`cowork-session-guide.md` → **`editing-session-guide.md`**, rewritten host-neutral:
+sessions run in **Claude Code by default** (Cowork remains valid; its sandbox
+notes now marked Cowork-only), with a recommended three-session grouping —
+(1) Transcription + Creative Context, (2) Orchestrator fan-out + Synthesis,
+(3) the Edit session. Stale `viewer-edit-redesign` branch references removed
+from the guide + EDIT-SESSION-KICKOFF (the redesign merged to `main` 2026-07-02);
+drift linter GUIDE target updated, old filename kept as a flagged pattern. Same
+skills, same pause points — packaging, not architecture.
+
+Also this week (2026-08-10, see prior entries/commits): v5.12 version
+reconciliation; the questioning norm (facts vs. decisions); the per-act cadence
+(agent applies its Beat-3 cut proposal); the cold-read critic (fresh-context
+Rule 2 gate); graph-engineering fan-out assessed and deferred (memory-filed).
+
 ## v5.12 — version reconciliation — 2026-08-10
 
 Housekeeping release that makes the version stamps truthful again. The 2026-07-23

@@ -248,7 +248,7 @@ documentary-junior-editor/
 ├── SKILL-fcpxml.md                 ← FCPXML Agent instructions
 ├── SKILL-editing-coach.md          ← Editing Coach Agent instructions (v5.4; optional as of v5.7)
 ├── SKILL-review.md                 ← Skill Review Agent instructions
-├── cowork-session-guide.md         ← step-by-step Cowork run guide (all agents)
+├── editing-session-guide.md         ← step-by-step session run guide (all agents; Claude Code default)
 ├── quotes-viewer-roadmap.md        ← viewer change queue (Coach writes; viewer dev consumes)
 ├── CHANGELOG.md                    ← version history
 ├── .env                            ← ASSEMBLYAI_API_KEY=... (gitignored, per-Mac)
@@ -584,7 +584,7 @@ Current version: 5.10 — June 2026
   skill — more dependable than the viewer tweak-log → Coach → Review chain,
   which silently no-ops when tweak-log persistence is absent. The Editing
   Coach is now **optional**: Skill Review reads the lessons doc directly when
-  Coach didn't run (SKILL-review.md), and `cowork-session-guide.md` reflects
+  Coach didn't run (SKILL-review.md), and `editing-session-guide.md` reflects
   the optional Coach step.
 - **SKILL-edit.md editorial promotions (Hammer NER 2026 Round 1).**
   *Reference examples are not runtime templates* — runtime is a downstream
@@ -618,7 +618,7 @@ Current version: 5.10 — June 2026
   follow-ups in CHANGELOG.
 - **SKILL.md drift cleanup.** Version header, agent-count wording, folder-tree
   listing (added SKILL-orchestrator.md, SKILL-editing-coach.md,
-  cowork-session-guide.md, quotes-viewer-roadmap.md, current scripts), and
+  editing-session-guide.md, quotes-viewer-roadmap.md, current scripts), and
   the handoffs listing (added edit-agent-lessons + lessons-learned).
 
 ### v5.6 highlights (quote viewer batch)
@@ -646,7 +646,7 @@ Current version: 5.10 — June 2026
   as parallel sub-agents, waits for completion, validates outputs exist on disk,
   hands off to Synthesis. Formalizes the orchestration pilot that ran organically
   on the 2026 Nanos Boston project (41 output files on first attempt).
-- **`cowork-session-guide.md` Step 2 collapsed** from "Step 2a (FCPXML Params) +
+- **`editing-session-guide.md` Step 2 collapsed** from "Step 2a (FCPXML Params) +
   Step 2b (one Transcript Agent per speaker)" to single "Step 2: Orchestrator
   Agent." Down from 11+ session launches to 1 for a 10-speaker project.
 - **Re-run patterns documented** in `SKILL-orchestrator.md`. Orchestrator can be
@@ -862,7 +862,7 @@ reframe that tipped the release into a major version bump.
   wide net followed by tightening
 - Version management: versioned saves (v1, v2), viewer dropdown, matching FCPXML filenames
 - Long interview handling: transcripts over ~45 min processed in segments
-- Transcription as Step 0: documented in SKILL.md setup and cowork-session-guide
+- Transcription as Step 0: documented in SKILL.md setup and editing-session-guide
 - Reference example: Pacer Center (first Nonprofit Fundraising project)
 
 ---
