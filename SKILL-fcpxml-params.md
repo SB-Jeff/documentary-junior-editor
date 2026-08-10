@@ -578,7 +578,7 @@ Cowork; the agent completes in a few minutes for typical projects.
 
 ---
 
-*FCPXML Params Agent — documentary-junior-editor v5.10 (June 2026)*
+*FCPXML Params Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *The v4-era parser-format mismatch is resolved — `parse_params_md` consumes
 the canonical handoff format above (Clip Types table + per-clip_type

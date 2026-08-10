@@ -2250,7 +2250,7 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.11 (July 2026)*
+*Edit Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.11: roadmap consumption updated for the clean-narrative-outline format from
 Creative Context v5.11 — beats are quote-selection targets, beat order is the

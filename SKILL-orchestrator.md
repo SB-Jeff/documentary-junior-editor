@@ -489,7 +489,7 @@ Update `handoffs/[project-slug]/pipeline-state.json`.
 
 ---
 
-*Orchestrator Agent — documentary-junior-editor v5.10 (June 2026)*
+*Orchestrator Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *Pilot reference: 2026 Nanos Boston brand-video (May 14, 2026) ran
 this pattern organically before it was codified; 41 expected output

@@ -534,4 +534,4 @@ git pull
 
 ---
 
-*v5.10 — June 2026 — see CHANGELOG.md for detailed version history.*
+*v5.12 — August 2026 — see CHANGELOG.md for detailed version history.*

@@ -13,7 +13,7 @@ description: |
 ---
 
 # Documentary Junior Editor — Master Skill Index
-### Version 5.10 | June 2026
+### Version 5.12 | August 2026
 
 This is the master index for the documentary-junior-editor skill. Read this file first at
 the start of every session. It describes the pipeline, the folder structure, how agents

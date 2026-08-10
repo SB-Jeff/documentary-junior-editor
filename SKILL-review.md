@@ -751,7 +751,7 @@ Update `pipeline-state.json` to record Skill Review's run:
 
 ---
 
-*Skill Review Agent — documentary-junior-editor v5.10*
+*Skill Review Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *Read Coach's `skill-review-notes.md` before reading anything else from
 the project — it tells you what pipeline-level implications Coach

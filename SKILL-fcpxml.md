@@ -734,8 +734,6 @@ If Jeff approves the project, launch the Skill Review Agent:
 
 ---
 
-*FCPXML Agent — documentary-junior-editor v5.10 (June 2026)*
-*Read `SKILL.md` first for pipeline overview and folder structure.*
 *FCPXML generation delegated to `scripts/build_fcpxml.py`. The former
 Phase 3 follow-up list (v5 schema consumption, clip_type branching,
 per-segment clip generation, resource-ID remap, library-multicam UID
@@ -747,3 +745,6 @@ frame-rate sourcing — timing math and single-clip `tcFormat`/`audioRole`
 assume 23.98fps NDF / dialogue rather than reading them from the source
 format; (3) Q9 — duplicate-media-ref-ID rule under review (see
 `SKILL-fcpxml-params.md` Completeness Check).*
+
+*FCPXML Agent — documentary-junior-editor v5.12 (August 2026)*
+*Read `SKILL.md` first for pipeline overview and folder structure.*

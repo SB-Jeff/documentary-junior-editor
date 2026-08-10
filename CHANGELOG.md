@@ -1,5 +1,21 @@
 # Documentary Junior Editor — Changelog
 
+## v5.12 — version reconciliation — 2026-08-10
+
+Housekeeping release that makes the version stamps truthful again. The 2026-07-23
+Mounds View session shipped **v5.11** (Creative Context: narrative roadmap as a
+clean narrative outline; Edit: roadmap-consumption rewritten to match) and the
+2026-08-03/05 ECI + design-pass sessions shipped **v5.12** (viewer hierarchy
+header with all five functions, project switcher + /view/<slug> sibling serving,
+per-entry placement rationale on Timeline cards, Library why-not-selected
+reasons, Save-trim collapses the card, first-cut sizing as judgment, series-
+distinctness rule, the XML-Wash import ritual in FCPXML Params) — but SKILL.md's
+canonical version header stayed at 5.10, so the drift linter flagged the two
+bumped footers. This entry: SKILL.md header → 5.12, every skill/guide footer
+stamped v5.12 (August 2026), no behavior changes. Also in this window (2026-08-10):
+the cowork guide gained the browser-edit variant (hosted viewer + djed) and the
+XML-Wash import guidance.
+
 ## Edit Agent consumes the clean-outline roadmap — 2026-07-23 (Mounds View Rising session)
 
 Companion to the Creative Context v5.11 roadmap change. `SKILL-edit.md`'s two

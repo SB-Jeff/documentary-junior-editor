@@ -526,7 +526,7 @@ transcribe, validate, save, emit handoff, update state.
 
 ---
 
-*Transcription Agent — documentary-junior-editor v5.10*
+*Transcription Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *AssemblyAI calls delegated to `scripts/transcribe.py` (key path resolved in
 v5.1 — the script reads `ASSEMBLYAI_API_KEY` from `documentary-junior-editor/.env`).*

@@ -523,6 +523,6 @@ agents read from `tagged-quotes-v[N].json`.
 
 ---
 
-*Synthesis Agent — documentary-junior-editor v5.10 (June 2026)*
+*Synthesis Agent — documentary-junior-editor v5.12 (August 2026)*
 
 *Read `SKILL.md` first for pipeline overview and folder structure.*

@@ -629,7 +629,7 @@ provides the launch prompt for the Synthesis Agent (sonnet-4.6) per
 
 ---
 
-*Creative Context Agent — documentary-junior-editor v5.11*
+*Creative Context Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.11: narrative roadmap is a clean narrative outline — act label as bucket, ordered
 narrative beats beneath, no summary line, no quotes or quote-like content; bullet order is
