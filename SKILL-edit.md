@@ -340,9 +340,10 @@ reduction in one message.
 1. **Assemble — you go first.** Build the over-inclusive Timeline for this act
    against the roadmap beats: the inclusion bar is *"could this possibly make
    the final edit?"*, fence-sitters in (Phase 3). Every entry carries its
-   reason; **every** quote left out carries an `agent_note`. Seed via the
-   `editing-versions` JSON + rebuild (Phase 2); Jeff opens it. Hand the turn
-   back.
+   reason; **every** quote left out carries an `agent_note`. Run the
+   **cold-read critic** on the sequenced act (below) and act on it before
+   anything ships. Seed via the `editing-versions` JSON + rebuild (Phase 2);
+   Jeff opens it. Hand the turn back — with the critic's note.
 2. **Jeff's assembly pass.** He reacts in the viewer + chat; you respond and
    iterate **at the selection/order level** — don't push reduction yet. Loop
    until he signals the assembly is settled.
@@ -350,11 +351,14 @@ reduction in one message.
    your cut candidates to the **Cuts bin** (tight → loose — fully recoverable,
    that's what the bin is for), each with its cut reason in `notes`, delivered
    through the cut-seeding mechanics (confirm Jeff's state is saved, emit the
-   updated cut, he reloads). Announce a grouped summary in chat: what you cut
-   and why, what's load-bearing, plus any trims. Hand the turn back. *(Why
-   apply rather than list: agent moves land via the file channel, so the tweak
-   log records only Jeff's restores — pure correction signal. If he executed
-   your list, the log couldn't tell agreement from his own initiative.)*
+   updated cut, he reloads). Run the **cold-read critic** on the reduced
+   sequence before it ships — a winnowed act breaks differently than a wide
+   one. Announce a grouped summary in chat: what you cut and why, what's
+   load-bearing, plus any trims — with the critic's note. Hand the turn back.
+   *(Why apply rather than list: agent moves land via the file channel, so the
+   tweak log records only Jeff's restores — pure correction signal. If he
+   executed your list, the log couldn't tell agreement from his own
+   initiative.)*
 4. **Jeff's reduction pass.** He restores what you got wrong (those restores
    ARE the training data), confirms the rest, trims further. Small loops until
    he calls *this act* done — then the next act's Beat 0.
@@ -433,6 +437,59 @@ a seam breaks — an orphan pronoun, an abrupt jump, a point already made — em
 seam-flag at that spot with a suggested fix or bridge. They appear inline in
 Review, only where flagged — not as a separate always-on panel. This is the
 in-session surface for the Cardinal Rule 2 verification (Phase 7).
+
+### The cold-read critic — fresh eyes before every proposal *(added 2026-08-10)*
+
+**Why:** you cannot cold-read a sequence you built — you already know the
+story, so every gap arrives pre-filled by your own context and Rule 2's "read
+it as if hearing it for the first time" is structurally impossible to perform
+on yourself. Fresh context is what makes the check real. So before any
+sequenced proposal reaches Jeff (cadence Beat 1, Beat 3, and the whole-film
+Review pass), it passes a critic that genuinely has no context.
+
+**Mechanics.** Spawn a critic subagent via the Task tool (sonnet-class is
+fine) with a completely fresh prompt. The critic receives **only the cut as a
+viewer would experience it**: speaker names, the trimmed quote text (kept
+words only), and any title cards/interstitials, in playback order, each item
+carrying a position number for anchoring. It must **not** receive the
+transcripts, the rationale/`why` notes, the creative brief or roadmaps,
+project background, or the unselected pool — the whole point is that it knows
+nothing you know.
+
+**The critic's charge** (Cardinal Rule 2 as a cold viewer): Can I follow this
+top to bottom? Where did I have to mentally fill a gap? What is referenced
+before it's established? Where does the argument jump to a conclusion before
+it's built? Who are these people — does the opening hook and establish them,
+and does the closer land forward-looking? It returns a list of specific
+issues anchored to positions, each with what broke and (optionally) what
+would fix it. The Phase 7 coherence checklist is its rubric.
+
+**Acting on the critique — constrained to moves already yours:**
+- Freely: reordering within the act, trims, and short factual text
+  interstitials bridging flagged gaps.
+- **Selection changes depend on whose cut it is.** At Beat 1, the sequence is
+  your own not-yet-presented proposal: you may add from the pool (the
+  inclusion bar wants fence-sitters in anyway) or pull an entry, with
+  `agent_note`s updated as always, and the change named in the critic's note.
+  From Beat 2 onward the cut is Jeff-shaped: any fix requiring a selection
+  change is surfaced as a **flagged suggestion** — never applied.
+
+**Bound the loop:** at most one re-sequence followed by one re-critique.
+Issues that survive the second pass become **open flags** — emit them as
+seam-flags (the notes sidecar) so they render where Jeff reads, and stop
+iterating. Do not chase a clean bill of health; a flagged seam is Jeff's to
+judge.
+
+**The critic's note.** When the proposal is presented, include a brief note:
+what the cold read caught, what you changed in response, and what remains
+flagged for Jeff's decision. This keeps the critic legible — it gates what
+you present; it never overrides Jeff, and it runs *inside* a step Jeff has
+already directed, never ahead of him.
+
+**Fallback:** if the Task tool is unavailable, run the Phase 7 checklist as a
+deliberate self-read (assemble the verbatim playback text first, per Phase 7)
+and say in the proposal that the cold read was a self-read this time. Never
+skip the gate.
 
 ---
 
@@ -1608,16 +1665,18 @@ For each act:
 4. Flag any gaps — moments the act needs but no strong material covers
    (with title-card / interstitial / context-beat suggestions where they
    apply)
-5. **Cardinal Rule 2 gate — verify narrative coherence here, at proposal
-   time, before Jeff sees the sequence.** This is the primary moment Rule 2
-   is enforced. Read the proposed sequence top-to-bottom as if hearing it for
-   the first time and check for orphan pronouns, back-reference openers
-   without setup, missing subject anchoring, logical jumps, redundancy, and
-   emotional/tonal whiplash (the full checklist is in Phase 7). Fix every
-   issue — reorder, re-trim, bridge, or pull setup material — *before*
-   presenting. Jeff should never be handed a sequence that hasn't already
-   passed Rule 2. Coherence is the editor's to confirm in the viewer; it is
-   the agent's to get right before the proposal lands.
+5. **Cardinal Rule 2 gate — the cold-read critic, at proposal time, before
+   Jeff sees the sequence.** This is the primary moment Rule 2 is enforced,
+   and it runs as **fresh eyes, not a self-read**: spawn the cold-read critic
+   (see "The cold-read critic" in the Act-by-Act Loop) on the sequenced
+   proposal — it hunts orphan pronouns, back-reference openers without setup,
+   missing subject anchoring, logical jumps, redundancy, and emotional/tonal
+   whiplash (the full checklist is in Phase 7). Fix what it catches within
+   your authorized moves — reorder, re-trim, bridge — one re-sequence and one
+   re-critique at most; survivors become seam-flags plus the critic's note.
+   Jeff should never be handed a sequence that hasn't faced a cold read.
+   Coherence is the editor's to confirm in the viewer; it is the agent's to
+   get right before the proposal lands.
 6. Get the proposed cut into the viewer for this act. For the act's **opening
    build**, write the proposed selections/ordering/segments/trims/memberships
    (and the `agent_note`s for left-out quotes) into the `editing-versions` JSON,
@@ -1990,13 +2049,15 @@ proceed with unverified entries.
 ### Cardinal Rule 2 verification — narrative coherence (the checklist)
 
 This is the coherence checklist referenced by the proposal-time gate (Phase
-3, step 5) and the emit-time confirmation pass (above). At proposal time,
-apply it to the sequence you are about to present. At emit, apply it only to
-any region changed since the last proposal Jeff saw. To run it, assemble the
-relevant verbatim text in playback order — concatenating each entry's kept
-segments in source order, with any interstitials and title cards inserted at
-their timeline positions — and read it through as if hearing it for the first
-time. Check for:
+3, step 5) and the emit-time confirmation pass (above). **At proposal time it
+is executed by the cold-read critic** (fresh-context subagent — see "The
+cold-read critic" in the Act-by-Act Loop; the checklist below is its rubric),
+falling back to a deliberate self-read only when the Task tool is unavailable.
+At emit, apply it yourself, to any region changed since the last proposal Jeff
+saw. To run it, assemble the relevant verbatim text in playback order —
+concatenating each entry's kept segments in source order, with any
+interstitials and title cards inserted at their timeline positions — and read
+it through as if hearing it for the first time. Check for:
 
 1. **Orphan pronouns** — "they / it / that / this / those" without a
    clear antecedent established earlier in the cut.
