@@ -194,8 +194,11 @@ than questions.
 
 The viewer is a **persistent local app** (served by `scripts/viewer_save_server.py`,
 opened in Chrome — see Phase 2), not a throwaway chat artifact. It is the shared
-workspace: what Jeff sees, edits, and evaluates. Jeff drives the viewer; you
-advise. The viewer and you share one channel — a file on disk.
+workspace: what Jeff sees, edits, and evaluates. Jeff drives the viewer
+turn-by-turn; you write the timeline only at your two proposal beats — the
+opening assembly and the applied cut proposal (see "The per-act cadence") — via
+the cut-seeding mechanics, announced, never silently mid-conversation. The
+viewer and you share one channel — a file on disk.
 
 **The shared-state file: `handoffs/[project-slug]/viewer-state.json`.** The
 viewer autosaves its full working state to this file on every edit (the cut, what
@@ -318,28 +321,52 @@ onto the views, not onto a wizard:
 Never narrate the workflow as locked steps or announce "we are now in the Refine
 phase." Work the act through the views.
 
-### The per-act micro-loop
+### The per-act cadence *(the turn rhythm — set with Jeff, 2026-08-10)*
 
-For each act, in order (Intro, then Act 1, 2, 3 …):
+For each act, in order (Intro, then Act 1, 2, 3 …), the conversation follows a
+default four-beat rhythm. The beats are **turn structure, not UI gates** — the
+viewer stays free-form throughout (the June decision stands: order/select/trim
+are one continuous activity *in the viewer*). What the beats fix is **whose turn
+it is and what kind of proposal is on the table**, so Jeff's corrections arrive
+cleanly separated for the Editing Coach: Beat-2 corrections teach selection and
+ordering taste; Beat-4 corrections teach keep-vs-kill judgment. After each beat
+that is yours, **stop and hand the turn back** — never barrel from assembly into
+reduction in one message.
 
-1. **Categorize — you go first.** Present every quote you tagged into this act and
-   **flag the ones you are not sure about** ("I put this under Act 2, but it could
-   be the Intro"). Jeff fixes any wrong buckets in the Library before anything
-   else. (Recategorizing — retagging a quote to a different act — happens ONLY in
-   the Quote Library, via the act pill. In the Timeline, dragging reorders *within*
-   an act; moving a quote to another act = retag it in the Library.)
-2. **Build the over-inclusive Timeline — you go first.** Propose the first pass
-   for this act: deliberately wide — the inclusion bar is *"could this possibly
-   make the final edit?"*, fence-sitters in (see Phase 3). For every quote you pull in, give the reason; for **every**
-   quote you leave out — plausible or not — **write an `agent_note`** so the
-   omission is visible in the Library, never silent ("Left out — overlaps
-   #3/#9, weaker delivery"). And every entry you later Cut carries its cut
-   reason in `notes` (see Phase 5's three dispositions). Seed this by emitting
-   the `editing-versions` JSON and running the build (Phase 2); Jeff opens it.
-3. **Refine — continuous.** Order, cut/add-back (the selection keeps changing),
-   split, and trim all happen at once. You propose adjustments; Jeff applies them
-   in the viewer; you re-read `viewer-state.json` on your next turn and respond.
-   Loop until Jeff calls *this act* done — then move to the next act.
+0. **Categorize check (quick).** Present the act's quotes and **flag the tags
+   you're unsure about**; Jeff fixes wrong buckets in the Library (act pill —
+   recategorizing happens ONLY there; Timeline dragging reorders within an act).
+   Often trivial — keep it brief.
+1. **Assemble — you go first.** Build the over-inclusive Timeline for this act
+   against the roadmap beats: the inclusion bar is *"could this possibly make
+   the final edit?"*, fence-sitters in (Phase 3). Every entry carries its
+   reason; **every** quote left out carries an `agent_note`. Seed via the
+   `editing-versions` JSON + rebuild (Phase 2); Jeff opens it. Hand the turn
+   back.
+2. **Jeff's assembly pass.** He reacts in the viewer + chat; you respond and
+   iterate **at the selection/order level** — don't push reduction yet. Loop
+   until he signals the assembly is settled.
+3. **Propose cuts — by applying them.** Make the winnowing call yourself: move
+   your cut candidates to the **Cuts bin** (tight → loose — fully recoverable,
+   that's what the bin is for), each with its cut reason in `notes`, delivered
+   through the cut-seeding mechanics (confirm Jeff's state is saved, emit the
+   updated cut, he reloads). Announce a grouped summary in chat: what you cut
+   and why, what's load-bearing, plus any trims. Hand the turn back. *(Why
+   apply rather than list: agent moves land via the file channel, so the tweak
+   log records only Jeff's restores — pure correction signal. If he executed
+   your list, the log couldn't tell agreement from his own initiative.)*
+4. **Jeff's reduction pass.** He restores what you got wrong (those restores
+   ARE the training data), confirms the rest, trims further. Small loops until
+   he calls *this act* done — then the next act's Beat 0.
+
+After the last act: one **whole-film Review pass** (read end to end on the All
+view, seam-flags across act boundaries) before Export.
+
+**Flex clause.** The cadence is the default, not a straitjacket. Jeff can
+collapse beats ("this act's easy — go straight to your tight proposal"), and
+you may *suggest* collapsing when an act is thin — but never skip a hand-back
+silently, and never mix an assembly proposal and a reduction proposal in the
+same turn without saying so.
 
 Every correction Jeff makes (a bucket you got wrong, a quote you cut that he
 restores, a trim he loosens) is captured in the tweak log and is training signal
@@ -925,13 +952,16 @@ cut: **read it at the top of every turn.** It contains the open cut, the full
 Timeline (all tiers, with trims and splits), the pending tweaks since Jeff's last
 send, his Library recategorizations, the act/view/mode he is on, and any message
 or "Point at this" reference he is composing. You do not push changes into the
-viewer turn-by-turn (no `update_artifact`) — Jeff drives the viewer; you read it.
+viewer turn-by-turn (no `update_artifact`) — Jeff drives the viewer; you read it,
+and you write only at your announced proposal beats (below).
 
-When you need to seed a cut yourself — the over-inclusive opening proposal per
-act (Phase 3), or a larger restructure — write a new `editing-versions/<name>.json`
-(via the build's payload shape), re-run the build, and ask Jeff to Open it. Before
-a rebuild, make sure Jeff has **saved** any pending in-viewer tweaks; a rebuild
-reloads from disk and a fresh build won't carry unsaved working state.
+When you seed a cut yourself — the over-inclusive opening assembly (cadence
+Beat 1), your **applied cut proposal** (cadence Beat 3: the same mechanics, with
+your cut candidates moved to `loose` and their reasons in `notes`), or a larger
+restructure — write a new `editing-versions/<name>.json` (via the build's
+payload shape), re-run the build, and ask Jeff to Open it. Before any of these,
+make sure Jeff has **saved** any pending in-viewer tweaks; a rebuild reloads
+from disk and a fresh build won't carry unsaved working state.
 
 ### Your notes sidecar — `agent_note` and seam-flags
 
@@ -1086,12 +1116,12 @@ rest of the live-partner loop.
 
 ## Phase 3: The Over-Inclusive First Build (per act)
 
-This is step 2 of the per-act micro-loop — your opening proposal for the act you
+This is **Beat 1 of the per-act cadence** — your opening proposal for the act you
 are working. Phases 3–5 describe *what good selection, discussion, and reduction
-look like*; they are **not** gated, sequential checkpoints. Within an act you
-move fluidly between proposing a wide first build, discussing it, and refining it
-down — all in the continuous "Refine" phase from "The Act-by-Act Loop." Don't
-announce these as locked steps to Jeff; let the views drive the work.
+look like*; the *when* is the cadence: Phase 3 lands as Beat 1 (assemble), Phase
+4's discussion runs through Beats 2 and 4, Phase 5's reduction lands as Beat 3
+(your applied cut proposal). In the viewer everything stays continuous — the
+beats structure the conversation's turns, not the UI.
 
 You do the first build per act, not for the whole film at once — categorize and
 build that act, refine it with Jeff until he calls it done, then move to the next
@@ -1630,7 +1660,10 @@ applies these directly in the viewer; you read the result in `viewer-state.json`
 
 ## Phase 5: Reduction
 
-Once Discussion has produced decisions, Reduction applies them.
+Once Discussion has produced decisions, Reduction applies them — and it is
+delivered as **Beat 3 of the per-act cadence: you apply your cut proposal
+yourself** (candidates → Cuts bin with reasons, announced summary, turn handed
+back; Jeff's restores are the correction signal).
 **Reduction is primarily about Cutting expendable beats to land the Timeline
 tier at target runtime** — not about deciding what comes out of the project
 entirely. The question shifts from "does this tell the story?" to "what's the
