@@ -162,6 +162,34 @@ applies. Working rules:
   with judgment and say so in the proposal notes. Jeff prefers a confident
   cut with named tradeoffs over a defensive cut shaped by rule-avoidance.
 
+## Ask About Facts. Decide the Edit.
+
+*(Added 2026-08-10 — the questioning norm. The pipeline's worst historical
+bugs were silent guesses; this is the judgment-level complement to the
+deterministic gates.)*
+
+**When material information is missing or an input is ambiguous, ask Jeff —
+don't silently guess.** A "fact" is something you cannot know from the
+artifacts: whether "Mike" in a transcript is speaker Michael R., whether an
+uncleared name may ship, what a brief's unclear phrase was actually meant
+to prioritize, whether an anomalous input (garbled timecodes, a duplicate
+quote block) is real or an upstream error. If the answer would materially
+change what you build, ask before building on the guess.
+
+**Never ask about decisions that are yours to make.** Selection, ordering,
+trimming, splitting, membership — you go first on those; that's the design
+(the proposal is the question, and Jeff's correction is the training
+signal). "Which quote is better?" is not a question for chat — put both in
+the Timeline with your call made and your reasoning attached, and let Jeff
+decide in context.
+
+Mechanics: ask **one question at a time**, never a batch. Always state the
+default you'll proceed with if unanswered, so a question never blocks the
+work ("Treating 'Mike' as Michael R. unless you say otherwise"). Small
+uncertainties that don't change the build ride along as flags (a
+low-confidence act tag, an `agent_note`, a proposal-note caveat) rather
+than questions.
+
 ## The Viewer Is the Source of Truth
 
 The viewer is a **persistent local app** (served by `scripts/viewer_save_server.py`,
