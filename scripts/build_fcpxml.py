@@ -863,9 +863,12 @@ def find_speaker_fcpxml(speaker: str, xml_dir: Path):
     if exact.exists():
         return exact
 
-    # Case-insensitive stem match
+    # Case-insensitive stem match. Skip macOS AppleDouble sidecars (._*) —
+    # they shadow real files on exFAT/SMB volumes and made speaker resolution
+    # "ambiguous" (v5.13).
     target_lower = speaker.lower()
-    fcpxmls = sorted(xml_dir.glob("*.fcpxml"))
+    fcpxmls = sorted(p for p in xml_dir.glob("*.fcpxml")
+                     if not p.name.startswith("._"))
     for p in fcpxmls:
         if p.stem.lower() == target_lower:
             return p

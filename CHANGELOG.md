@@ -1,5 +1,46 @@
 # Documentary Junior Editor — Changelog
 
+## v5.13 — St. Andrews close: checkpoint versioning + tooling hardening — 2026-08-26
+
+**Versioning (agreed with Jeff):** the FCP model — always-saving, named
+snapshots. ONE canonical `handoffs/<slug>/editing-versions/` location (the
+flat/slug union that let stale saves shadow fresh bakes is retired; legacy
+flat layouts load with a migration warning). The agent checkpoints Jeff's
+work (`checkpoints/NNN-jeff-<label>.json`) BEFORE touching anything and
+checkpoints its own proposals; Save is for naming, not persistence. The
+viewer restores newer-than-build working state on load with a visible
+banner + revert (no more silent reload clobber), and lists checkpoints as
+their own Open-menu group.
+
+**Viewer:** creative context is pinnable as a persistent right side panel
+(follows the act filter, sticky, localStorage-remembered, hides on narrow
+windows) — Jeff: the roadmaps are edit-against targets, not a popup.
+AppleDouble (`._*`) junk filtered in the build, server /list, and FCPXML
+speaker resolution. Orphans load structured: heading-aware markdown parse
+(one orphan per `### Orphan` heading, speaker + explicit `speakerSlug`
+attribution, merged file preferred over per-speaker files — 12 no longer
+becomes 38) with speaker-slug reconciliation against the pool;
+SKILL-synthesis now mandates embedding orphans as `is_orphan` entries in
+tagged-quotes. Act labels reconcile against actual pool `part` values
+("One (Intro)" no longer strips to a matchless "One"); roadmap keys match
+loosely ("Intro — One" ↔ "One (Intro)"); premise parse case-insensitive;
+initial round = latest NUMBERED round, not the last named cut;
+`BUILD_GENERATED_AT` stamped for restore-on-load.
+
+**FCPXML:** two-clocks guard — when transcript TCs and caption offsets
+share no origin (interview-relative vs camera-clock), TC narrowing
+disables itself with a one-time warning and full-range search runs
+(St. Andrews R1: 65/66 quotes silently dropped before this).
+SKILL-fcpxml-params hardened: speaker keys must equal the pool's `speaker`
+values; joint interviews split into per-speaker rows sharing one source
+file.
+
+**SKILL-edit:** session persistence protocol (server health check,
+checkpoint-before-touching, bake-on-read); the cold-read critic is told
+who the film is for; serial presentation extended to suggestions.
+Editorial taste deliberately NOT codified as rules — lives in
+edit-agent-lessons (intent over rule accumulation, per Jeff).
+
 ## Editing Session Guide (renamed) + all-Code sessions — 2026-08-10
 
 `cowork-session-guide.md` → **`editing-session-guide.md`**, rewritten host-neutral:

@@ -190,6 +190,12 @@ uncertainties that don't change the build ride along as flags (a
 low-confidence act tag, an `agent_note`, a proposal-note caveat) rather
 than questions.
 
+**Serial presentation applies beyond questions (Jeff, 2026-08-21):**
+recommendations, suggestions, and debrief items also go to Jeff one at a
+time — even when he invites them in the plural ("ask me any questions,"
+"what adjustments would you make?"). Queue the list internally, present the
+single most consequential item, and continue only after he responds.
+
 ## The Viewer Is the Source of Truth
 
 The viewer is a **persistent local app** (served by `scripts/viewer_save_server.py`,
@@ -376,6 +382,32 @@ Every correction Jeff makes (a bucket you got wrong, a quote you cut that he
 restores, a trim he loosens) is captured in the tweak log and is training signal
 for the Editing Coach. That is *why* you go first.
 
+### Session persistence protocol — checkpoints (v5.13, agreed with Jeff)
+
+Versioning follows the Final Cut model: always-saving, named snapshots —
+Jeff's Save button is for NAMING states, never load-bearing for persistence.
+The agent is the persistence engine:
+
+- **One canonical location.** ALL round files, named cuts, and checkpoints
+  live in `handoffs/[project-slug]/editing-versions/` — the slug subfolder
+  even on flat-layout projects (the viewer saves there; v5.13 retired the
+  flat/slug union that let a stale save shadow a fresh bake). Never write a
+  round file anywhere else.
+- **Top of every turn, before anything else:** confirm the app server is up
+  (`curl -s http://127.0.0.1:8765/ping`); restart it if dead — background
+  servers die with their host session, and a dead server means you are blind
+  and the viewer can't save.
+- **Checkpoint before touching.** When your state read shows new ops from
+  Jeff, snapshot his work FIRST: write the current state's entries as
+  `editing-versions/checkpoints/NNN-jeff-<label>.json` (NNN = next number,
+  label = a few words, e.g. `004-jeff-act1-reduction`; same payload shape as
+  a round file), then bake into the round file. Every proposal you seed also
+  checkpoints as `NNN-agent-<label>.json`. Checkpoints are append-only —
+  never overwritten, never deleted; the viewer lists them in its Open menu.
+- **Bake on read.** After checkpointing, fold Jeff's ops into the round
+  file (`v[N].json`) and rebuild, so a tab reload can never lose work — the
+  viewer's restore-on-load banner (v5.13) is the second net, not the first.
+
 ### Reading state and talking to Jeff each turn
 
 - **Top of every turn: read `handoffs/[project-slug]/viewer-state.json`.** It
@@ -455,6 +487,15 @@ carrying a position number for anchoring. It must **not** receive the
 transcripts, the rationale/`why` notes, the creative brief or roadmaps,
 project background, or the unselected pool — the whole point is that it knows
 nothing you know.
+
+**One line of context the critic DOES get: who the film is for** (added
+v5.13 — St. Andrews). State the audience and viewing setting in the charge
+("this film is for the church's own congregation, premiering at a service").
+Without it, a cold reader flags orientation gaps an internal audience
+doesn't have (unnamed institutions, unexplained programs, unintroduced
+staff) and those false positives crowd out the real catches. Audience
+context is viewing context, not editorial context — it doesn't compromise
+the fresh read.
 
 **The critic's charge** (Cardinal Rule 2 as a cold viewer): Can I follow this
 top to bottom? Where did I have to mentally fill a gap? What is referenced
@@ -2372,8 +2413,14 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.12 (August 2026)*
+*Edit Agent — documentary-junior-editor v5.13 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
+*v5.13 (St. Andrews close): checkpoint-versioning persistence protocol
+(canonical editing-versions location, checkpoint-before-touching, bake-on-read,
+server health check); cold-read critic now told who the film is for; serial
+presentation extended to suggestions. Editorial-taste calibration deliberately
+NOT added as rules — see the project's edit-agent-lessons-v1.md (intent over
+rule accumulation, per Jeff).*
 *v5.11: roadmap consumption updated for the clean-narrative-outline format from
 Creative Context v5.11 — beats are quote-selection targets, beat order is the
 sequencing target, speaker weighting comes from the creative brief (Jeff

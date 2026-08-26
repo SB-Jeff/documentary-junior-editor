@@ -529,6 +529,18 @@ needed on any project.** If segments are missing TCs the matcher falls back
 to a full-range scan — if that ever times out again, flag it to Jeff rather
 than hand-narrowing.
 
+> **The two-clocks problem (v5.13 — St. Andrews).** Transcript TCs are
+> interview-relative ("00:01:51" = 1:51 into the conversation), but some
+> source FCPXMLs carry camera-clock caption offsets (time-of-day —
+> St. Andrews' captions started ~25,000s in). The two share no origin, so a
+> TC window can bisect to entirely the wrong neighborhood and silently drop
+> nearly every quote (St. Andrews R1: 65/66 before the fix).
+> `_narrow_caption_search_window()` now detects a TC window disjoint from
+> the captions' actual offset range, warns once on stderr, and falls back to
+> full-range search automatically — slower (~1 min/interview) but correct.
+> If you see that warning, it is working as designed: do NOT hand-edit TCs
+> or blank them; just expect the slower build and note it in your report.
+
 ### 2.4 — Call the script
 
 ```
@@ -748,3 +760,4 @@ format; (3) Q9 — duplicate-media-ref-ID rule under review (see
 
 *FCPXML Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
+*v5.13: two-clocks guard — TC narrowing auto-disables with a warning when transcript TCs and caption offsets share no origin (§2.3).*

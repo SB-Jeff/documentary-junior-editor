@@ -134,6 +134,11 @@ const INITIAL_FOCUS = null;
 //     suggestion: "Lead with Dana naming the team first." }
 const SEAM_FLAGS = [];
 
+// Build timestamp (ISO) — set by the build script. Restore-on-load compares it
+// against viewer-state.json's generated_at so a reload can never silently
+// clobber working state that is NEWER than the page it loads into.
+const BUILD_GENERATED_AT = "";
+
 // Dedicated tags that live in act_labels but are NOT narrative acts. They are
 // held out of the three-act nav and rendered after a divider as set-apart
 // filter chips (the approved structure calls Safety Lines "a dedicated tag, not
@@ -843,6 +848,7 @@ export default function QuotesView() {
       setCuts((prev) => {
         const known = new Set(prev.map((c) => c.version));
         const additions = data.cuts
+          .filter((c) => !c.stem.startsWith("._"))  // macOS AppleDouble junk
           .filter((c) => !known.has(c.stem))
           .map((c) => ({
             round_number: c.round ?? null,
@@ -857,9 +863,81 @@ export default function QuotesView() {
         return additions.length ? [...prev, ...additions] : prev;
       });
     } catch (_) { /* server down — keep the baked list */ }
+    // Checkpoints (checkpoint-versioning design, 2026-08-21): the agent
+    // auto-snapshots every state it reads or writes into
+    // editing-versions/checkpoints/. List them as their own Open-menu group.
+    try {
+      const res = await fetch(`${SAVE_HELPER_URL}/list?path=${encodeURIComponent(rel + "/checkpoints")}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || !data.ok || !Array.isArray(data.cuts)) return;
+      setCuts((prev) => {
+        const known = new Set(prev.map((c) => c.version));
+        const adds = data.cuts
+          .filter((c) => !c.stem.startsWith("._"))
+          .filter((c) => !known.has("ckpt:" + c.stem))
+          .map((c) => ({
+            round_number: c.round ?? null,
+            version: "ckpt:" + c.stem,
+            round_label: c.stem.replace(/^\d+[-_]/, "").replace(/[-_]/g, " "),
+            cut_name: null,
+            timeline: [],          // lazy-loaded on Open
+            _disk: true,
+            _checkpoint: true,
+            _path: c.path,
+            _entryCount: c.entry_count,
+          }));
+        return adds.length ? [...prev, ...adds] : prev;
+      });
+    } catch (_) { /* no checkpoints yet */ }
   }
 
   useEffect(() => { refreshDiskCuts(); /* eslint-disable-next-line */ }, []);
+
+  // ====== Restore-on-load (checkpoint-versioning design, 2026-08-21) ======
+  // The baked page can be OLDER than the live working state on disk (the agent
+  // rebuilds between passes; a reload used to load the stale bake and then
+  // autosave it OVER viewer-state.json, silently destroying unsaved work).
+  // Newest wins, out loud: if viewer-state.json is newer than this build,
+  // restore it and show a banner with a revert option.
+  const [restoredFrom, setRestoredFrom] = useState(null);
+  useEffect(() => {
+    (async () => {
+      if (typeof fetch !== "function") return;
+      try {
+        const rel = `handoffs/${PROJECT_META.slug}/viewer-state.json`;
+        const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent(rel)}`);
+        if (!res.ok) return;
+        const j = await res.json();
+        const st = j && j.ok && j.data;
+        if (!st || !st.generated_at || !Array.isArray(st.entries) || st.entries.length === 0) return;
+        if (BUILD_GENERATED_AT && !(new Date(st.generated_at) > new Date(BUILD_GENERATED_AT))) return;
+        const oc = st.open_cut || {};
+        let idx = ROUNDS.findIndex((r) => r.version === oc.version);
+        if (idx < 0) idx = INITIAL_ROUND_INDEX;
+        setWorkingByRound((prev) => ({ ...prev, [idx]: JSON.parse(JSON.stringify(st.entries)) }));
+        if (st.source_act_overrides && typeof st.source_act_overrides === "object") {
+          setSourceActOverrides(st.source_act_overrides);
+        }
+        if (Array.isArray(st.pending_ops) && st.pending_ops.length) {
+          setPendingOpsByRound((prev) => ({ ...prev, [idx]: st.pending_ops }));
+        }
+        setRoundIndex(idx);
+        setRestoredFrom(st.generated_at);
+      } catch (_) { /* no state file / server down — the baked build stands */ }
+    })();
+    // eslint-disable-next-line
+  }, []);
+
+  function revertToBuild() {
+    const idx = roundIndex;
+    setWorkingByRound((prev) => ({
+      ...prev,
+      [idx]: JSON.parse(JSON.stringify((ROUNDS[idx] && ROUNDS[idx].timeline) || [])),
+    }));
+    setPendingOpsByRound((prev) => ({ ...prev, [idx]: [] }));
+    setRestoredFrom(null);
+  }
   // Per-round Talk-to-agent batch counter. Each op is tagged with the batch it
   // was made in; Send advances the counter so the panel clears for the next
   // batch while the cumulative log keeps every batch.
@@ -989,6 +1067,21 @@ export default function QuotesView() {
   // act shows only PROJECT_META.acts[that].roadmap; All shows premise + every
   // act's roadmap. Sourced from the Creative Context agent.
   const [creativeOpen, setCreativeOpen] = useState(false);
+
+  // Creative context as a persistent SIDE PANEL (Jeff, 2026-08-21): the
+  // roadmaps are edit-against targets, and a popup forces memorize-close-edit.
+  // Pinned state survives reloads via localStorage; on narrow windows the
+  // panel hides (CSS) and the popup remains the fallback.
+  const [ccPinned, setCcPinned] = useState(() => {
+    try { return localStorage.getItem("cc-pinned") === "1"; } catch (_) { return false; }
+  });
+  function toggleCcPinned() {
+    setCcPinned((v) => {
+      const nv = !v;
+      try { localStorage.setItem("cc-pinned", nv ? "1" : "0"); } catch (_) { /* private mode */ }
+      return nv;
+    });
+  }
 
   // Speaker-context ("who's who") panel — mirrors creativeOpen. Speaker-scoped:
   // All shows every voice's summary; one speaker selected shows just theirs.
@@ -1385,6 +1478,26 @@ export default function QuotesView() {
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, lastSent, dirtySinceSend, sourceActOverrides, pendingExport]);
+
+  // Offline self-heal (v5.13): the indicator latches "offline" when a save
+  // fires while the app server is down (it restarts between agent sessions),
+  // and nothing re-tries until the next edit. While offline, ping every 15s
+  // and re-run the autosave the moment the server is back.
+  useEffect(() => {
+    if (persistState.state !== "offline") return;
+    const t = setInterval(async () => {
+      try {
+        const res = await fetch(SAVE_HELPER_URL + "/ping");
+        if (!res.ok) return;
+        const relPath = `handoffs/${PROJECT_META.slug}/viewer-state.json`;
+        const json = JSON.stringify(buildLiveState(), null, 2);
+        const r = await persistFile(relPath, json, { allowDownload: false });
+        if (r.ok) setPersistState({ state: "saved", at: Date.now(), detail: r.detail || relPath });
+      } catch (_) { /* still down — keep waiting */ }
+    }, 15000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistState.state]);
 
   // ====== Export ======
 
@@ -2222,7 +2335,7 @@ export default function QuotesView() {
                 <div className="tb-empty">No saved versions yet.</div>
               ) : (
                 <ul className="tb-cutlist">
-                  {cuts.map((r, i) => (
+                  {cuts.map((r, i) => ({ r, i })).filter(({ r }) => !r._checkpoint).map(({ r, i }) => (
                     <li key={i} className={i === roundIndex ? "current" : ""}>
                       <span className="tb-cutname">
                         {r.round_label || `Round ${r.round_number}`}
@@ -2236,6 +2349,26 @@ export default function QuotesView() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {cuts.some((c) => c._checkpoint) && (
+                <>
+                  <div className="tb-panel-title tb-ckpt-title">Checkpoints (saved automatically)</div>
+                  <ul className="tb-cutlist tb-ckpt-list">
+                    {cuts.map((r, i) => ({ r, i })).filter(({ r }) => r._checkpoint).map(({ r, i }) => (
+                      <li key={i} className={i === roundIndex ? "current" : ""}>
+                        <span className="tb-cutname">
+                          {r.round_label}
+                          {i === roundIndex && <span className="tb-current-tag">current</span>}
+                        </span>
+                        <button
+                          className="btn tb-open-btn"
+                          disabled={i === roundIndex}
+                          onClick={() => openCut(i)}
+                        >Open</button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
               <div className="tb-footnote">Opening a version never deletes another — every save stays on disk.</div>
             </div>
@@ -2384,6 +2517,11 @@ export default function QuotesView() {
                 >?</button>
                 {creativeOpen && (
                   <div className="cc-panel">
+                    <button
+                      className="cc-pin-btn"
+                      onClick={() => { toggleCcPinned(); setCreativeOpen(false); }}
+                      title="Keep the creative context visible beside the editor"
+                    >{ccPinned ? "Unpin side panel" : "⇥ Pin as side panel"}</button>
                     {renderCreativeContext()}
                     <div className="cc-source">from Creative Context agent</div>
                   </div>
@@ -3864,17 +4002,68 @@ export default function QuotesView() {
       padding:3px 9px; border:none; background:none; border-radius:7px; cursor:pointer; }
     .tray-btn:hover { background:rgba(255,255,255,.7); }
     .tray-dot { color: var(--accent); opacity:.45; }
+
+    /* Restore-on-load banner (checkpoint-versioning design) */
+    .restore-banner { display:flex; align-items:center; gap:10px; padding:8px 16px;
+      font-size:13px; background: var(--accent-soft); border-bottom:1px solid var(--border-strong); }
+    .restore-banner button { font-family:inherit; font-size:12px; font-weight:600;
+      padding:3px 10px; border:1px solid var(--border-strong); background:#fff;
+      border-radius:7px; cursor:pointer; }
+    .restore-banner button:hover { background: var(--accent-soft); }
+
+    /* Creative-context side panel (pinned) */
+    .body-row { display:flex; align-items:flex-start; }
+    .body-row > .main { flex:1 1 auto; min-width:0; }
+    .cc-side { flex:0 0 300px; position:sticky; top:0; max-height:100vh; overflow:auto;
+      border-left:1px solid var(--border-strong); background:#fff; padding:14px 16px 24px; }
+    .cc-side-head { display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:8px; gap:8px; }
+    .cc-side-title { font-size:11px; font-weight:700; letter-spacing:.05em;
+      text-transform:uppercase; color: var(--accent); }
+    .cc-side-close { border:none; background:none; cursor:pointer; font-size:14px;
+      opacity:.55; padding:2px 6px; }
+    .cc-side-close:hover { opacity:1; }
+    .cc-pin-btn { display:block; margin:0 0 10px; font-family:inherit; font-size:11.5px;
+      font-weight:600; padding:3px 9px; border:1px solid var(--border-strong);
+      background:none; border-radius:7px; cursor:pointer; color: var(--accent); }
+    .cc-pin-btn:hover { background: var(--accent-soft); }
+    @media (max-width: 1100px) { .cc-side { display:none; } }
+    .tb-ckpt-title { margin-top:10px; opacity:.7; }
   `;
 
   return (
     <div className="viewer">
       <style>{m2Styles}</style>
       {renderHeader()}
-      <main className="main">
-        {view === "library" && renderLibrary()}
-        {view === "timeline" && renderTimeline()}
-        {view === "cuts" && renderCuts()}
-      </main>
+      {restoredFrom && (
+        <div className="restore-banner">
+          <span>
+            Restored your unsaved work from {new Date(restoredFrom).toLocaleString()} — newer
+            than this build.
+          </span>
+          <button onClick={() => setRestoredFrom(null)}>OK</button>
+          <button onClick={revertToBuild}>Revert to built version</button>
+        </div>
+      )}
+      <div className="body-row">
+        <main className="main">
+          {view === "library" && renderLibrary()}
+          {view === "timeline" && renderTimeline()}
+          {view === "cuts" && renderCuts()}
+        </main>
+        {ccPinned && (
+          <aside className="cc-side">
+            <div className="cc-side-head">
+              <span className="cc-side-title">Creative context — {activeActLabel}</span>
+              <button className="cc-side-close" onClick={toggleCcPinned} title="Unpin">✕</button>
+            </div>
+            <div className="cc-side-body">
+              {renderCreativeContext()}
+              <div className="cc-source">from Creative Context agent</div>
+            </div>
+          </aside>
+        )}
+      </div>
       {renderAgentPanel()}
       {renderExportModal()}
     </div>

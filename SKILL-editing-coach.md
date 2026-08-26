@@ -510,3 +510,4 @@ specific adjustments to apply. Read that before your standard inputs.
 *Editing Coach Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *Read `SKILL-edit.md` to understand what you're coaching.*
+*v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*

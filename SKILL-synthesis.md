@@ -302,6 +302,15 @@ Structure:
 - Preserve all original content: quote text, context notes, reasons for orphan
   status
 
+**Also embed the orphans in `tagged-quotes-v[N].json` (v5.13).** Append each
+orphan to the merged pool as a structured entry — same shape as a tagged quote
+(`num` continuing the sequence, `speaker`, `speakerSlug`, `quote`, `startTC`/
+`endTC` when known, single-segment `segments[]`) — plus `"is_orphan": true`
+and `"part": "Orphan"`. The viewer build consumes these directly; the markdown
+file remains the human-readable record of WHY each didn't fit an act. (The
+build's markdown fallback parse is heuristic and historically double-counted —
+St. Andrews R1: 12 orphans rendered as 38 speakerless fragments.)
+
 The orphan file is surfaced to Jeff for review and is loaded into the Edit
 Agent's live viewer alongside the main quote pool.
 
@@ -526,3 +535,4 @@ agents read from `tagged-quotes-v[N].json`.
 *Synthesis Agent — documentary-junior-editor v5.12 (August 2026)*
 
 *Read `SKILL.md` first for pipeline overview and folder structure.*
+*v5.13: orphans are now ALSO embedded in tagged-quotes-v[N].json as is_orphan entries (Phase 3.1) — the viewer consumes them structured.*

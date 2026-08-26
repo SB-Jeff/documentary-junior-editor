@@ -207,6 +207,27 @@ def _narrow_caption_search_window(captions: List[Caption],
     lo_secs = tc_start - buffer_secs
     hi_secs = tc_end + buffer_secs
 
+    # Origin-mismatch guard (v5.13): transcript TCs are interview-relative, but
+    # some source XMLs carry camera-clock (time-of-day) caption offsets — two
+    # clocks with no shared origin. Without this check, a disjoint window
+    # bisects to the end of the caption list and silently searches the wrong
+    # neighborhood (St. Andrews R1: 65/66 quotes dropped). If the requested
+    # window falls entirely outside the captions' actual offset range, disable
+    # narrowing and warn once — full-range search is slow but correct.
+    _first_off = captions[0].offset.numerator / captions[0].offset.denominator
+    _last_off = captions[-1].offset.numerator / captions[-1].offset.denominator
+    if hi_secs < _first_off or lo_secs > _last_off:
+        if not getattr(_narrow_caption_search_window, "_origin_warned", False):
+            _narrow_caption_search_window._origin_warned = True
+            import sys as _sys
+            print(
+                "WARNING: transcript TCs and caption offsets share no common "
+                f"origin (TC window ~{lo_secs:.0f}-{hi_secs:.0f}s vs caption "
+                f"offsets ~{_first_off:.0f}-{_last_off:.0f}s). TC narrowing "
+                "disabled; using full-range caption search (two-clocks note, "
+                "SKILL-fcpxml).", file=_sys.stderr)
+        return full
+
     # Pre-compute caption offsets in seconds (already sorted by offset in
     # parse_source_fcpxml). bisect against the seconds list.
     offsets_secs = [c.offset.numerator / c.offset.denominator for c in captions]

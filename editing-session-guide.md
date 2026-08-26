@@ -542,3 +542,5 @@ git pull
 ---
 
 *v5.12 — August 2026 — see CHANGELOG.md for detailed version history.*
+
+*v5.13 (2026-08-26): checkpoint versioning + canonical editing-versions location + viewer side panel / restore-on-load — see CHANGELOG. Session flow unchanged.*

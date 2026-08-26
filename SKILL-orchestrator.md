@@ -494,3 +494,4 @@ Update `handoffs/[project-slug]/pipeline-state.json`.
 *Pilot reference: 2026 Nanos Boston brand-video (May 14, 2026) ran
 this pattern organically before it was codified; 41 expected output
 files materialized on disk on first attempt.*
+*v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*

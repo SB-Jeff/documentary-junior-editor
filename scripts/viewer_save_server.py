@@ -125,6 +125,8 @@ class SaveHandler(BaseHTTPRequestHandler):
             return
         cuts = []
         for p in sorted(target.glob("*.json")):
+            if p.name.startswith("._"):
+                continue  # macOS AppleDouble sidecar junk (exFAT/SMB volumes)
             stem = p.stem
             entry = {"stem": stem, "path": (Path(rel) / p.name).as_posix()}
             try:

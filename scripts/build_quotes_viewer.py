@@ -84,10 +84,17 @@ def slugify(name: str) -> str:
     return s or "speaker"
 
 
+def not_junk(paths):
+    """Filter out macOS AppleDouble sidecars (._*) — metadata droppings on
+    exFAT/SMB volumes that otherwise surface as phantom versions, break
+    latest-version selection, and crash JSON reads (v5.13)."""
+    return [p for p in paths if not p.name.startswith("._")]
+
+
 def latest_versioned(paths):
     """Return the highest-v[N] Path from an iterable, or None."""
     best, best_n = None, -1
-    for p in paths:
+    for p in not_junk(paths):
         m = re.search(r"v(\d+)", p.name)
         n = int(m.group(1)) if m else 0
         if n >= best_n:
@@ -307,7 +314,7 @@ def parse_premise_md(text: str):
         return ""
     m = re.search(
         r"^##\s*Central narrative.*?$(.*?)(?=^##\s|\Z)",
-        text, re.MULTILINE | re.DOTALL,
+        text, re.MULTILINE | re.DOTALL | re.IGNORECASE,
     )
     body = (m.group(1) if m else "").strip()
     if not body:
@@ -354,6 +361,80 @@ def parse_orphans_md(text: str, start_num: int):
     upstream (Synthesis emitting is_orphan entries inside tagged-quotes-v*.json,
     which this build already consumes) — see the scope flag in the build output.
     """
+    def _mk(num, quote_text, speaker="", rationale=""):
+        return {
+            "num": num,
+            "originalNum": num,
+            "speaker": speaker,
+            "speakerSlug": slugify(speaker) if speaker else "",
+            "role": "",
+            "quote": quote_text,
+            "startTC": "",
+            "endTC": "",
+            "part": "Orphan",
+            "rationale": rationale,
+            "is_orphan": True,
+            "segments": [{"idx": 0, "text": quote_text, "startTC": "", "endTC": ""}],
+        }
+
+    # v5.13 heading-aware pass: the Synthesis/Transcript orphan files structure
+    # each orphan under a "### Orphan ..." heading, inside per-speaker "## Name"
+    # sections. One orphan per heading (multi-line blockquotes joined), speaker
+    # attributed from the section. Falls back to the old per-line heuristic
+    # when the file carries no such headings.
+    if re.search(r"^###\s*Orphan\b", text, re.MULTILINE):
+        orphans = []
+        num = start_num
+        cur_speaker = ""
+        cur_lines, cur_title, in_orphan = [], "", False
+        cur_slug = [""]
+
+        def _flush():
+            nonlocal num, cur_lines, in_orphan
+            if in_orphan and cur_lines:
+                quote_text = " ".join(cur_lines).strip().strip('"“”')
+                if len(quote_text) > 1:
+                    o = _mk(num, quote_text, cur_speaker, cur_title)
+                    if cur_slug[0]:
+                        o["speakerSlug"] = cur_slug[0]
+                    orphans.append(o)
+                    num += 1
+            cur_lines, in_orphan = [], False
+            cur_slug[0] = ""
+
+        for raw in text.splitlines():
+            line = raw.strip()
+            h2 = re.match(r"^##\s+([^#].*)$", line)
+            h3 = re.match(r"^###\s*(Orphan\b.*)$", line)
+            if h3:
+                _flush()
+                in_orphan = True
+                cur_title = h3.group(1).strip().rstrip(" \t#")
+                continue
+            if h2:
+                _flush()
+                cand = h2.group(1).strip()
+                # Speaker section headers are bare names (no colon metadata).
+                if ":" not in cand:
+                    cur_speaker = cand
+                continue
+            if in_orphan:
+                bq = re.match(r">\s*(.*)$", line)
+                if bq:
+                    frag = bq.group(1).strip()
+                    if frag and frag != "[...]":
+                        cur_lines.append(frag)
+                    continue
+                # Explicit slug line ("*speakerSlug: `don` · per-speaker
+                # orphan 2*") — authoritative over the section header's
+                # slugified name; keeps the Speaker filter from splitting.
+                sm = re.search(r"speakerSlug:\s*`?([a-z0-9-]+)`?", line)
+                if sm:
+                    cur_slug[0] = sm.group(1)
+        _flush()
+        return orphans
+
+    # Legacy fallback: lift every blockquote / quoted line as its own orphan.
     orphans = []
     num = start_num
     for raw in text.splitlines():
@@ -367,20 +448,7 @@ def parse_orphans_md(text: str, start_num: int):
             if qm:
                 quote_text = qm.group(1).strip()
         if quote_text and len(quote_text) > 1:
-            orphans.append({
-                "num": num,
-                "originalNum": num,
-                "speaker": "",
-                "speakerSlug": "",
-                "role": "",
-                "quote": quote_text,
-                "startTC": "",
-                "endTC": "",
-                "part": "Orphan",
-                "rationale": "",
-                "is_orphan": True,
-                "segments": [{"idx": 0, "text": quote_text, "startTC": "", "endTC": ""}],
-            })
+            orphans.append(_mk(num, quote_text))
             num += 1
     return orphans
 
@@ -639,7 +707,10 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
     # (or, pre-emit, in editing-versions working rounds). Deliberately matches
     # -tight window variants too — they carry the same target_runtime_seconds
     # and this scan is value-lookup only, not version counting.
-    for f in sorted(handoffs.glob("trimmed-quotes-v*.json")) + sorted((handoffs / "editing-versions").glob("v*.json") if (handoffs / "editing-versions").is_dir() else []):
+    _ev_scan = ssd_root / "handoffs" / slug / "editing-versions"
+    for f in sorted(not_junk(handoffs.glob("trimmed-quotes-v*.json"))) + \
+             sorted(not_junk(_ev_scan.glob("v*.json")) if _ev_scan.is_dir() else []) + \
+             sorted(not_junk((handoffs / "editing-versions").glob("v*.json")) if (handoffs / "editing-versions").is_dir() else []):
         try:
             j = json.loads(f.read_text())
             if "target_runtime_seconds" in j:
@@ -663,13 +734,20 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
     # If none were embedded, parse the markdown. Last resort: a prior viewer HTML.
     if not orphans:
         next_num = (max((q.get("num", 0) for q in source_quotes), default=0)) + 1
-        # Latest version of each distinct orphan-md stem.
+        # Latest version of each distinct orphan-md stem. When the MERGED
+        # orphan file (orphan-quotes-v*.md, from Synthesis) exists, use ONLY it
+        # — the per-speaker *-orphans-v*.md files hold the same orphans and
+        # double-counted them under the old union (v5.13; 12 orphans → 38).
         orphan_md = {}
-        for p in list(handoffs.glob("*orphans-v*.md")) + list(handoffs.glob("orphan-quotes-v*.md")):
-            stem = re.sub(r"-v\d+", "", p.stem)
-            cur = orphan_md.get(stem)
-            if cur is None or latest_versioned([cur, p]) == p:
-                orphan_md[stem] = p
+        merged = latest_versioned(handoffs.glob("orphan-quotes-v*.md"))
+        if merged is not None:
+            orphan_md = {"orphan-quotes": merged}
+        else:
+            for p in not_junk(handoffs.glob("*orphans-v*.md")):
+                stem = re.sub(r"-v\d+", "", p.stem)
+                cur = orphan_md.get(stem)
+                if cur is None or latest_versioned([cur, p]) == p:
+                    orphan_md[stem] = p
         for p in orphan_md.values():
             try:
                 parsed = parse_orphans_md(p.read_text(errors="ignore"), next_num)
@@ -695,6 +773,22 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
                     orphans = d.get("orphan_quotes", []) or []
                 except Exception:
                     pass
+
+    # Reconcile markdown-parsed orphan speakers with the pool's canonical
+    # identities (v5.13): exact-name match wins; else an explicit parsed slug
+    # that exists in the pool keeps the orphan under the same Speaker-filter
+    # entry instead of minting a duplicate slugified variant.
+    if source_quotes and orphans:
+        name_to_slug = {q.get("speaker"): q.get("speakerSlug")
+                        for q in source_quotes
+                        if q.get("speaker") and q.get("speakerSlug")}
+        pool_slugs = set(name_to_slug.values())
+        for o in orphans:
+            if o.get("speaker") in name_to_slug:
+                o["speakerSlug"] = name_to_slug[o["speaker"]]
+            elif o.get("speakerSlug") not in pool_slugs:
+                # Last resort: leave as parsed (renders, filters under itself).
+                pass
 
     # Mark orphans
     for o in orphans:
@@ -754,6 +848,24 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         list(act_labels_override) if act_labels_override
         else as_labels or cc.get("act_labels") or []
     )
+    # Reconcile labels against the pool's actual `part` values (v5.13): the
+    # md parser strips trailing parentheticals as glosses, but a canonical tag
+    # can legitimately carry one ("One (Intro)") — and the viewer matches
+    # part↔label by STRICT equality, so a stripped label renders an empty act.
+    # If a label matches no quote part but an unstripped variant does, use the
+    # pool's form. Never applied to explicit --act-labels overrides.
+    if not act_labels_override and combined_quotes:
+        parts_in_pool = {q.get("part") for q in combined_quotes
+                         if isinstance(q.get("part"), str)}
+        reconciled = []
+        for lbl in act_labels_full:
+            if lbl in parts_in_pool:
+                reconciled.append(lbl)
+                continue
+            variant = next(
+                (p for p in sorted(parts_in_pool) if p.startswith(lbl + " (")), None)
+            reconciled.append(variant or lbl)
+        act_labels_full = reconciled
     # speakers: derived from the quote pool (slugs guaranteed to match) >
     # pipeline-state > act-structure (slugified names).
     speakers = (
@@ -801,8 +913,23 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
 
     # acts: aligned to act_labels (Orphan excluded later in build_data_block),
     # each {label, roadmap}. Match by quoted act name == label; "" if no match.
+    def _roadmap_for(lbl):
+        """Match a canonical act label to its roadmap key, tolerating the
+        Creative Context heading style differing from the tag list (v5.13):
+        exact first; then parenthetical-stripped equality either way; then a
+        heading that ends with the stripped label ("Intro — One" ↔ "One (Intro)")."""
+        if lbl in act_roadmaps:
+            return act_roadmaps[lbl]
+        base = re.sub(r"\s*\(.*\)\s*$", "", lbl).strip()
+        for k, v in act_roadmaps.items():
+            k_base = re.sub(r"\s*\(.*\)\s*$", "", k).strip()
+            if k_base == base or k_base == lbl or k.endswith("— " + base) \
+                    or k.endswith("- " + base):
+                return v
+        return ""
+
     acts = [
-        {"label": lbl, "roadmap": act_roadmaps.get(lbl, "")}
+        {"label": lbl, "roadmap": _roadmap_for(lbl)}
         for lbl in act_labels_full
         if lbl != "Orphan"
     ]
@@ -818,23 +945,28 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         m = re.fullmatch(r"(?:trimmed-quotes-)?v(\d+)\.json", name)
         return int(m.group(1)) if m else None
 
-    # Scan editing-versions in BOTH the resolved handoffs dir AND the viewer's
-    # own runtime folder (ssd_root/handoffs/<slug>/editing-versions). On a flat
-    # project those differ: the pipeline/agent writes rounds to the flat
-    # handoffs/editing-versions/, while the VIEWER saves named cuts under the
-    # slug subfolder. Reading only the resolved dir made viewer-saved cuts
-    # invisible to rebuilds (the Open menu re-found them via the server's /list,
-    # but a rebuild dropped them from the baked rounds). Union both, dedup by
-    # stem with the slug-subfolder (the viewer's authoritative save) winning.
-    ev_dirs = [handoffs / "editing-versions",
-               ssd_root / "handoffs" / slug / "editing-versions"]
-    ev_by_stem = {}
-    for d in ev_dirs:
-        if d.is_dir():
-            for p in d.glob("*.json"):
-                ev_by_stem[p.stem] = p  # later dir wins on stem collision
-    if ev_by_stem:
-        all_ev = list(ev_by_stem.values())
+    # CANONICAL editing-versions location (checkpoint-versioning design,
+    # 2026-08-21): ONE directory — handoffs/<slug>/editing-versions/ — used by
+    # the viewer's saves, the agent's bakes, and this build alike. The old
+    # two-dir union (flat + slug, slug wins on stem collision) let a stale save
+    # silently shadow a fresh bake; it is retired. A flat-layout project with
+    # only the legacy handoffs/editing-versions/ still loads, with a migration
+    # warning. The checkpoints/ subdirectory is deliberately NOT globbed here —
+    # checkpoints reach the Open menu live via the app server's /list.
+    canonical_ev = ssd_root / "handoffs" / slug / "editing-versions"
+    legacy_ev = handoffs / "editing-versions"
+    ev_dir = None
+    canonical_files = not_junk(canonical_ev.glob("*.json")) if canonical_ev.is_dir() else []
+    if canonical_files:
+        ev_dir = canonical_ev
+    elif legacy_ev.resolve() != canonical_ev.resolve() and legacy_ev.is_dir() \
+            and not_junk(legacy_ev.glob("*.json")):
+        ev_dir = legacy_ev
+        print(f"Warning: using LEGACY flat editing-versions ({legacy_ev}). "
+              f"Migrate round files to {canonical_ev} — the canonical location.",
+              file=sys.stderr)
+    if ev_dir is not None:
+        all_ev = not_junk(ev_dir.glob("*.json"))
         numbered = sorted((p for p in all_ev if _round_vnum(p.name) is not None),
                           key=lambda p: _round_vnum(p.name))
         named = sorted((p for p in all_ev if _round_vnum(p.name) is None),
@@ -846,7 +978,7 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         # round, NOT rounds of their own — they must never appear in the round
         # dropdown or shift version numbering (B3).
         round_files = sorted(
-            (p for p in handoffs.glob("trimmed-quotes-v*.json")
+            (p for p in not_junk(handoffs.glob("trimmed-quotes-v*.json"))
              if re.fullmatch(r"trimmed-quotes-v(\d+)\.json", p.name)),
             key=lambda p: int(re.search(r"v(\d+)", p.name).group(1)))
 
@@ -1060,7 +1192,12 @@ def assemble_data_block(data: dict) -> dict:
         "PROJECT_META": project_meta,
         "SOURCE_QUOTES": data["source_quotes"],
         "ROUNDS": migrated_rounds,
-        "INITIAL_ROUND_INDEX": max(0, len(migrated_rounds) - 1),
+        # Open on the latest NUMBERED working round, not whatever named cut
+        # happens to sort last (v5.13 — "Narrative 1 - JB" opened by default).
+        "INITIAL_ROUND_INDEX": next(
+            (i for i in range(len(migrated_rounds) - 1, -1, -1)
+             if re.fullmatch(r"v\d+", str(migrated_rounds[i].get("version", "")))),
+            max(0, len(migrated_rounds) - 1)),
         "INITIAL_FOCUS": None,
         "SEAM_FLAGS": data.get("seam_flags", []),
     }
@@ -1140,6 +1277,18 @@ def substitute_data_block(template_src: str, data_block: dict) -> str:
     out = re.sub(
         r'^const SEAM_FLAGS = \[\];',
         lambda _: f'const SEAM_FLAGS = {js_literal(data_block.get("SEAM_FLAGS", []))};',
+        out,
+        count=1,
+        flags=re.MULTILINE,
+    )
+
+    # BUILD_GENERATED_AT (v5.13): stamp the build time so restore-on-load can
+    # tell when the live working state on disk is newer than this page.
+    import datetime as _dt
+    build_ts = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    out = re.sub(
+        r'^const BUILD_GENERATED_AT = "[^"]*";',
+        lambda _: f'const BUILD_GENERATED_AT = {json.dumps(build_ts)};',
         out,
         count=1,
         flags=re.MULTILINE,

@@ -530,3 +530,4 @@ transcribe, validate, save, emit handoff, update state.
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *AssemblyAI calls delegated to `scripts/transcribe.py` (key path resolved in
 v5.1 — the script reads `ASSEMBLYAI_API_KEY` from `documentary-junior-editor/.env`).*
+*v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*

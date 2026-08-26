@@ -13,7 +13,7 @@ description: |
 ---
 
 # Documentary Junior Editor — Master Skill Index
-### Version 5.12 | August 2026
+### Version 5.13 | August 2026
 
 This is the master index for the documentary-junior-editor skill. Read this file first at
 the start of every session. It describes the pipeline, the folder structure, how agents
@@ -869,3 +869,4 @@ reframe that tipped the release into a major version bump.
 
 *This file is the entry point for the documentary-junior-editor skill. Always read it
 first. Then read the specific agent SKILL file for the session you are starting.*
+*v5.13 (St. Andrews close): checkpoint versioning, canonical editing-versions location, viewer restore-on-load + creative-context side panel, AppleDouble filtering, structured orphans, two-clocks FCPXML guard. See CHANGELOG.*

@@ -756,3 +756,4 @@ Update `pipeline-state.json` to record Skill Review's run:
 *Read Coach's `skill-review-notes.md` before reading anything else from
 the project — it tells you what pipeline-level implications Coach
 already surfaced.*
+*v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*

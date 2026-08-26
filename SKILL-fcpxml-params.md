@@ -303,10 +303,18 @@ N is the next unused version (read `pipeline-state.json` to determine — first
 run is v1; later runs increment). Never overwrite an existing version.
 
 > **Speaker-name authority — names must match the timeline, not the media
-> metadata (added v5.7).** Every speaker key you emit (the per-interview row
-> label and any `### [Speaker Name]` section) MUST exactly match the `speaker`
-> value the Synthesis Agent wrote in `tagged-quotes-v[N].json`. That field is
-> authoritative. Do NOT derive speaker names from the FCPXML `<media name=...>`
+> metadata (added v5.7; hardened v5.13).** Every speaker key you emit (the
+> per-interview row label and any `### [Speaker Name]` section) MUST exactly
+> match the `speaker` value the Synthesis Agent wrote in
+> `tagged-quotes-v[N].json`. That field is authoritative. Do NOT use the
+> transcript FILENAMES as keys ("Don", "Pastor Mike", "Sarah & Josh") — that
+> mismatch produced 100% speaker misses and an empty spine on St. Andrews R1.
+> **Joint interviews must be split explicitly:** one row PER pool speaker
+> ("Sarah Ladd" and "Josh Ladd" as separate rows), each pointing at the same
+> shared source file — never a combined "Sarah & Josh" key, and never a
+> duplicate `<media>` uid for the shared file. Before emitting, diff your key
+> list against `sorted({q["speaker"] for q in tagged-quotes})` — the two sets
+> must be identical. Do NOT derive speaker names from the FCPXML `<media name=...>`
 > metadata — it often uses short names, legacy spellings, or joint-interview
 > groupings that differ from the canonical transcript names (Hammer NER 2026:
 > media metadata `Isiah` / `Mike & Janna Stern` vs. timeline `Isaiah Allen` /
@@ -586,3 +594,4 @@ sections + `_resolve_reference_file` path handling). Open items touching
 this agent: Q9 duplicate-media-ref-ID rule (under review, see Completeness
 Check) and frame-rate/tcFormat sourcing from the source format (tracked in
 `skill-review-2026-06-10.md`).*
+*v5.13: speaker keys hardened — must equal the tagged-quotes `speaker` values; joint interviews split into per-speaker rows.*
