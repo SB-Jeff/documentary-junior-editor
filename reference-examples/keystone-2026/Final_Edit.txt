@@ -1,0 +1,195 @@
+# Keystone 2026 Gala Video — Final Edit
+# Completed: August 31, 2026
+## Video type: Nonprofit Fundraising (gala; evergreen-by-design — no baked-in ask)
+# 2 interview subjects (Brandy — protagonist/navigator; Adero — President & CEO)
+# Final runtime: ~4:26 · 80 clips · 4 fact cards · Jeff's FCP final: xml/Narrative Final for AI.fcpxmld
+# NOTE: quote text below is caption-derived from the final FCPXML (verbatim as played);
+# TCs are the source quote's transcript window. '(frag)' = partial quote; heavy
+# word-level FCP cutting throughout (see lessons-learned.md).
+
+1. Brandy  (source #5)
+"And I am a housing navigator through Americor here at Keystone."
+TC: 00:02:07 - 00:02:19
+
+2. Adero  (source #178 (frag))
+"So people will call in. It might be... They need help with utilities or... they might be getting evicted and they need support or They're having some kind of, Domestic violence."
+TC: 00:17:55 - 00:18:34
+
+3. Adero  (source #179)
+"whatever it is that's going on in their life, they have somebody that walks with them. So that is what that navigator is, really, to help provide that. Resource and that connection. to show them that they're not alone."
+TC: 00:18:34 - 00:19:02
+
+4. Brandy  (source #68 (frag))
+"They don't have any hope. They don't know who else to go to. in crisis."
+TC: 00:26:51 - 00:27:05
+
+5. Brandy  (source #72 (frag))
+"You might hear a person that starts break down crying on the call and like, go ahead, let's take a second."
+TC: 00:27:57 - 00:28:12
+
+6. Brandy  (source #7 (frag))
+"I gotta listen to you 1st to see how I can help you best."
+TC: 00:02:42 - 00:03:21
+
+7. Brandy  (source #72 (frag))
+"Let it out."
+TC: 00:27:57 - 00:28:12
+
+8. Brandy  (source #74)
+"Empathy, it's just built in me. And if I wouldn't have gone through what I had gone through and had the personal lived experience to be able to relate and listen, you can't make it up."
+TC: 00:28:30 - 00:28:46
+
+9. Brandy  (source #145 (frag))
+"I really sat outside. I can relate to this. This is my story."
+TC: 00:56:04 - 00:56:35
+
+--- TITLE CARD ---
+"Brandi's Story"
+
+10. Brandy  (source #9)
+"Ooh, it was rough. For. 7 years straight. It was dealing with homelessness. It was. Dealing with hunger, abusive relationships, trying to find stability."
+TC: 00:03:51 - 00:04:09
+
+--- TITLE CARD ---
+"During that time Brandi was diagnosed with 
+bi-polar disorder and anxiety and started 
+receiving Social Security Disability."
+
+11. Brandy  (source #10 (frag))
+"I just wanna be with my kids. give them that undivided attention that corporate America took away from, you know, as a single mother."
+TC: 00:04:09 - 00:04:37
+
+12. Brandy  (source #21 (frag))
+"Okay, yeah, I'm home, but the only major stress was food."
+TC: 00:08:58 - 00:09:12
+
+13. Brandy  (source #15 (frag))
+"How do I make 1,500 stretch a whole month, paying rent? Keep a vehicle?"
+TC: 00:06:06 - 00:06:28
+
+14. Brandy  (source #11 (frag))
+"The biggest triggers were, Spring breaks, Christmas vacations."
+TC: 00:04:37 - 00:04:55
+
+15. Brandy  (raw pickup — not in tagged pool)
+"Summer."
+NOTE: raw pickup — one-word beat pulled directly from source in FCP (not in tagged pool); confirmed Brandy
+
+16. Brandy  (source #12 (frag))
+"Now, those are times when, typically, people are like, yeah, I get to spend time with my kids go on vacation. And I'm like, I don't even know how I'm gonna feed them."
+TC: 00:04:55 - 00:05:18
+
+17. Brandy  (source #13 (frag))
+"The worst thing for me is to tell my kids, like, Hey, wait, watch what you're eating. Please don't get wake up in the middle of the night and get hungry."
+TC: 00:05:18 - 00:05:32
+
+18. Brandy  (source #24)
+"Just talking to my therapist. Like, what's triggering you? Why are you crying? Why are you sad? And I'm like, the kids are, you know, they, they're at home and I need to figure out how to be able to feed them."
+TC: 00:10:01 - 00:10:19
+
+--- TITLE CARD ---
+"Brandi's Therapist referred her to Keystone."
+
+19. Brandy  (source #27 (frag))
+"My truck had had died. Nobody to give me a ride. I'm a single mom."
+TC: 00:10:48 - 00:11:15
+
+20. Brandy  (source #28 (frag))
+"it's summertime. It's hot."
+TC: 00:11:15 - 00:11:28
+
+21. Brandy  (source #32 (frag))
+"We're gonna have to walk. The night before I couldn't sleep."
+TC: 00:12:12 - 00:12:38
+
+22. Brandy  (source #37 (frag))
+"I felt bad as a mother."
+TC: 00:13:47 - 00:14:05
+
+23. Brandy  (source #32 (frag))
+"I was so humiliated. We're gonna have to cut corners and, like, do different blocks, so people aren't seeing us."
+TC: 00:12:12 - 00:12:38
+
+24. Brandy  (source #37 (frag))
+"We have to get to this food shop because we have nothing. No, I didn't even have hope."
+TC: 00:13:47 - 00:14:05
+
+25. Brandy  (source #36 (frag))
+"It was a good hour. We finally get there."
+TC: 00:13:22 - 00:13:34
+
+26. Brandy  (source #39 (frag))
+"By the time we got our number, we were number 14. So then it's the panic, like, are we gonna get food?"
+TC: 00:14:18 - 00:14:32
+
+27. Brandy  (source #41)
+"And we're watching everybody on university go by who you're assuming knows, oh, really? You're at the food chef."
+TC: 00:14:46 - 00:15:02
+
+28. Adero  (source #174 (frag))
+"It's a humbling situation. They feel like their whole story is written on their back. And it's not."
+TC: 00:15:49 - 00:16:02
+
+29. Brandy  (source #42 (frag))
+"As our number gets called."
+TC: 00:15:14 - 00:15:38
+
+30. Brandy  (source #43 (frag))
+"like, I'm embarrassed. know what I'm doing."
+TC: 00:15:38 - 00:16:14
+
+31. Brandy  (source #44)
+"And the volunteers, as they were guiding us through to show us how to shop, they were so welcoming."
+TC: 00:16:15 - 00:16:23
+
+32. Adero  (source #170 (frag))
+"And in that moment, they get the support that they need. And they walk away feeling empowered. Like their dignity was... Still intact."
+TC: 00:13:06 - 00:13:35
+
+33. Brandy  (source #46 (frag))
+"There was so much pressure taken off me, 'cause I could feed my... Like, I knew this was gonna stretch for a few days, like, we're gonna be fine."
+TC: 00:16:40 - 00:17:04
+
+34. Brandy  (source #48 (frag))
+"And we can keep going back until I figure something out."
+TC: 00:17:58 - 00:18:35
+
+35. Brandy  (source #152 (frag))
+"So after that first time, we came that one time. And I want to say we came one more time after that."
+TC: 00:58:21 - 00:58:42
+
+36. Adero  (source #169)
+"It really is. a bridge to help support individuals during the hardest time."
+TC: 00:12:48 - 00:13:06
+
+37. Brandy  (source #55)
+"Then after that, my daughter... She was like, Mom, you could get a job and get back to work. And I'm like, no, I'm too scared to go back to work."
+TC: 00:21:01 - 00:21:19
+
+38. Brandy  (source #54 (frag))
+"Okay, no, no, maybe I'll start volunteering."
+TC: 00:20:23 - 00:21:01
+
+39. Brandy  (source #56 (frag))
+"got certified as a certified peer recovery specialist. Like, all right, I'm gonna help people in recovery."
+TC: 00:21:19 - 00:21:51
+
+40. Brandy  (source #57)
+"So one of the girls at the place where I was volunteering at, she said, Would you ever think of being a housing navigator? like America has this program, uh, where you're helping people get housing. So I signed up for it."
+TC: 00:21:51 - 00:22:12
+
+--- TITLE CARD ---
+"After finishing her training, Brandy selected 
+Keystone as her Americor Assignment"
+
+41. Adero  (source #163 (frag))
+"She does an amazing job. She connects with so many individuals and so gives them the resources that they need."
+TC: 00:08:20 - 00:09:02
+
+42. Brandy  (source #140 (frag))
+"Everybody out there has got a comeback story. Because you're looking at a living comeback story."
+TC: 00:54:26 - 00:54:50
+
+43. Brandy  (source #82 (frag))
+"This is why I went through all that stuff. This is my why, to be able to give it back at a place who helped me."
+TC: 00:31:31 - 00:31:53

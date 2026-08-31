@@ -17,6 +17,7 @@ The Paper Cut tab should have columns:
   Seq #, Quote #, Speaker, Section, Quote, Start TC, End TC, Notes
 """
 
+import sys
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import openpyxl
@@ -162,6 +163,74 @@ def _tc_string_to_seconds(tc_str: str) -> Optional[float]:
     elif len(ints) == 1:
         return ints[0] + decimal
     return None
+
+
+def _seconds_to_fraction(seconds: float, denominator: int = 24000) -> "FractionTime":
+    """
+    Convert a float seconds value to a FractionTime at the given denominator,
+    rounding to the nearest tick. Clamps negative input to 0.
+
+    NOTE: this does NOT snap to the frame grid — the result can land between
+    frames. Do not use this for any synthesized (non-caption-derived)
+    duration or offset that ends up on the spine; use
+    _quantize_to_frame_duration() for those instead (see its docstring for
+    why). Kept only as a low-level building block.
+    """
+    if seconds <= 0:
+        seconds = 0.0
+    return FractionTime(round(seconds * denominator), denominator)
+
+
+# A single frame at 23.976fps NTSC (NDF) — the frame rate this pipeline's
+# FCPXML output is fixed to (SKILL-fcpxml.md: "Frame rate: 23.98fps NTSC").
+FRAME_DURATION = FractionTime(1001, 24000)
+
+
+def _quantize_to_frame_duration(seconds: float, min_frames: int = 1) -> "FractionTime":
+    """
+    Round a float-seconds value to the nearest positive integer multiple of
+    the sequence frame duration (1001/24000s), enforcing a minimum of
+    `min_frames` frame(s) so the result is never non-positive.
+
+    Every duration or offset that ends up on the spine must fall on an exact
+    frame boundary or FCP flags it "not on an edit frame boundary" on
+    import. Caption-derived times are already frame-aligned (they come
+    straight from the source FCPXML's own <caption>/<asset-clip>
+    attributes, which Final Cut Pro wrote) and must NOT be passed through
+    this. This helper exists specifically for SYNTHESIZED values that don't
+    come from a caption: the negative-duration / mis-anchored-match
+    fallback duration, the 1.0s last-resort floor, gap/title-card
+    durations, and (for a future implementer) any estimated_seconds-derived
+    duration for title_card / interstitial / context_beat rendering.
+
+    Keystone 2026 R1: a single un-quantized fallback duration
+    (96000/24000s — one frame short of an exact 96 frames) shifted every
+    subsequent spine offset off the frame grid, producing 67 "not on an
+    edit frame boundary" warnings in FCP on import. Always route synthesized
+    durations through this function to prevent that class of defect.
+    """
+    frame_secs = FRAME_DURATION.numerator / FRAME_DURATION.denominator
+    frames = max(min_frames, round(seconds / frame_secs))
+    return FractionTime(frames * FRAME_DURATION.numerator, FRAME_DURATION.denominator)
+
+
+def _is_on_frame_boundary(value: "FractionTime") -> bool:
+    """
+    True if `value` (an offset or duration) is an exact integer multiple of
+    the frame duration (1001/24000s), regardless of what denominator it's
+    expressed in. Used by the post-build assertion and by verify_output()'s
+    independent re-check.
+    """
+    if value.numerator == 0:
+        return True
+    # Compare on a common denominator rather than assuming `value` is
+    # already in 24000ths — FractionTime arithmetic can produce other
+    # denominators (see __add__/__sub__'s common-denominator branch).
+    common = (value.denominator * FRAME_DURATION.denominator
+              // FractionTime._gcd(value.denominator, FRAME_DURATION.denominator))
+    scaled_value = value.numerator * (common // value.denominator)
+    scaled_frame = FRAME_DURATION.numerator * (common // FRAME_DURATION.denominator)
+    return scaled_value % scaled_frame == 0
 
 
 def _narrow_caption_search_window(captions: List[Caption],
@@ -1026,6 +1095,17 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
                   f"1 clip (score={segments[0][2]:.2f})")
 
         for seg_idx, (start_idx, end_idx, score) in enumerate(segments):
+            orig_start_idx, orig_end_idx = start_idx, end_idx
+            was_inverted = end_idx < start_idx
+            if was_inverted:
+                # Inverted span — produced by find_captions_for_quote()'s
+                # sentence-merge loop matching a later sentence to an
+                # EARLIER caption than a prior sentence (seen on
+                # low-confidence / short-repetitive-phrase matches during a
+                # full-range two-clocks search). Swap first so we have a
+                # valid ordering to evaluate below.
+                start_idx, end_idx = end_idx, start_idx
+
             start_caption = captions[start_idx]
             end_caption = captions[end_idx]
 
@@ -1035,6 +1115,96 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
 
             clip_end = end_caption.end_offset() + padding
             clip_duration = clip_end - clip_start
+
+            needs_fallback = clip_duration.numerator <= 0
+            if was_inverted and not needs_fallback:
+                # The swap produced SOME positive span, but that doesn't
+                # mean it's the RIGHT span. An inversion means the two
+                # half-matches individually landed in different, disagreeing
+                # neighborhoods of the interview — "simply swapped" (the
+                # matches were adjacent, just recorded in reverse order) and
+                # "mis-anchored" (the matches are genuinely far apart,
+                # probably because at least one landed on the wrong
+                # material) look identical up to this point. Distinguish
+                # them by comparing the swapped span's duration against the
+                # segment's own transcript-TC estimate (independent of
+                # caption matching): a merely-reversed pair stays close to
+                # the expected length; a mis-anchored pair balloons far
+                # past it (Keystone 2026 #55 seg 3: matched span 20.2s vs a
+                # ~4s transcript-TC estimate — the swap "fixed" the sign but
+                # produced a clip padded with unrelated, already-used
+                # material from earlier in the interview).
+                clip_secs = clip_duration.numerator / clip_duration.denominator
+                tc_start_s = _tc_string_to_seconds(quote_info.get('start_tc'))
+                tc_end_s = _tc_string_to_seconds(quote_info.get('end_tc'))
+                if (tc_start_s is not None and tc_end_s is not None
+                        and tc_end_s > tc_start_s):
+                    expected_secs = tc_end_s - tc_start_s
+                    tolerance = max(expected_secs * 3, expected_secs + 10.0)
+                else:
+                    expected_secs = None
+                    tolerance = 30.0  # no TC estimate — absolute cap
+                if clip_secs > tolerance:
+                    needs_fallback = True
+
+            if needs_fallback:
+                # Never emit a non-positive-duration clip, and never emit a
+                # swapped-but-mis-anchored clip whose span is wildly larger
+                # than the segment's expected length. Fall back to the
+                # segment's own transcript-TC span, anchored at the
+                # caption-matched clip_start we already have (best available
+                # anchor — it's either the original match's start, or the
+                # earlier of the two swapped bounds), so FCP still gets a
+                # short, plausibly-positioned, playable clip. Record it as a
+                # low-confidence note for review rather than guessing at
+                # exact content.
+                tc_start_s = _tc_string_to_seconds(quote_info.get('start_tc'))
+                tc_end_s = _tc_string_to_seconds(quote_info.get('end_tc'))
+                if (tc_start_s is not None and tc_end_s is not None
+                        and tc_end_s > tc_start_s):
+                    fallback_secs = tc_end_s - tc_start_s
+                else:
+                    fallback_secs = 1.0  # last-resort floor; never <= 0
+                kind = ('negative_duration_fallback' if clip_duration.numerator <= 0
+                        else 'mis_anchored_duration_fallback')
+                # Quantized to the frame grid — clip_start is already frame-
+                # aligned (derived from a caption offset minus a 2-frame
+                # padding), but fallback_secs is a raw float seconds value
+                # and must be snapped to an integer frame count or every
+                # subsequent spine offset drifts off-grid (see
+                # _quantize_to_frame_duration()'s docstring).
+                clip_duration = _quantize_to_frame_duration(fallback_secs)
+                clip_end = clip_start + clip_duration
+                print(
+                    f"Warning: quote #{quote_info.get('quote_num', '?')} "
+                    f"[{speaker}] segment {seg_idx + 1}: caption match "
+                    f"(captions {orig_start_idx}-{orig_end_idx}, "
+                    f"score={score:.2f}) was {kind}; "
+                    f"falling back to transcript-TC duration "
+                    f"{fallback_secs:.2f}s anchored at the matched start.",
+                    file=sys.stderr,
+                )
+                build_report['truncations'].append({
+                    'quote_num': quote_info.get('quote_num'),
+                    'speaker': speaker,
+                    'entry': quote_info.get('notes', ''),
+                    'text': quote_text,
+                    'kind': kind,
+                    'captions': f"{orig_start_idx}-{orig_end_idx}",
+                    'score': round(score, 3),
+                    'fallback_duration_s': round(fallback_secs, 3),
+                })
+                # The original (start_idx, end_idx) range is no longer
+                # trusted for TIMING (that's why we fell back), so it must
+                # not be trusted for the caption OVERLAY either — embedding
+                # all of captions[start_idx..end_idx] here would still show
+                # disagreeing/wrong text spanning the mis-anchored range
+                # even though the clip itself now plays a short, honest
+                # fallback window. Collapse the embed range to just the
+                # single anchor caption at start_idx so any overlay shown
+                # is at least the one caption nearest the chosen anchor,
+                # not a multi-caption span known to be unreliable.
+                end_idx = start_idx
 
             # Branch on clip_type to emit the right spine element.
             if clip_type == "single_clip":
@@ -1094,6 +1264,48 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
             if len(segments) > 1:
                 seg_dur = clip_duration.numerator / clip_duration.denominator
                 print(f"    Segment {seg_idx + 1}: captions {start_idx}-{end_idx}, {seg_dur:.1f}s")
+
+    # Hard post-build assertions (Keystone 2026 R1 bug fixes):
+    #
+    # 1. No clip on the spine may have a non-positive duration. The
+    #    per-clip swap/fallback logic above should make this unreachable,
+    #    but this is the last line of defense before spine_clips is handed
+    #    off to be written to disk — fail loudly rather than silently ship
+    #    a clip FCP will warn on and discard at import.
+    # 2. Every spine element's offset AND duration must land on an exact
+    #    frame boundary (integer multiple of 1001/24000s). Caption-derived
+    #    values already do; only a synthesized value that skipped
+    #    _quantize_to_frame_duration() could violate this — and because
+    #    offset is cumulative (each clip's offset is the running sum of
+    #    every prior clip's duration), a single off-grid duration drags
+    #    every later spine offset off-grid with it (Keystone 2026 R1: one
+    #    un-quantized fallback produced 67 "not on an edit frame boundary"
+    #    warnings in FCP, not just one).
+    for clip_el in spine_clips:
+        if clip_el.tag not in ('mc-clip', 'asset-clip', 'gap'):
+            continue
+        dur = FractionTime.from_string(clip_el.get('duration', '0s'))
+        off = FractionTime.from_string(clip_el.get('offset', '0s'))
+        if clip_el.tag != 'gap' and dur.numerator <= 0:
+            raise AssertionError(
+                f"build_spine() produced a non-positive-duration "
+                f"{clip_el.tag} (name={clip_el.get('name')!r}, "
+                f"offset={clip_el.get('offset')!r}, "
+                f"duration={clip_el.get('duration')!r}). This should be "
+                "unreachable after the swap/fallback handling above; "
+                "treat as a generation bug."
+            )
+        if not _is_on_frame_boundary(dur) or not _is_on_frame_boundary(off):
+            raise AssertionError(
+                f"build_spine() produced an off-frame-boundary {clip_el.tag} "
+                f"(name={clip_el.get('name')!r}, "
+                f"offset={clip_el.get('offset')!r} "
+                f"(on-grid={_is_on_frame_boundary(off)}), "
+                f"duration={clip_el.get('duration')!r} "
+                f"(on-grid={_is_on_frame_boundary(dur)})). Every synthesized "
+                "duration/offset must go through _quantize_to_frame_duration() "
+                "— treat as a generation bug."
+            )
 
     return spine_clips, text_style_counter, build_report
 

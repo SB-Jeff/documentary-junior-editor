@@ -1899,6 +1899,15 @@ no exception ever adds, changes, or reorders words.
   changes — where conviction, vulnerability, or excitement comes through —
   keep it even if it is not the most informationally dense.
 
+- **Leave word-level economy to Final Cut (Jeff's directive, keystone-2026
+  2026-08-31).** Breath-level and single-word cuts — an "um," a one-word echo,
+  the tail syllable of a sentence — are "a judgment you can only make when
+  hearing the clip." The paper cut's scope is selection, structure, sequence,
+  and sentence/segment-level trims; do not attempt, flag, or agonize over
+  sub-sentence word cuts in the edit session. (Related: transcript attribution
+  flags on one-word utterances are guesses — label them as such, never as
+  facts.)
+
 - **Don't over-trim.** A timeline entry that is too short can lose its
   conversational naturalness. A speaker who says "It was — I mean, I
   couldn't believe it. We had never seen numbers like that." loses
@@ -2413,8 +2422,16 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.13 (August 2026)*
+*Edit Agent — documentary-junior-editor v5.14 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
+*v5.14 (Keystone 2026 close): word-level cuts declared FCP territory (explicit
+Jeff directive — see Trimming Guidelines). Editorial-taste findings from the
+close (mission-scope the flashback; one full-circle device max; the film
+demonstrates / the event solicits; fact-card register) deliberately NOT added
+as rules — first sightings, recorded in
+reference-examples/keystone-2026/lessons-learned.md per the three-occurrence
+discipline. FCPXML build/verify hardened (negative-duration, mis-anchor, and
+frame-boundary guards) — see scripts history.*
 *v5.13 (St. Andrews close): checkpoint-versioning persistence protocol
 (canonical editing-versions location, checkpoint-before-touching, bake-on-read,
 server health check); cold-read critic now told who the film is for; serial

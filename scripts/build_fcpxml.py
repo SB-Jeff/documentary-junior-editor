@@ -48,6 +48,8 @@ from generate_fcpxml import (  # noqa: E402
     generate_fcpxml,
     normalize_label,
     _canonicalize_section,
+    FractionTime,
+    _is_on_frame_boundary,
 )
 
 
@@ -718,9 +720,20 @@ def _load_v5(data: dict, source_pool: dict, path: str) -> dict:
     for idx, entry in enumerate(entries):
         if not isinstance(entry, dict):
             continue
-        if "source_quote_id" in entry:
+        if entry.get("source_quote_id") is not None:
             # Spoken-quote entry — expand into one v4-shaped dict per kept
             # segment. The list extension preserves playback order.
+            #
+            # Bug fix (Keystone 2026 R1): non-spoken entries (interstitial /
+            # context_beat) emitted by the Edit Agent's segments-shape export
+            # carry an explicit "source_quote_id": null key. The old
+            # `"source_quote_id" in entry` membership check matched that key
+            # even though its value is None, misrouting these entries into
+            # _v5_entry_to_segment_quotes() which then raised "has no
+            # source_quote_id". Checking the value (not just key presence)
+            # routes null-id entries to the type-based branch below instead,
+            # matching the documented (warn-and-drop) handling for
+            # title_card/interstitial/context_beat entries.
             quotes.extend(
                 _v5_entry_to_segment_quotes(entry, source_pool, seq_counter)
             )
@@ -1060,6 +1073,69 @@ def verify_output(output_path: str, paper_cuts: list, params: dict,
     divider_gaps = [el for el in spine
                     if el.tag == "gap" and el.find("title") is not None]
 
+    # ── non-positive-duration clips (Keystone 2026 R1 negative-duration bug)
+    # A caption-matched span with end <= start produces a negative/zero
+    # duration clip that FCP flags "unexpected value" / "invalid edit with
+    # no respective media" and silently discards on import. generate_fcpxml
+    # now guards against this at emission time (swap-or-fallback + a hard
+    # post-build assertion), but verify independently re-checks the actual
+    # XML so this class of defect can never again slip through unnoticed —
+    # belt and suspenders, since the assertion only protects one code path.
+    non_positive_durations = []
+    for i, el in enumerate(xml_clips):
+        dur = _frac_secs(el.get("duration", "0s"))
+        if dur <= 0:
+            non_positive_durations.append({
+                "index": i,
+                "tag": el.tag,
+                "name": el.get("name"),
+                "offset": el.get("offset"),
+                "start": el.get("start"),
+                "duration": el.get("duration"),
+            })
+    if non_positive_durations:
+        failures.append(
+            f"{len(non_positive_durations)} clip(s) with non-positive "
+            "duration in the output spine (see 'non_positive_durations') — "
+            "FCP will discard these on import"
+        )
+
+    # ── off-frame-boundary offsets/durations (Keystone 2026 R1) ────────────
+    # A synthesized (non-caption-derived) duration that isn't an exact
+    # integer multiple of the frame duration (1001/24000s) doesn't just
+    # affect its own clip — offset is a cumulative running sum, so one
+    # off-grid duration drags every later spine offset off-grid too. FCP
+    # flags each as "not on an edit frame boundary" on import. generate_fcpxml
+    # now quantizes every synthesized value via _quantize_to_frame_duration()
+    # and asserts on this at build time, but verify independently re-checks
+    # the actual XML (every spine element, clips and dividers alike) so this
+    # class of defect can never again slip through unnoticed.
+    off_frame_boundary = []
+    for i, el in enumerate(spine):
+        if el.tag not in ("mc-clip", "asset-clip", "gap"):
+            continue
+        off = FractionTime.from_string(el.get("offset", "0s"))
+        dur = FractionTime.from_string(el.get("duration", "0s"))
+        off_ok = _is_on_frame_boundary(off)
+        dur_ok = _is_on_frame_boundary(dur)
+        if not off_ok or not dur_ok:
+            off_frame_boundary.append({
+                "spine_index": i,
+                "tag": el.tag,
+                "name": el.get("name"),
+                "offset": el.get("offset"),
+                "duration": el.get("duration"),
+                "offset_on_grid": off_ok,
+                "duration_on_grid": dur_ok,
+            })
+    if off_frame_boundary:
+        failures.append(
+            f"{len(off_frame_boundary)} spine element(s) with an "
+            "off-frame-boundary offset or duration (see "
+            "'off_frame_boundary') — FCP will warn \"not on an edit frame "
+            "boundary\" on import"
+        )
+
     report_clips = build_report.get("clips", [])
     truncations = build_report.get("truncations", [])
     speaker_misses = build_report.get("speaker_misses", [])
@@ -1254,6 +1330,8 @@ def verify_output(output_path: str, paper_cuts: list, params: dict,
             "clips_expected_from_build": len(report_clips),
             "spine_elements": len(list(spine)),
         },
+        "non_positive_durations": non_positive_durations,
+        "off_frame_boundary": off_frame_boundary,
         "per_speaker": per_speaker,
         "per_entry": per_entry,
         "truncations": truncations,
@@ -1286,7 +1364,11 @@ def print_verify_summary(report: dict):
           f"fit_gaps={ad.get('titles_consistent_with_gaps')})")
     n_trunc = len(report.get("truncations", []))
     n_miss = len(report.get("speaker_misses", []))
-    print(f"[verify] truncations: {n_trunc}; speaker misses: {n_miss}")
+    n_negdur = len(report.get("non_positive_durations", []))
+    n_offgrid = len(report.get("off_frame_boundary", []))
+    print(f"[verify] truncations: {n_trunc}; speaker misses: {n_miss}; "
+          f"non-positive-duration clips: {n_negdur}; "
+          f"off-frame-boundary elements: {n_offgrid}")
     for f in report.get("failures", []):
         print(f"[verify] FAIL: {f}")
 
