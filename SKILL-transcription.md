@@ -531,3 +531,4 @@ transcribe, validate, save, emit handoff, update state.
 *AssemblyAI calls delegated to `scripts/transcribe.py` (key path resolved in
 v5.1 — the script reads `ASSEMBLYAI_API_KEY` from `documentary-junior-editor/.env`).*
 *v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*
+*v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*

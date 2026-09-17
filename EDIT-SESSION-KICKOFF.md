@@ -40,9 +40,9 @@ python3 scripts/viewer_save_server.py \
   --serve <ssd-root>/handoffs/<slug>/<slug>_quotes_view.html \
   --root <ssd-root>
 ```
-Open **http://127.0.0.1:8765/** in Chrome. The top-bar pill reads **● Saved**
-when the viewer is autosaving `handoffs/<slug>/viewer-state.json` — the channel
-the agent reads each turn. Leave this running for the whole session.
+Open **http://127.0.0.1:8765/** in Chrome. The strip's pill reads **● Synced**
+when the viewer is autosaving `handoffs/<slug>/edits/main/current.json` — the
+channel the agent reads each turn. Leave this running for the whole session.
 
 ## 3 — Start the Edit Agent (a fresh Claude Code session, on the branch)
 Paste this to a new session:
@@ -55,14 +55,19 @@ Paste this to a new session:
 > `<ssd-root>/handoffs/`. The viewer is already built and served at
 > http://127.0.0.1:8765/ (app server running, `--root <ssd-root>`).
 >
-> Each turn: first read `handoffs/<slug>/viewer-state.json` to see my current
-> cut, then write your read-acknowledgement to `handoffs/<slug>/agent-cursor.json`
+> Each turn: first read `handoffs/<slug>/edits/<open edit>/current.json` (main
+> unless my edit chip says otherwise) to see my current cut, then write your
+> read-acknowledgement to `handoffs/<slug>/agent-cursor.json`
 > (`{ "read_at": "<ISO now>", "message": "<one line>" }`) so my staleness pill
-> clears. Work one act at a time, you first: present your categorization and flag
-> low-confidence tags; build the over-inclusive Timeline with a visible
-> `agent_note` for every plausible quote you leave out (write
-> `handoffs/<slug>/edit-agent-notes-v[N].json` with `by_num` + `seam_flags`, then
-> rebuild — step 1 — so they render); refine with me until I call the act done.
+> clears. Versioning is yours to write: when I say "move to Act N" snapshot my
+> step (`scripts/edits_store.py snapshot --who jeff --label "..."`), and land
+> every proposal with `scripts/edits_store.py propose` — it becomes a step and my
+> viewer adopts it live (no rebuild, no reload). Work one act at a time, you
+> first: present your categorization and flag low-confidence tags; build the
+> over-inclusive Timeline with a visible `agent_note` for every plausible quote
+> you leave out (write `handoffs/<slug>/edit-agent-notes-v[N].json` with
+> `by_num` + `seam_flags`, then rebuild — step 1 — so they render); refine with
+> me until I call the act done.
 > When I queue an export (`handoffs/<slug>/export-request.json`, status
 > "requested"), launch the FCPXML Agent yourself via the Task tool per
 > `SKILL-fcpxml.md`, save the `.fcpxml`, set the request status to "built", and
@@ -71,13 +76,18 @@ Paste this to a new session:
 > Start with the Intro act.
 
 ## Notes / known frictions
-- **Live loop:** you edit in the viewer → it autosaves `viewer-state.json` → you
-  message the agent in chat → it reads state + writes `agent-cursor.json` (pill
-  flips green) → it responds. No copy-paste, no new session.
+- **Live loop:** you edit in the viewer → it autosaves `edits/<edit>/current.json`
+  → you message the agent in chat → it reads state + writes `agent-cursor.json`
+  (pill flips green) → it responds. Its proposals land as steps you see within
+  seconds (banner + History). No copy-paste, no new session.
+- **Versions (v5.15):** one Main edit, always saved. **History** = the steps the
+  agent writes as you move act to act ("Claude: Act 1 proposal", "Jeff: Act 1
+  revision") — View any step read-only, Restore it as a new step. **Save as**
+  forks an alternative edit; the agent assists on whichever edit is open.
 - **agent_note + seam-flags are baked at build time** (from
   `edit-agent-notes-v[N].json`). After the agent writes that file it must re-run
   the build (step 1); reload the tab to see the reasons/flags. (Cut membership,
-  trims, splits, and saved cuts are live via `viewer-state.json` / Open and do
+  trims, splits, edits and steps are live via `current.json` / History and do
   NOT need a rebuild — only the agent's notes do.)
 - **Export** never leaves the session: the viewer queues `export-request.json`;
   the Edit Agent fulfils it by launching the FCPXML Agent (Task tool).

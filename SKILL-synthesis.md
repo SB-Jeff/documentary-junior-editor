@@ -536,3 +536,4 @@ agents read from `tagged-quotes-v[N].json`.
 
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.13: orphans are now ALSO embedded in tagged-quotes-v[N].json as is_orphan entries (Phase 3.1) — the viewer consumes them structured.*
+*v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*

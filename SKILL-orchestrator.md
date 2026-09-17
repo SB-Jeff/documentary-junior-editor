@@ -495,3 +495,4 @@ Update `handoffs/[project-slug]/pipeline-state.json`.
 this pattern organically before it was codified; 41 expected output
 files materialized on disk on first attempt.*
 *v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*
+*v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*

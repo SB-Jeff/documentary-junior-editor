@@ -595,3 +595,4 @@ this agent: Q9 duplicate-media-ref-ID rule (under review, see Completeness
 Check) and frame-rate/tcFormat sourcing from the source format (tracked in
 `skill-review-2026-06-10.md`).*
 *v5.13: speaker keys hardened — must equal the tagged-quotes `speaker` values; joint interviews split into per-speaker rows.*
+*v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*

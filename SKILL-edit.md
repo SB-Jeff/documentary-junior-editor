@@ -206,14 +206,18 @@ opening assembly and the applied cut proposal (see "The per-act cadence") — vi
 the cut-seeding mechanics, announced, never silently mid-conversation. The
 viewer and you share one channel — a file on disk.
 
-**The shared-state file: `handoffs/[project-slug]/viewer-state.json`.** The
-viewer autosaves its full working state to this file on every edit (the cut, what
-is in the Timeline vs. Cuts, trims, splits, the act/view/mode Jeff is looking at,
-and any tweaks or message he is composing). **Read it at the top of every one of
-your turns.** That file — not the chat scrollback — is the current truth of the
-cut. This is the "live partner" mechanism: you see the viewer's current state the
-instant it is your turn to speak. No copy-paste, no PDF-printing, no asking Jeff
-to describe what he changed.
+**The shared-state file: `handoffs/[project-slug]/edits/<edit>/current.json`.**
+The viewer autosaves the open edit's full working state to this file on every
+edit (the cut, what is in the Timeline vs. Cuts, trims, splits, the act/view/mode
+Jeff is looking at, and any tweaks or message he is composing). **Read it at the
+top of every one of your turns.** That file — not the chat scrollback — is the
+current truth of the cut. `main` is the Main edit; Jeff may have forked an
+alternative with **Save as** (`tighter-cut`, `social-30s`) — **you assist on
+whichever edit is OPEN** (the viewer's edit chip; `edit` inside the file). This
+is the "live partner" mechanism: you see the viewer's current state the instant
+it is your turn to speak. No copy-paste, no PDF-printing, no asking Jeff to
+describe what he changed. (v5.15 retired `viewer-state.json` and `editing-versions/`;
+the build migrates them once. See "Session persistence protocol".)
 
 **You propose; Jeff disposes — in the viewer.** Do not silently mutate the cut
 behind Jeff's back. Two ways changes reach the viewer:
@@ -223,19 +227,19 @@ behind Jeff's back. Two ways changes reach the viewer:
   the viewer with a drag, a Cut, a trim. The viewer auto-scrolls to and
   highlights whatever quote you name, so he finds it instantly.
 - **Your opening proposal per act** — the over-inclusive first build (Phase 3).
-  Here you go first and write the cut yourself: emit an `editing-versions` JSON
-  with your proposed Timeline + `agent_note`s, run the build, and Jeff opens it.
-  After that, he drives.
+  Here you go first and write the cut yourself: land it as a **step** with
+  `scripts/edits_store.py propose` (see "Session persistence protocol"); the
+  viewer adopts it live — no rebuild, no reload. After that, he drives.
 
 **The staleness cue is honest — and there is no Send button.** The viewer's
 agent panel shows "✓ Reading your live edits" until Jeff edits after your last
 read, then flips amber "↻ You've changed things since I last looked." It clears
 itself when you write your read-acknowledgement (`agent-cursor.json`, below) with
 a `read_at` newer than his last edit — the viewer polls for it. So the loop is:
-Jeff edits → talks to you in chat → you read `viewer-state.json` → you write
+Jeff edits → talks to you in chat → you read `current.json` → you write
 `agent-cursor.json` → his cue goes green. No copy-paste, no manual send.
 
-**If the chat and `viewer-state.json` disagree, the file is right.** The viewer
+**If the chat and `current.json` disagree, the file is right.** The viewer
 is the deliverable, not the chat. Never reason from a stale mental model of the
 cut; re-read the state file.
 
@@ -348,16 +352,17 @@ reduction in one message.
    the final edit?"*, fence-sitters in (Phase 3). Every entry carries its
    reason; **every** quote left out carries an `agent_note`. Run the
    **cold-read critic** on the sequenced act (below) and act on it before
-   anything ships. Seed via the `editing-versions` JSON + rebuild (Phase 2);
-   Jeff opens it. Hand the turn back — with the critic's note.
+   anything ships. Land it with `edits_store.py propose` (it becomes a step;
+   the viewer adopts it live). Hand the turn back — with the critic's note.
 2. **Jeff's assembly pass.** He reacts in the viewer + chat; you respond and
    iterate **at the selection/order level** — don't push reduction yet. Loop
    until he signals the assembly is settled.
 3. **Propose cuts — by applying them.** Make the winnowing call yourself: move
    your cut candidates to the **Cuts bin** (tight → loose — fully recoverable,
    that's what the bin is for), each with its cut reason in `notes`, delivered
-   through the cut-seeding mechanics (confirm Jeff's state is saved, emit the
-   updated cut, he reloads). Run the **cold-read critic** on the reduced
+   with `edits_store.py propose` (snapshot Jeff's step first — see the
+   persistence protocol; nothing to save, nothing to reload). Run the
+   **cold-read critic** on the reduced
    sequence before it ships — a winnowed act breaks differently than a wide
    one. Announce a grouped summary in chat: what you cut and why, what's
    load-bearing, plus any trims — with the critic's note. Hand the turn back.
@@ -382,35 +387,58 @@ Every correction Jeff makes (a bucket you got wrong, a quote you cut that he
 restores, a trim he loosens) is captured in the tweak log and is training signal
 for the Editing Coach. That is *why* you go first.
 
-### Session persistence protocol — checkpoints (v5.13, agreed with Jeff)
+### Session persistence protocol — edits and steps (v5.15, agreed with Jeff)
 
-Versioning follows the Final Cut model: always-saving, named snapshots —
-Jeff's Save button is for NAMING states, never load-bearing for persistence.
-The agent is the persistence engine:
+Versioning follows the Final Cut model: **one main edit that is always saved,
+an annotated step history, and named alternatives.** Jeff never presses a save
+button for persistence — the viewer autosaves; **you write the history.**
 
-- **One canonical location.** ALL round files, named cuts, and checkpoints
-  live in `handoffs/[project-slug]/editing-versions/` — the slug subfolder
-  even on flat-layout projects (the viewer saves there; v5.13 retired the
-  flat/slug union that let a stale save shadow a fresh bake). Never write a
-  round file anywhere else.
+- **The layout.** `handoffs/[project-slug]/edits/<edit>/` holds
+  `current.json` (the always-saved working state — what you read and what you
+  propose into), `edit.json` (name, `forked_from`) and
+  `steps/NNN-<who>-<label>.json` (read-only snapshots, `who` = jeff | claude |
+  pipeline). `main` is the Main edit; the viewer's **Save as** forks
+  alternatives (`tighter-cut`, …), each with its own steps. **Work on the
+  OPEN edit only** — the viewer's edit chip / `current.json`'s `edit` field
+  says which. Never write `editing-versions/`, `checkpoints/`, or
+  `current.json` (retired in v5.15; the build migrates a legacy layout
+  once). `scripts/edits_store.py list --root <ssd-root> --slug <slug>` prints
+  every edit with its steps.
 - **Top of every turn, before anything else:** confirm the app server is up
   (`curl -s http://127.0.0.1:8765/ping`); restart it if dead — background
   servers die with their host session, and a dead server means you are blind
   and the viewer can't save.
-- **Checkpoint before touching.** When your state read shows new ops from
-  Jeff, snapshot his work FIRST: write the current state's entries as
-  `editing-versions/checkpoints/NNN-jeff-<label>.json` (NNN = next number,
-  label = a few words, e.g. `004-jeff-act1-reduction`; same payload shape as
-  a round file), then bake into the round file. Every proposal you seed also
-  checkpoints as `NNN-agent-<label>.json`. Checkpoints are append-only —
-  never overwritten, never deleted; the viewer lists them in its Open menu.
-- **Bake on read.** After checkpointing, fold Jeff's ops into the round
-  file (`v[N].json`) and rebuild, so a tab reload can never lose work — the
-  viewer's restore-on-load banner (v5.13) is the second net, not the first.
+- **Close Jeff's step when he hands off.** When Jeff says "let's move to Act
+  2", "done with this act", or otherwise hands the act back — and always
+  before you land a proposal on top of his work — snapshot his state FIRST:
+  `python3 scripts/edits_store.py snapshot --root <ssd-root> --slug <slug>
+  --edit <open edit> --who jeff --label "Act 1 revision"` (label = a few words
+  in the shape "Act 1 assembly pass" / "Act 2 reduction"; the command skips
+  itself when nothing changed since the latest step). No button for Jeff; you
+  infer the step from the conversation.
+- **Land every proposal as a step.** Beat 1 (opening assembly), Beat 3 (the
+  applied cut proposal) and any larger restructure go through
+  `python3 scripts/edits_store.py propose --root <ssd-root> --slug <slug>
+  --edit <open edit> --entries <proposal.json> --label "Act 2 proposal"
+  --note "<one line>"`. The entries file is a JSON list (or `{"entries":
+  [...]}`) in `current.json.entries` shape — character-range `_editCuts`,
+  `membership`, `notes`, `why`. That writes `steps/NNN-claude-<label>.json`
+  AND replaces `current.json` (`written_by: "agent"`); the viewer polls every
+  4 s, adopts it and shows Jeff a banner naming the step. **No rebuild, no
+  reload, no "please Open it."** Start from the current entries (read
+  `current.json`) so Jeff's trims, splits and title cards survive your pass.
+- **Steps are append-only** — never rewrite or delete one. The viewer's
+  History lists them newest-first; Jeff can View any step read-only and
+  Restore it forward as a new step. Rename is his (hover ✎), not yours.
+- **Rebuild only for the notes sidecar.** `edit-agent-notes-v[N].json`
+  (`agent_note`s + seam-flags) is still baked at build time, so rebuild after
+  writing it. A rebuild never loses work: the page prefers the on-disk
+  `current.json` over its baked entries.
 
 ### Reading state and talking to Jeff each turn
 
-- **Top of every turn: read `handoffs/[project-slug]/viewer-state.json`.** It
+- **Top of every turn: read `handoffs/[project-slug]/edits/<open edit>/current.json`**
+  (`main` unless Jeff has opened an alternative — check the chip / `edit`). It
   carries the current Timeline (all tiers, with trims and splits), the pending
   tweaks since your last read, his Library recategorizations, the act/view/mode
   he is on, and — under `pending_message` — the note he's telling you right now
@@ -429,24 +457,27 @@ The agent is the persistence engine:
   under the hood (hover fallback).
 - **Jeff referring to a quote (Jeff → agent):** he uses the per-card **"Point at
   this"** action, which tags the exact quote (speaker + first words + hidden id)
-  into his message; `viewer-state.json` carries it under `pending_message`.
+  into his message; `current.json` carries it under `pending_message`.
 
 ### The cloud loop — when Jeff is in the hosted viewer (Storyboard Ops)
 
 Jeff may be editing at `https://storyboard-ops-app.vercel.app/p/[project-slug]`
-instead of the local HTML viewer. Same files, same contract — they just live in
-the cloud store and travel via `djed sync`:
+instead of the local HTML viewer. Same contract, different store — the files
+travel via `djed sync`. **Note (v5.15):** the hosted viewer still speaks the
+legacy v5.13 file contract (`viewer-state.json`, `editing-versions/`); porting the
+edit/step model to the app is a flagged follow-up in START-HERE. In the cloud
+loop, read the legacy `viewer-state.json` where this section says so:
 
 - **Top of every turn sync down, end of every turn sync up.** Run
   `~/Desktop/storyboard-ops-app/scripts/djed sync --slug [project-slug]
   --ssd-root [ssd-root] --session-only` (token comes from the app repo's
   `.env.local`). One command, both directions: it pulls Jeff's
-  `viewer-state.json`, saved cuts, exports, and the chat/feedback logs down to
+  legacy `viewer-state.json`, saved cuts, exports, and the chat/feedback logs down to
   `handoffs/`, and pushes your `agent-cursor.json`, chat replies, and new cut
   files up. Then read state exactly as above. Run it again after you write your
   reply + cursor, so Jeff sees them within the viewer's 4-second poll.
 - **The durable conversation is `handoffs/[project-slug]/project-chat.json`**
-  (`viewer-state.json` advertises it under `chat_log`). `pending_message` still
+  (the legacy `viewer-state.json` advertises it under `chat_log`). `pending_message` still
   mirrors only Jeff's LATEST note; the chat log is the full thread — read every
   `who: "jeff"` message newer than your last reply, not just the mirror.
 - **Reply by APPENDING to `messages`, never rewriting or removing entries.**
@@ -935,8 +966,8 @@ selection and sequencing. (Speaker roles and editorial weighting live in
 
 The viewer runs as a persistent local app, not a chat artifact. As part of
 session setup, build the viewer (Phase 2) and start the app server, which both
-**serves** the viewer in Chrome and **persists** everything it writes — saved
-cuts, the tweak log, and the live `viewer-state.json` you read each turn:
+**serves** the viewer in Chrome and **persists** everything it writes — edits,
+steps, the tweak log, and the live `edits/<edit>/current.json` you read each turn:
 
 ```
 python3 scripts/viewer_save_server.py \
@@ -946,8 +977,8 @@ python3 scripts/viewer_save_server.py \
 
 Then point Jeff at `http://127.0.0.1:8765/`. The tab survives task-switching
 like any web app — nothing to lose when he steps away. The top-bar persistence
-indicator confirms the channel is live: **"● Saved to disk"** means
-`viewer-state.json` is being written for you to read; **"Offline"** means the
+indicator confirms the channel is live: **"● Synced"** means
+`current.json` is being written for you to read; **"Offline"** means the
 server isn't running, so you are blind to his edits — fix that before working.
 If the server can't be started for some reason, the viewer degrades to browser
 downloads (see "Viewer persistence" in Phase 2), but then the live state file is
@@ -986,8 +1017,10 @@ python3 scripts/build_quotes_viewer.py \
   --output <handoffs/[slug]/[slug]_quotes_view.html>
 ```
 
-The script auto-discovers `tagged-quotes-v*.json`, `trimmed-quotes-v*.json`,
-`pipeline-state.json`, and any `editing-versions/v*.json` and named saved cuts;
+The script auto-discovers `tagged-quotes-v*.json`, `pipeline-state.json`, and
+the project's edits (`handoffs/[slug]/edits/<edit>/current.json` — a legacy
+`editing-versions/` + `viewer-state.json` layout is migrated into `edits/` once,
+old files left in place; a project with nothing yet gets an empty Main edit);
 reads the act titles, per-act narrative roadmaps, and premise from
 `act-structure-v*.md` / `creative-brief-summary-v*.md` (for the act-scoped
 Creative-context dropdown); migrates segment-based trims to the viewer's
@@ -999,8 +1032,8 @@ retired `runtime_recommendation` legacy field; and produces the HTML.
 ### Serving it as a persistent app
 
 Do not `create_artifact`. Serve the built file with the app server, which also
-persists everything the viewer writes (saved cuts, the tweak log, and the live
-`viewer-state.json` you read each turn):
+persists everything the viewer writes (edits, steps, the tweak log, and the
+live `current.json` you read each turn):
 
 ```
 python3 scripts/viewer_save_server.py \
@@ -1010,7 +1043,7 @@ python3 scripts/viewer_save_server.py \
 
 Jeff opens `http://127.0.0.1:8765/` in Chrome. This is the persistent shell:
 same-origin saves (no CORS caveats), survives task-switching, and writes
-`viewer-state.json` to disk for you. The HTML build is fully offline and
+`edits/<edit>/current.json` to disk for you. The HTML build is fully offline and
 self-contained — vendored React 18 + ReactDOM inlined, JSX compiled to plain JS
 at build time (Node + vendored `@babel/standalone` in `scripts/vendor/`); no CDN
 fetches, no runtime Babel.
@@ -1018,11 +1051,12 @@ fetches, no runtime Babel.
 ### Viewer capabilities
 
 Top view tabs, in workflow order: **Quote Library → Timeline → Cuts** (the three
-tiers; see "The Act-by-Act Loop"). A top bar carries **Save · Open · Export to
-Final Cut**; a left-aligned act-nav row (`All / Intro / Act 1 / …`) with a
-speaker filter; and a sub-header showing the active act title inline with the
-act-scoped **Creative context** dropdown. The top-bar persistence indicator
-("● Saved to disk" / "Offline") reports whether `viewer-state.json` is live.
+tiers; see "The Act-by-Act Loop"). The header carries the **edit chip** (names
+the open edit; lists every edit), **History · Save as · Export to Final Cut**;
+a left-aligned act-nav row (`All / Intro / Act 1 / …`) with a speaker filter;
+and a sub-header showing the active act title inline with the act-scoped
+**Creative context** dropdown. The strip's persistence indicator ("● Synced" /
+"Offline") is the one save state — there is no dirty dot and no Save button.
 
 - **Quote Library card** — compact clickable **act pill** (recategorize; Library
   only), speaker, quote text, the `agent_note` if the quote is not used, a status
@@ -1042,11 +1076,12 @@ act-scoped **Creative context** dropdown. The top-bar persistence indicator
   in Review to catch act-seam flow.
 - **Save / Open / Export** — see "Saved cuts" and "Export" below.
 
-### The shared-state channel — `viewer-state.json`
+### The shared-state channel — `edits/<edit>/current.json`
 
-The viewer autosaves its full working state (debounced) to
-`handoffs/[slug]/viewer-state.json` on every edit. This is your window into the
-cut: **read it at the top of every turn.** It contains the open cut, the full
+The viewer autosaves the open edit's full working state (debounced) to
+`handoffs/[slug]/edits/<edit>/current.json` on every edit (`kind:
+"edit-current"`, `edit`, `written_by: "viewer"`). This is your window into the
+cut: **read it at the top of every turn.** It contains the open edit, the full
 Timeline (all tiers, with trims and splits), the pending tweaks since Jeff's last
 send, his Library recategorizations, the act/view/mode he is on, and any message
 or "Point at this" reference he is composing. You do not push changes into the
@@ -1056,10 +1091,10 @@ and you write only at your announced proposal beats (below).
 When you seed a cut yourself — the over-inclusive opening assembly (cadence
 Beat 1), your **applied cut proposal** (cadence Beat 3: the same mechanics, with
 your cut candidates moved to `loose` and their reasons in `notes`), or a larger
-restructure — write a new `editing-versions/<name>.json` (via the build's
-payload shape), re-run the build, and ask Jeff to Open it. Before any of these,
-make sure Jeff has **saved** any pending in-viewer tweaks; a rebuild reloads
-from disk and a fresh build won't carry unsaved working state.
+restructure — first `edits_store.py snapshot` Jeff's step, then
+`edits_store.py propose` yours (both in "Session persistence protocol"). The
+proposal becomes a step and the viewer adopts it within one poll; nothing for
+Jeff to save, open, or reload.
 
 ### Your notes sidecar — `agent_note` and seam-flags
 
@@ -1091,7 +1126,7 @@ Two of your outputs render in the viewer only if you write them to
   better by #43"); silence is not.
 - **`seam_flags`** are the narrative-coherence breaks you found reading the cut
   (Cardinal Rule 2). Each sits **before** the entry whose `entry_id` you give
-  (read it from `viewer-state.json`); it renders inline in Review mode at that
+  (read it from `current.json`); it renders inline in Review mode at that
   seam. `kind` is a short tag (orphan-pronoun, abrupt-jump, already-made-point);
   `message` says what breaks; `suggestion` offers a fix or bridge.
 
@@ -1114,8 +1149,8 @@ and *sequence* on the Timeline; both audits need your reasoning visible inline.
 
 ### Viewer persistence — persistFile()'s tiers
 
-All viewer disk writes (saved cuts, exports, the tweak log, the live
-`viewer-state.json` autosave) go through `persistFile()`, which tries writers
+All viewer disk writes (edits, steps, exports, the tweak log, the live
+`current.json` autosave) go through `persistFile()`, which tries writers
 most-robust-first and reports which one wrote:
 
 1. **Cowork** — `window.cowork.callMcpTool` bash, when the viewer happens to run
@@ -1127,7 +1162,7 @@ most-robust-first and reports which one wrote:
 3. **Browser download** — the never-lose-data fallback when neither writer is
    reachable. Best-effort writes (the tweak log, the live-state autosave) skip
    this tier rather than spam downloads — so if the app server is down, the
-   `viewer-state.json` channel simply goes quiet (indicator shows "Offline").
+   `current.json` channel simply goes quiet (indicator shows "Offline").
 
 ### Referring to quotes, and full text on first reference
 
@@ -1138,16 +1173,23 @@ reference to any quote; afterward, shorthand (speaker + first words) is fine onc
 Jeff has seen the full text. This prevents the failure mode where Jeff must flip
 to the viewer just to know which quote you mean.
 
-### Saved cuts and Export
+### Edits, History and Export
 
-- **Save / Open** — a project has many named deliverables (a long cut plus social
-  shorts) drawn from the same quote pool. **Save** offers "save changes to this
-  cut" (overwrite the open one) and "save as new" (name a new deliverable);
-  **Open** lists saved cuts to reopen. Each is a snapshot of the Timeline
-  arrangement + trims + tier assignments in `editing-versions/<name>.json`.
-- **Export to Final Cut** writes the cut JSON (`trimmed-quotes-v[N]-tight.json`
-  for the Timeline window; `trimmed-quotes-v[N].json` for the full timeline —
-  separate filenames so the two never overwrite each other) and **queues an
+- **Edit chip** — names the edit Jeff is in and lists every edit of the project
+  (Main edit + alternatives). Opening one never changes another; each autosaves
+  its own `current.json`.
+- **History** — the open edit's steps, newest first, each labelled "Who: what"
+  ("Claude: Act 2 proposal", "Jeff: Act 1 revision"). **View** shows a step
+  read-only (banner; autosave paused); **Restore as new step** copies it
+  forward; hover ✎ renames. You write the steps (persistence protocol above).
+- **Save as** — forks the current state into a new named edit (a long cut plus
+  social shorts drawn from the same pool). The edit branched from is untouched;
+  the agent assists on whichever edit is open.
+- **Export to Final Cut** writes the cut JSON per edit
+  (`trimmed-quotes-<edit>-tight.json` for the Timeline window;
+  `trimmed-quotes-<edit>.json` for the full timeline — separate filenames so the
+  two never overwrite each other; the `round` field carries the edit's step
+  count) and **queues an
   export request on disk** — `handoffs/[slug]/export-request.json` — for YOU to
   fulfil. No copy-paste, no new Cowork session (that old flow is gone). The
   viewer does **not** generate XML itself; you launch the FCPXML Agent. See
@@ -1159,13 +1201,14 @@ record of the latest round; Jeff can open it in any browser at any time.
 ### Fulfilling an export request (you launch the FCPXML Agent)
 
 When Jeff clicks **Export to Final Cut**, the viewer writes
-`handoffs/[slug]/export-request.json` and mirrors it in `viewer-state.json`
+`handoffs/[slug]/export-request.json` and mirrors it in `current.json`
 (`pending_export`). On your turn — when Jeff says "build the export" or you
 notice the request while reading state — **you run the FCPXML build yourself**,
 the same way the Orchestrator launches downstream agents:
 
 1. Read `handoffs/[slug]/export-request.json`. Shape:
-   `{ status, window, label, round, cut_name, cut_file, out_fcpxml, entry_count }`.
+   `{ status, window, label, round, edit, cut_name, cut_file, out_fcpxml, entry_count }`
+   (`out_fcpxml` = `XML/imports/[slug]_<edit>_<window>_cut.fcpxml`).
    Act **only when `status == "requested"`** — if it's already `"built"`, do
    nothing (this is what prevents rebuilding the same export every turn).
 2. **Convert `cut_file` before building — it is char-range data, not the shape
@@ -1720,11 +1763,12 @@ For each act:
    get right before the proposal lands.
 6. Get the proposed cut into the viewer for this act. For the act's **opening
    build**, write the proposed selections/ordering/segments/trims/memberships
-   (and the `agent_note`s for left-out quotes) into the `editing-versions` JSON,
-   rebuild, and ask Jeff to Open it. For **incremental** proposals mid-act, name
-   the changes ("move Dana's 'flying blind' line ahead of the budget quote") so
-   Jeff applies them in the viewer; then read `viewer-state.json` next turn to see
-   what landed.
+   as entries and land them with `edits_store.py propose` (the `agent_note`s
+   for left-out quotes go in the notes sidecar + a rebuild); the viewer adopts
+   the step live. For **incremental** proposals mid-act, name the changes
+   ("move Dana's 'flying blind' line ahead of the budget quote") so Jeff
+   applies them in the viewer; then read `current.json` next turn to see what
+   landed.
 7. Inline the full text of any newly-introduced source quote on first
    reference; subsequent references can use shorthand
 8. Ask Jeff to review the viewer before moving to the next act
@@ -1754,7 +1798,7 @@ Capture decisions as they land; don't accumulate a backlog.
 The Discussion may also surface that your membership calls are miscalibrated. If
 Jeff Restores several quotes you had cut (or cuts several you kept), that's a
 signal — re-examine your reasoning and recalibrate on the next act. Remember he
-applies these directly in the viewer; you read the result in `viewer-state.json`.
+applies these directly in the viewer; you read the result in `current.json`.
 
 ---
 
@@ -2422,7 +2466,7 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.14 (August 2026)*
+*Edit Agent — documentary-junior-editor v5.15 (September 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.14 (Keystone 2026 close): word-level cuts declared FCP territory (explicit
 Jeff directive — see Trimming Guidelines). Editorial-taste findings from the
@@ -2432,8 +2476,8 @@ as rules — first sightings, recorded in
 reference-examples/keystone-2026/lessons-learned.md per the three-occurrence
 discipline. FCPXML build/verify hardened (negative-duration, mis-anchor, and
 frame-boundary guards) — see scripts history.*
-*v5.13 (St. Andrews close): checkpoint-versioning persistence protocol
-(canonical editing-versions location, checkpoint-before-touching, bake-on-read,
+*v5.13 (St. Andrews close; superseded by v5.15): checkpoint-versioning persistence protocol
+(canonical editing-versions location, checkpoint-before-touching, bake-on-read — all retired in v5.15;
 server health check); cold-read critic now told who the film is for; serial
 presentation extended to suggestions. Editorial-taste calibration deliberately
 NOT added as rules — see the project's edit-agent-lessons-v1.md (intent over
@@ -2442,3 +2486,11 @@ rule accumulation, per Jeff).*
 Creative Context v5.11 — beats are quote-selection targets, beat order is the
 sequencing target, speaker weighting comes from the creative brief (Jeff
 feedback, Mounds View Rising).*
+*v5.15 (viewer versioning redesign, agreed with Jeff 2026-09-17): one main
+edit that is always saved + an annotated STEP history you write
+(`scripts/edits_store.py snapshot` when Jeff hands off an act, `propose` for
+every proposal — the viewer adopts it live, no rebuild) + "Save as"
+alternatives; you assist on whichever edit is open. Retired:
+`viewer-state.json`, `editing-versions/`, checkpoints, bake-on-read (all retired), and the
+viewer's Save/Open/dirty-dot/restore banner. See "Session persistence
+protocol".*

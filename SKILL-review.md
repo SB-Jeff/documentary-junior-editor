@@ -234,7 +234,7 @@ almost broke, or required workarounds.
   caption-matcher performance issues, parser format mismatches in
   `build_fcpxml.py`, missing resources, broken multicam angle IDs,
   per-segment clip generation errors.
-- **Quote viewer breakage.** Render errors, autosave / `viewer-state.json`
+- **Quote viewer breakage.** Render errors, autosave / `edits/<edit>/current.json`
   write failures, app-server (`viewer_save_server.py`) issues, Export /
   `export-request.json` failures, agent panel / staleness-cue issues. (Note:
   viewer UX issues belong
@@ -757,3 +757,4 @@ Update `pipeline-state.json` to record Skill Review's run:
 the project — it tells you what pipeline-level implications Coach
 already surfaced.*
 *v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*
+*v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*

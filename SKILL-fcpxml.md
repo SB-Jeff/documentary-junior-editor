@@ -761,3 +761,4 @@ format; (3) Q9 — duplicate-media-ref-ID rule under review (see
 *FCPXML Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.13: two-clocks guard — TC narrowing auto-disables with a warning when transcript TCs and caption offsets share no origin (§2.3).*
+*v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*

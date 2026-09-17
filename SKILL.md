@@ -13,7 +13,7 @@ description: |
 ---
 
 # Documentary Junior Editor — Master Skill Index
-### Version 5.13 | August 2026
+### Version 5.15 | September 2026
 
 This is the master index for the documentary-junior-editor skill. Read this file first at
 the start of every session. It describes the pipeline, the folder structure, how agents
@@ -127,7 +127,7 @@ Synthesis Agent          →  merged tagged-quotes-v[N].json (segments preserved
 │                            edit-handoff-v[N].md,                │
 │                            [project-slug]_quotes_view.html      │
 │                            (persistent local app; act-by-act    │
-│                            live partner via viewer-state.json)  │
+│                            live partner via edits/*/current.json)│
 │        ↓ (Export → export-request.json; Edit Agent launches    │
 │           the FCPXML Agent itself via the Task tool)            │
 │  FCPXML Agent          →  [project-slug]_rough_cut_v[N].fcpxml  │
@@ -162,7 +162,8 @@ The pipeline pauses and waits for Jeff at these moments:
    act structure proposed and iterated until Jeff approves.
 3. **During Edit Agent** — Jeff works collaboratively with the agent **act by act** in
    the persistent viewer app (the live-partner loop: the agent reads
-   `viewer-state.json` each turn; Jeff edits and talks back), across multiple rounds.
+   `edits/<edit>/current.json` each turn and writes the step History; Jeff edits
+   and talks back), across multiple rounds.
 4. **After each FCPXML Agent run** — Jeff imports and watches the cut. He either approves
    (proceed to Skill Review) or appends notes to `review-notes.md` and re-launches Edit
    for another round.
@@ -870,3 +871,4 @@ reframe that tipped the release into a major version bump.
 *This file is the entry point for the documentary-junior-editor skill. Always read it
 first. Then read the specific agent SKILL file for the session you are starting.*
 *v5.13 (St. Andrews close): checkpoint versioning, canonical editing-versions location, viewer restore-on-load + creative-context side panel, AppleDouble filtering, structured orphans, two-clocks FCPXML guard. See CHANGELOG.*
+*v5.15 (viewer versioning redesign, 2026-09-17): one main edit + agent-written step History + Save-as alternatives (`handoffs/<slug>/edits/`, `scripts/edits_store.py`); retires viewer-state.json / editing-versions / checkpoints. See CHANGELOG.*

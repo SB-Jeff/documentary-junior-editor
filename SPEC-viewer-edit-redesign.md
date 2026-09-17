@@ -62,10 +62,14 @@ Cuts as the two placements and the Library as the permanent superset.
   out ("overlaps #3/#9"). Populated by the Edit Agent.
 - **Split lineage.** A split produces sibling entries with a shared `split_src` (e.g. `5a`/`5b` →
   `split_src: "5"`) so **Rejoin** can stitch them back verbatim.
-- **Saved cuts (deliverables).** A named save = a snapshot of the Timeline arrangement +
-  trims + tier assignments, stored as `editing-versions/<name>.json` (extends the existing
-  `editing-versions/v[N].json`). Multiple named deliverables per project (long cut, social shorts)
-  coexist; Open loads one; Save offers "save changes to this cut" (overwrite) and "save as new".
+- **Edits + steps (v5.15 — supersedes the saved-cuts model below).** One Main edit that is
+  always saved (`edits/main/current.json`), an append-only step history the agent writes
+  (`edits/main/steps/NNN-<who>-<label>.json`), and named alternatives forked with "Save as"
+  (`edits/<name>/…`, each with its own steps). Multiple deliverables per project coexist as
+  edits; the agent assists on whichever is open. Design: `scripts/mockups/versioning-redesign-
+  mockup-2026-09-17.html`; store: `scripts/edits_store.py`.
+- *(v5.10–v5.14, retired)* Saved cuts as `editing-versions/<name>.json` with Save / Save-as-new
+  / Open.
 
 ---
 
@@ -139,7 +143,8 @@ The viewer must survive task-switching and support named, recallable saved cuts 
 Cowork chat-artifact model (artifact is ephemeral; `sendPrompt` unavailable; persistence is a
 brittle 3-tier fallback). Target: a **persistent local app** served in Chrome, sharing state with
 the agent through files on disk.
-- Saved cuts → `editing-versions/<name>.json` (named deliverables, not just v[N]).
+- Edits + steps → `edits/<edit>/{edit,current}.json` + `steps/` (v5.15; formerly saved cuts in
+  `editing-versions/<name>.json`).
 - Export → packages the current Timeline and hands to the FCPXML Agent, which builds the `.fcpxml`
   from the media reference / angle IDs already extracted by FCPXML Params. The viewer does NOT
   generate XML itself (unchanged from today's Export contract).

@@ -33,8 +33,8 @@ FROZEN = {
 # Lines that mention a retired symbol while explaining it is retired are fine;
 # only flag mentions presented as live instructions.
 DEPRECATION_CONTEXT = re.compile(
-    r"\b(no|not|never|deprecated|legacy|replaced?s?|removed|removal|retired|"
-    r"dropped|drops|ignore|historical|formerly|obsolete)\b",
+    r"\b(no|not|never|deprecated|legacy|replaced?s?|removed|removal|retire[sd]?|"
+    r"dropped|drops|ignore|historical|formerly|obsolete|migrated?s?|supersede[sd]?)\b",
     re.I,
 )
 
@@ -55,6 +55,17 @@ RETIRED = [
      {"SKILL-edit-pipeline.md"}, True),
     (re.compile(r"sendPrompt"),
      "retired sendPrompt (viewer is a persistent app; the agent reads/writes disk)",
+     {"SKILL-edit-pipeline.md"}, True),
+    # v5.15 edit/step versioning: the live state is edits/<edit>/current.json,
+    # history is steps/, alternatives are edits. The old files are migrated once.
+    (re.compile(r"viewer-state\.json"),
+     "retired viewer-state.json (v5.15: the agent reads edits/<edit>/current.json)",
+     {"SKILL-edit-pipeline.md"}, True),
+    (re.compile(r"editing-versions/"),
+     "retired editing-versions/ (v5.15: edits/<edit>/current.json + steps/)",
+     {"SKILL-edit-pipeline.md"}, True),
+    (re.compile(r"checkpoint-before|bake-on-read|checkpoints/"),
+     "retired checkpoint protocol (v5.15: edits_store.py snapshot / propose write steps)",
      {"SKILL-edit-pipeline.md"}, True),
 ]
 

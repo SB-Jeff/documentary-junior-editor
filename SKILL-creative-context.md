@@ -653,3 +653,4 @@ narrative beats beneath, no summary line, no quotes or quote-like content; bulle
 the Edit Agent's quote-sequencing target (Jeff feedback, Mounds View Rising). Supersedes
 the v5.9 one-line-summary-plus-points format.*
 *v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*
+*v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*
