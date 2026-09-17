@@ -15,11 +15,14 @@ What it does (M4 — persistent app shell)
    Open ``http://127.0.0.1:<port>/`` once in Chrome; the tab survives
    task-switching like any web app — no chat artifact to lose.
 2. **Persists files** the viewer POSTs to ``/save`` (``{path, content}``):
-   named saved cuts (``editing-versions/<name>.json``), the tweak log, exports,
-   and — new in M4 — the viewer's **live working state**, autosaved on every
-   edit to ``handoffs/<slug>/viewer-state.json``. That file is the channel the
-   Edit Agent reads on each of its turns to see the current cut (no copy-paste,
-   no PDF-printing — see SKILL-edit.md).
+   the open edit's **always-saved working state**
+   (``handoffs/<slug>/edits/<edit>/current.json`` — the channel the Edit Agent
+   reads on each of its turns), new edits + steps the viewer creates
+   (``edits/<edit>/edit.json``, ``steps/NNN-*.json``), the tweak log, and
+   exports (see SKILL-edit.md and scripts/edits_store.py).
+3. **Lists edits** at ``GET /edits?slug=<slug>`` (edit picker + History) and
+   reads any sandboxed JSON at ``GET /read?path=...`` (a step to view/restore,
+   the agent's read-acknowledgement).
    If the helper is NOT running, the viewer degrades to a plain download, so a
    save is never lost either way.
 
@@ -54,6 +57,11 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+
+# The edit/step model (v5.15) lives in the sibling module; the viewer's
+# /edits poll is a thin wrapper over edits_store.list_edits().
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import edits_store  # noqa: E402
 
 DEFAULT_PORT = 8765
 MAX_BODY = 16 * 1024 * 1024  # 16 MB — generous for a cut/tweak-log JSON
@@ -96,6 +104,8 @@ class SaveHandler(BaseHTTPRequestHandler):
             self._read_json(parse_qs(parsed.query))
         elif path == "/list":
             self._list_cuts(parse_qs(parsed.query))
+        elif path == "/edits":
+            self._list_edits(parse_qs(parsed.query))
         elif path.startswith("/view/"):
             self._serve_sibling(path[len("/view/"):])
         elif path in ("", "/index.html") and self.serve_file is not None:
@@ -138,6 +148,27 @@ class SaveHandler(BaseHTTPRequestHandler):
                 pass  # still list it, just without metadata
             cuts.append(entry)
         self._json(200, {"ok": True, "cuts": cuts})
+
+    def _list_edits(self, query):
+        """List a project's edits with their step manifests (v5.15 model).
+
+        ``GET /edits?slug=<slug>`` → ``{ok, edits:[{slug, name, is_main,
+        forked_from, current:{generated_at, written_by, entry_count, path},
+        steps:[{seq, who, label, created_at, entry_count, path}]}]}``.
+        The viewer polls this to keep the edit picker + History live and to
+        notice when the agent has written a newer current.json. Reads only
+        handoffs/<slug>/edits/** — the same sandbox as everything else.
+        """
+        slug = (query.get("slug") or [""])[0].strip()
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", slug or ""):
+            self._json(400, {"ok": False, "error": "bad slug"})
+            return
+        try:
+            edits = edits_store.list_edits(self.root, slug)
+        except (OSError, ValueError) as e:
+            self._json(500, {"ok": False, "error": f"list failed: {e}"})
+            return
+        self._json(200, {"ok": True, "edits": edits})
 
     def _read_json(self, query):
         """Return the contents of a sandboxed handoffs/**.json file.
