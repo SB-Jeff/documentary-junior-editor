@@ -93,7 +93,7 @@ def check_string_source_quote_id(_tmp):
         'lookup_source_quote(by_num, "2") returned None — string id did not coerce'
 
     db = bqv.assemble_data_block(raw)
-    entries = db["ROUNDS"][0]["timeline"]
+    entries = db["EDITS"][0]["timeline"]
     assert len(entries) == 1, \
         f"expected 1 migrated entry (string id linked), got {len(entries)}"
     sid = entries[0]["source_quote_id"]

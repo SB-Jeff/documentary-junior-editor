@@ -88,12 +88,18 @@ const PROJECT_META = {
 //   }
 const SOURCE_QUOTES = [];
 
-// Round versions — each has its own timeline of entries. Latest round is
-// the default landing view. Older rounds remain selectable via dropdown.
+// Edits (v5.15) — each has its own always-saved working timeline. The Main
+// edit is the default landing view; alternatives ("Save as") are listed in the
+// header's edit chip. Each edit's step history (read-only snapshots the agent
+// writes as the work moves act to act) is loaded live from the app server;
+// the build bakes only the light manifest + the current entries as an
+// offline fallback.
 //
-// Round shape:
+// Edit shape:
 //   {
-//     round_number: 1, version: "v...", round_label: "Round 1",
+//     slug: "main", name: "Main edit", is_main: true,
+//     forked_from: { edit: "main", step: 6 } | null,
+//     steps: [{ seq, who: "jeff"|"claude"|"pipeline", label, created_at, entry_count, path }],
 //     timeline: [
 //       {
 //         entry_id: "1" | "1a" | "1b" | "T1",        // sub-letters denote splits
@@ -111,13 +117,23 @@ const SOURCE_QUOTES = [];
 //       }
 //     ]
 //   }
-const ROUNDS = [
-  // { round_number: 1, version: "v0", round_label: "Round 1", timeline: [] },
+const EDITS = [
+  // { slug: "main", name: "Main edit", is_main: true, forked_from: null, steps: [], timeline: [] },
 ];
 
-// The round to render on load (most recent). Build script sets this to the
-// latest round's index.
-const INITIAL_ROUND_INDEX = 0;
+// The edit to open on load (the Main edit). Build script sets this.
+const INITIAL_EDIT_INDEX = 0;
+
+// Step-history helpers (v5.15).
+const whoName = (w) => (w === "claude" ? "Claude" : w === "jeff" ? "Jeff" : "Pipeline");
+function fmtWhen(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
+  const sameDay = d.toDateString() === new Date().toDateString();
+  const day = sameDay ? "Today" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return `${day} ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+}
 
 // Optional focus target — viewer auto-scrolls and flashes the focused element
 // on first render. Build script populates from the agent's current focus.
@@ -134,9 +150,8 @@ const INITIAL_FOCUS = null;
 //     suggestion: "Lead with Dana naming the team first." }
 const SEAM_FLAGS = [];
 
-// Build timestamp (ISO) — set by the build script. Restore-on-load compares it
-// against viewer-state.json's generated_at so a reload can never silently
-// clobber working state that is NEWER than the page it loads into.
+// Build timestamp (ISO) — set by the build script. Informational: the on-disk
+// edits/<edit>/current.json is always preferred over the baked entries.
 const BUILD_GENERATED_AT = "";
 
 // Dedicated tags that live in act_labels but are NOT narrative acts. They are
@@ -756,7 +771,7 @@ const SEARCH_STOPWORDS = new Set([
 
 export default function QuotesView() {
   // === Round + view state ===
-  const [roundIndex, setRoundIndex] = useState(INITIAL_ROUND_INDEX);
+  const [roundIndex, setRoundIndex] = useState(INITIAL_EDIT_INDEX);  // index into `cuts` (the edits)
   // Three top-level views, in workflow order: Quote Library → Timeline → Cuts.
   //   library  — every source quote, grouped by act + orphans, with a status badge.
   //   timeline — the working cut: entries where membershipOf(e) === "tight".
@@ -809,140 +824,155 @@ export default function QuotesView() {
     setReassigningQuoteNum(null);
   }
 
-  // === Saved cuts (live) ===
-  // `cuts` starts as the rounds baked into the page at build time, but the Open
-  // menu must reflect what's actually ON DISK — named deliverables saved this
-  // session, in another tab, or by the pipeline. refreshDiskCuts() polls the app
-  // server's /list and merges any not already present. Disk-only cuts carry
-  // `_disk:true` and lazy-load their entries on Open.
-  const [cuts, setCuts] = useState(ROUNDS);
+  // === Edits (live) ===
+  // `cuts` is the list of EDITS (v5.15): the ones baked at build time, kept
+  // live by refreshEdits() polling the app server's /edits — new edits created
+  // in another tab or by the agent, fresh step manifests, and agent writes to
+  // the open edit's current.json. Indexed by `roundIndex` (internal name kept
+  // from the rounds era; it is simply the open edit's index).
+  const [cuts, setCuts] = useState(EDITS);
+  const cutsRef = useRef(cuts);
+  useEffect(() => { cutsRef.current = cuts; }, [cuts]);
 
-  // === Per-round working timeline (deep-clone of canonical at first switch) ===
+  // === Per-edit working timeline (deep-clone of the baked fallback; replaced
+  // by the on-disk current.json the moment the app server answers) ===
   const [workingByRound, setWorkingByRound] = useState(() => {
     const init = {};
-    ROUNDS.forEach((r, i) => {
+    EDITS.forEach((r, i) => {
       init[i] = JSON.parse(JSON.stringify(r.timeline || []));
     });
     return init;
   });
   const [pendingOpsByRound, setPendingOpsByRound] = useState(() => {
     const init = {};
-    ROUNDS.forEach((_, i) => { init[i] = []; });
+    EDITS.forEach((_, i) => { init[i] = []; });
     return init;
   });
 
   const getTimeline = () => workingByRound[roundIndex] || [];
   const getPendingOps = () => pendingOpsByRound[roundIndex] || [];
 
-  // Fetch the on-disk saved cuts and merge any new ones into `cuts` so the Open
-  // menu is live. Best-effort: if the app server isn't reachable, the baked
-  // list still shows. Called on mount, after a save, and when opening Open.
-  async function refreshDiskCuts() {
-    if (typeof fetch !== "function") return;
-    const rel = `handoffs/${PROJECT_META.slug}/editing-versions`;
-    try {
-      const res = await fetch(`${SAVE_HELPER_URL}/list?path=${encodeURIComponent(rel)}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (!data || !data.ok || !Array.isArray(data.cuts)) return;
-      setCuts((prev) => {
-        const known = new Set(prev.map((c) => c.version));
-        const additions = data.cuts
-          .filter((c) => !c.stem.startsWith("._"))  // macOS AppleDouble junk
-          .filter((c) => !known.has(c.stem))
-          .map((c) => ({
-            round_number: c.round ?? null,
-            version: c.stem,
-            round_label: c.cut_name || (/^v\d+$/.test(c.stem) ? `Round ${c.round ?? c.stem.slice(1)}` : c.stem),
-            cut_name: c.cut_name || null,
-            timeline: [],          // lazy-loaded on Open
-            _disk: true,
-            _path: c.path,
-            _entryCount: c.entry_count,
-          }));
-        return additions.length ? [...prev, ...additions] : prev;
-      });
-    } catch (_) { /* server down — keep the baked list */ }
-    // Checkpoints (checkpoint-versioning design, 2026-08-21): the agent
-    // auto-snapshots every state it reads or writes into
-    // editing-versions/checkpoints/. List them as their own Open-menu group.
-    try {
-      const res = await fetch(`${SAVE_HELPER_URL}/list?path=${encodeURIComponent(rel + "/checkpoints")}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (!data || !data.ok || !Array.isArray(data.cuts)) return;
-      setCuts((prev) => {
-        const known = new Set(prev.map((c) => c.version));
-        const adds = data.cuts
-          .filter((c) => !c.stem.startsWith("._"))
-          .filter((c) => !known.has("ckpt:" + c.stem))
-          .map((c) => ({
-            round_number: c.round ?? null,
-            version: "ckpt:" + c.stem,
-            round_label: c.stem.replace(/^\d+[-_]/, "").replace(/[-_]/g, " "),
-            cut_name: null,
-            timeline: [],          // lazy-loaded on Open
-            _disk: true,
-            _checkpoint: true,
-            _path: c.path,
-            _entryCount: c.entry_count,
-          }));
-        return adds.length ? [...prev, ...adds] : prev;
-      });
-    } catch (_) { /* no checkpoints yet */ }
+  // ====== Edits + steps, live from the app server (v5.15) ======
+  // /edits?slug= returns every edit with its step manifest and the current
+  // state's stamp. Polled every 4s: new edits appear in the chip, History
+  // stays fresh, and a current.json the AGENT wrote (its proposal beat) is
+  // adopted into the open edit — no rebuild, no reload, no banner to dismiss
+  // before you can work. The baked page is only the offline fallback.
+  const editPathOf = (cut) => `handoffs/${PROJECT_META.slug}/edits/${(cut && cut.slug) || "main"}`;
+  const lastLocalWriteAt = useRef(0);        // ms of our last successful current.json write
+  const lastAdoptedAgentWrite = useRef("");  // generated_at of the last agent write adopted
+  const [agentUpdate, setAgentUpdate] = useState(null);  // { label, at } — toast after adopting
+  const viewingStepRef = useRef(null);
+  const roundIndexRef = useRef(roundIndex);
+  useEffect(() => { roundIndexRef.current = roundIndex; }, [roundIndex]);
+
+  function shapeEdit(d) {
+    return {
+      slug: d.slug, name: d.name || d.slug, is_main: !!d.is_main,
+      forked_from: d.forked_from || null, created_at: d.created_at || null,
+      steps: Array.isArray(d.steps) ? d.steps : [],
+      current_generated_at: (d.current && d.current.generated_at) || null,
+      current_written_by: (d.current && d.current.written_by) || null,
+    };
+  }
+  function mergeEdits(prev, disk) {
+    const bySlug = new Map(prev.map((c, i) => [c.slug, i]));
+    const next = prev.slice();
+    disk.forEach((d) => {
+      const shaped = shapeEdit(d);
+      if (bySlug.has(d.slug)) next[bySlug.get(d.slug)] = { ...next[bySlug.get(d.slug)], ...shaped };
+      else next.push({ ...shaped, timeline: [] });
+    });
+    return next;
   }
 
-  useEffect(() => { refreshDiskCuts(); /* eslint-disable-next-line */ }, []);
+  async function readJson(rel) {
+    const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent(rel)}`);
+    if (!res.ok) return null;
+    const j = await res.json();
+    return (j && j.ok) ? j.data : null;
+  }
 
-  // ====== Restore-on-load (checkpoint-versioning design, 2026-08-21) ======
-  // The baked page can be OLDER than the live working state on disk (the agent
-  // rebuilds between passes; a reload used to load the stale bake and then
-  // autosave it OVER viewer-state.json, silently destroying unsaved work).
-  // Newest wins, out loud: if viewer-state.json is newer than this build,
-  // restore it and show a banner with a revert option.
-  const [restoredFrom, setRestoredFrom] = useState(null);
+  // Load an edit's on-disk current.json into its working slot. Returns the
+  // state adopted, or null. `st` may be passed when already fetched.
+  async function adoptCurrent(idx, st) {
+    const cut = cutsRef.current[idx];
+    if (!cut) return null;
+    if (!st) st = await readJson(`${editPathOf(cut)}/current.json`);
+    if (!st || !Array.isArray(st.entries)) return null;
+    setWorkingByRound((prev) => ({ ...prev, [idx]: JSON.parse(JSON.stringify(st.entries)) }));
+    if (st.source_act_overrides && typeof st.source_act_overrides === "object") {
+      setSourceActOverrides(st.source_act_overrides);
+    }
+    if (Array.isArray(st.pending_ops)) {
+      setPendingOpsByRound((prev) => ({ ...prev, [idx]: st.pending_ops }));
+    }
+    return st;
+  }
+
+  async function refreshEdits() {
+    if (typeof fetch !== "function") return;
+    let data;
+    try {
+      const res = await fetch(`${SAVE_HELPER_URL}/edits?slug=${encodeURIComponent(PROJECT_META.slug)}`);
+      if (!res.ok) return;
+      data = await res.json();
+    } catch (_) { return; /* server down — the baked list stands */ }
+    if (!data || !data.ok || !Array.isArray(data.edits)) return;
+    setCuts((prev) => mergeEdits(prev, data.edits));
+    // An AGENT write to the open edit's current.json → adopt it (never while
+    // viewing history, never when we wrote after the agent did).
+    const idx = roundIndexRef.current;
+    const open = cutsRef.current[idx];
+    const d = open && data.edits.find((e) => e.slug === open.slug);
+    const cur = d && d.current;
+    if (!cur || cur.written_by !== "agent" || !cur.generated_at) return;
+    if (viewingStepRef.current) return;
+    if (cur.generated_at === lastAdoptedAgentWrite.current) return;
+    if ((Date.parse(cur.generated_at) || 0) <= lastLocalWriteAt.current) return;
+    lastAdoptedAgentWrite.current = cur.generated_at;
+    let st = null;
+    try { st = await readJson(cur.path || `${editPathOf(open)}/current.json`); } catch (_) { return; }
+    if (!st || st.written_by !== "agent") return;
+    if (await adoptCurrent(idx, st)) {
+      const stepRec = st.agent_step && (d.steps || []).find((x) => x.stem === st.agent_step);
+      const label = (stepRec && stepRec.label)
+        || (st.agent_step ? String(st.agent_step).replace(/^\d+-[a-z]+-/, "").replace(/-/g, " ") : "a new proposal");
+      setAgentUpdate({ label, at: Date.now() });
+    }
+  }
+
+  // On mount: the on-disk current.json of the open edit is the truth (it may
+  // have moved on in another tab or under the agent since this page was
+  // baked); the baked timeline is only the fallback. Then keep polling.
+  const initialLoadDone = useRef(false);
   useEffect(() => {
     (async () => {
-      if (typeof fetch !== "function") return;
       try {
-        const rel = `handoffs/${PROJECT_META.slug}/viewer-state.json`;
-        const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent(rel)}`);
-        if (!res.ok) return;
-        const j = await res.json();
-        const st = j && j.ok && j.data;
-        if (!st || !st.generated_at || !Array.isArray(st.entries) || st.entries.length === 0) return;
-        if (BUILD_GENERATED_AT && !(new Date(st.generated_at) > new Date(BUILD_GENERATED_AT))) return;
-        const oc = st.open_cut || {};
-        let idx = ROUNDS.findIndex((r) => r.version === oc.version);
-        if (idx < 0) idx = INITIAL_ROUND_INDEX;
-        setWorkingByRound((prev) => ({ ...prev, [idx]: JSON.parse(JSON.stringify(st.entries)) }));
-        if (st.source_act_overrides && typeof st.source_act_overrides === "object") {
-          setSourceActOverrides(st.source_act_overrides);
+        const st = await adoptCurrent(INITIAL_EDIT_INDEX);
+        if (st && st.written_by === "agent" && st.generated_at) {
+          lastAdoptedAgentWrite.current = st.generated_at;  // no toast for what was already there
         }
-        if (Array.isArray(st.pending_ops) && st.pending_ops.length) {
-          setPendingOpsByRound((prev) => ({ ...prev, [idx]: st.pending_ops }));
-        }
-        setRoundIndex(idx);
-        setRestoredFrom(st.generated_at);
-      } catch (_) { /* no state file / server down — the baked build stands */ }
+      } catch (_) { /* file:// open or server down — the baked build stands */ }
+      initialLoadDone.current = true;
+      refreshEdits();
     })();
+    const id = setInterval(refreshEdits, 4000);
+    return () => clearInterval(id);
     // eslint-disable-next-line
   }, []);
 
-  function revertToBuild() {
-    const idx = roundIndex;
-    setWorkingByRound((prev) => ({
-      ...prev,
-      [idx]: JSON.parse(JSON.stringify((ROUNDS[idx] && ROUNDS[idx].timeline) || [])),
-    }));
-    setPendingOpsByRound((prev) => ({ ...prev, [idx]: [] }));
-    setRestoredFrom(null);
-  }
+  // The agent-update toast fades on its own.
+  useEffect(() => {
+    if (!agentUpdate) return;
+    const t = setTimeout(() => setAgentUpdate(null), 12000);
+    return () => clearTimeout(t);
+  }, [agentUpdate]);
   // Per-round Talk-to-agent batch counter. Each op is tagged with the batch it
   // was made in; Send advances the counter so the panel clears for the next
   // batch while the cumulative log keeps every batch.
   const [batchByRound, setBatchByRound] = useState(() => {
-    const init = {}; ROUNDS.forEach((_, i) => { init[i] = 1; }); return init;
+    const init = {}; EDITS.forEach((_, i) => { init[i] = 1; }); return init;
   });
 
   // applyLocalEdit records a structured op alongside the human-readable
@@ -994,11 +1024,11 @@ export default function QuotesView() {
 
   // === Live-partner agent panel state (M5 redesign) ===
   // The old clipboard "Send batch" model is gone. The agent reads the viewer's
-  // live state from disk (viewer-state.json) on its turn; Jeff just edits and
+  // live state from disk (edits/<edit>/current.json) on its turn; Jeff just edits and
   // talks in chat. This panel is a STATUS surface, not a send surface.
   const [sendPanelOpen, setSendPanelOpen] = useState(false);
   // The note Jeff is composing for the agent right now ("tell me now" — it rides
-  // in viewer-state.json and is consumed when the agent next reads). NOT a queue.
+  // in edits/<edit>/current.json and is consumed when the agent next reads). NOT a queue.
   const [batchNote, setBatchNote] = useState("");
   // Quotes Jeff tagged with "Point at this" — { entry_id, label }. Staged as
   // chips in the composer; they ride the next Send and clear immediately.
@@ -1010,7 +1040,7 @@ export default function QuotesView() {
   // agent-cursor.json so replies appear without a reload.
   const [chatLog, setChatLog] = useState([]);
   const [chatSending, setChatSending] = useState(false);
-  // Mirror of the LAST SENT message — viewer-state.json's pending_message keeps
+  // Mirror of the LAST SENT message — edits/<edit>/current.json's pending_message keeps
   // advertising Jeff's latest note (the skill contract) even though the
   // composer clears on Send. The full thread is the chat log.
   const [lastSent, setLastSent] = useState(null);
@@ -1034,27 +1064,26 @@ export default function QuotesView() {
   const [exportInfo, setExportInfo] = useState(null);
   const [exportCopied, setExportCopied] = useState(false);
   // The export the viewer has queued for the Edit Agent (it launches the FCPXML
-  // Agent itself — no copy-paste, no new session). Surfaced in viewer-state.json
+  // Agent itself — no copy-paste, no new session). Surfaced in edits/<edit>/current.json
   // and written to export-request.json; the agent owns its lifecycle.
   const [pendingExport, setPendingExport] = useState(null);
 
-  // === Top-bar Save / Open / Export-to-Final-Cut menus (M3 §5 redesign) ===
-  // The legacy "Round N" <select> is replaced by three header buttons, each
-  // toggling a small inline panel. Only one is open at a time. The Open panel
-  // lists saved cuts (ROUNDS — editing-versions v[N].json + any named saves) and
-  // loads one (reusing the round-switch / roundIndex path). The Save panel
-  // re-persists the current arrangement (overwrite) or writes a NEW NAMED
-  // deliverable keyed on a typed name. The Export panel consolidates the two
-  // FCPXML export flows (Timeline → -tight file, Full timeline → non-suffixed).
-  const [topMenu, setTopMenu] = useState(null);   // "save" | "open" | "export" | null
-  const [newCutName, setNewCutName] = useState("");  // typed name for "Save as new"
+  // === Top-bar menus (v5.15): edit chip (open) · History · Save as · Export ===
+  // Each header button toggles a small inline panel; only one is open at a
+  // time. The edit chip lists the project's edits and opens one. History lists
+  // the open edit's steps (View / rename; Restore lives in the viewing
+  // banner). Save as forks the current state into a new named edit. Export
+  // consolidates the two FCPXML export flows (Timeline → -tight file, Full
+  // timeline → non-suffixed).
+  const [topMenu, setTopMenu] = useState(null);   // "save" | "open" | "history" | "export" | null
+  const [newEditName, setNewEditName] = useState("");  // typed name for "Save as"
   const [saveStatus, setSaveStatus] = useState({ text: "", cls: "" });
 
   // === Live autosave / persistence status (M4 — persistent app shell) ===
   // The viewer is no longer a throwaway chat artifact: it runs as a persistent
   // local app and shares its working state with the Edit Agent through a single
-  // file on disk, handoffs/<slug>/viewer-state.json, autosaved (debounced) on
-  // every edit. SKILL-edit reads that file at the top of each of its turns to
+  // file on disk, handoffs/<slug>/edits/<edit>/current.json, autosaved
+  // (debounced) on every edit. SKILL-edit reads that file at the top of each of its turns to
   // see the current cut — no copy-paste, no PDF-print. `persistState` drives the
   // top-bar indicator: "saved" (written to disk via the app server / Cowork),
   // "saving", "offline" (no writer reachable — the app server isn't running), or
@@ -1156,15 +1185,6 @@ export default function QuotesView() {
     setEditRenaming(false);
     setTopMenu(null);
     await writeNamesFile({ edit: name });
-  }
-
-  // === Unsaved-changes signal for the Save button dot ===
-  // "Dirty" = tweaks made to the current cut since it was last explicitly saved
-  // (or since it was first viewed this session). The viewer-state autosave is a
-  // separate, always-on channel — this dot is about the ROUND FILE.
-  const [savedMarks, setSavedMarks] = useState({});
-  function markRoundSaved(idx, len) {
-    setSavedMarks((prev) => ({ ...prev, [idx]: len }));
   }
 
   // === Drag-to-reorder state (pointer-events based) ===
@@ -1278,15 +1298,10 @@ export default function QuotesView() {
   // === Speaker color memo ===
   const speakerColors = buildSpeakerColors(PROJECT_META.speakers || []);
 
-  // ====== Saved cuts (named deliverables) — Save / Save-as-new ======
-  // A project has MANY named deliverables (long cut + social shorts), each a
-  // snapshot of the current Timeline arrangement + trims + tier assignments in
-  // handoffs/<slug>/editing-versions/<name>.json (SPEC §3.3). The current cut is
-  // ROUNDS[roundIndex]; its on-disk file stem is `version` ("v3" or a slugified
-  // name). "Save changes" overwrites that file; "Save as new" writes a NEW file
-  // keyed on a typed NAME (slugified). Both reuse the persistFile() path.
-
-  // Slugify a typed deliverable name for the on-disk file stem.
+  // ====== Save as — fork an alternative edit (v5.15) ======
+  // The current working state becomes a NEW edit with its own history; the
+  // edit you branched from is untouched. Writes edit.json + step 001 +
+  // current.json through the app server, then switches to the new edit.
   function slugifyName(name) {
     return (name || "")
       .trim()
@@ -1295,131 +1310,162 @@ export default function QuotesView() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
   }
+  const nowIso = () => new Date().toISOString();
 
-  // Build the editing-versions payload for the current Timeline arrangement.
-  // `roundField` keeps the legacy numeric `round` for v[N] files; named saves
-  // carry the human name in `cut_name` while leaving `round` as the source round
-  // number so downstream tooling that reads `round` still works.
-  function buildCutPayload(roundField, cutName) {
-    const payload = {
-      schema_version: 5,
-      round: roundField,
-      project_slug: PROJECT_META.slug,
-      target_runtime_seconds: PROJECT_META.target_seconds,
-      entries: getTimeline(),
+  async function saveAsNewEdit() {
+    const name = newEditName.trim();
+    const slug = slugifyName(name);
+    if (!slug) { setSaveStatus({ text: "Type a name for the new edit first.", cls: "warn" }); return; }
+    if (slug === "main" || cuts.some((c) => c.slug === slug)) {
+      setSaveStatus({ text: `An edit named “${name}” already exists — pick another name.`, cls: "warn" });
+      return;
+    }
+    const from = cuts[roundIndex];
+    const fromStep = from && from.steps && from.steps.length ? from.steps[from.steps.length - 1].seq : null;
+    const entries = getTimeline();
+    const base = `handoffs/${PROJECT_META.slug}/edits/${slug}`;
+    setSaveStatus({ text: "Creating…", cls: "" });
+    const meta = {
+      schema_version: 1, kind: "edit", project_slug: PROJECT_META.slug, slug, name, is_main: false,
+      created_at: nowIso(), forked_from: from ? { edit: from.slug, step: fromStep } : null,
     };
-    if (cutName) payload.cut_name = cutName;
-    return payload;
-  }
-
-  async function persistCut(relPath, downloadName, payload, okWord) {
-    const json = JSON.stringify(payload, null, 2);
-    setSaveStatus({ text: "Saving…", cls: "" });
-    const { ok, method, detail } = await persistFile(relPath, json, { downloadName });
-    if (!ok) {
-      setSaveStatus({ text: `Save failed: ${detail}`, cls: "err" });
-      return false;
+    const stepLabel = from ? `forked from ${from.name}${fromStep ? ` step ${fromStep}` : ""}` : "created";
+    const step = {
+      schema_version: 1, kind: "edit-step", project_slug: PROJECT_META.slug, edit: slug, seq: 1, who: "jeff",
+      label: stepLabel, note: null, created_at: nowIso(), target_runtime_seconds: PROJECT_META.target_seconds,
+      entry_count: entries.length, entries,
+    };
+    const stepPath = `${base}/steps/001-jeff-${slugifyName(stepLabel).slice(0, 60)}.json`;
+    const current = { ...buildLiveState(), edit: slug, edit_name: name, entries, generated_at: nowIso(), written_by: "viewer" };
+    const w1 = await persistFile(`${base}/edit.json`, JSON.stringify(meta, null, 2), { allowDownload: false });
+    const w2 = w1.ok && await persistFile(stepPath, JSON.stringify(step, null, 2), { allowDownload: false });
+    const w3 = w2 && w2.ok && await persistFile(`${base}/current.json`, JSON.stringify(current, null, 2), { allowDownload: false });
+    if (!(w3 && w3.ok)) {
+      setSaveStatus({ text: `Couldn't create the edit: ${(w1 && !w1.ok && w1.detail) || "is the app server running?"}`, cls: "err" });
+      return;
     }
-    if (method === "download") {
-      setSaveStatus({ text: `Downloaded ${downloadName} — move it into ${relPath}, then reload.`, cls: "warn" });
-    } else {
-      setSaveStatus({ text: `${okWord} → ${detail}. Reload to see it under Open.`, cls: "ok" });
-    }
-    return true;
-  }
-
-  // Overwrite the CURRENT cut's editing-versions file with the current
-  // arrangement. Keys on ROUNDS[roundIndex].version (the file stem), falling
-  // back to v<round_number> for legacy rounds without an explicit version.
-  async function saveChangesToCut() {
-    const round = cuts[roundIndex];
-    if (!round) { setSaveStatus({ text: "No cut to save into yet — use Save as new.", cls: "warn" }); return; }
-    const stem = round.version || `v${round.round_number}`;
-    const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/${stem}.json`;
-    const payload = buildCutPayload(round.round_number, round.cut_name || round.round_label);
-    const ok = await persistCut(relPath, `${stem}.json`, payload, `Saved “${round.round_label}”`);
-    if (ok) markRoundSaved(roundIndex, getPendingOps().length);
-  }
-
-  // Write a NEW named deliverable to editing-versions/<slug>.json, keyed on a
-  // typed NAME (not v[N]). The source round number is preserved in `round`.
-  async function saveAsNamedCut() {
-    const name = newCutName.trim();
-    const stem = slugifyName(name);
-    if (!stem) { setSaveStatus({ text: "Type a name for the new cut first.", cls: "warn" }); return; }
-    if (/^v\d+$/.test(stem)) { setSaveStatus({ text: "That name is reserved for numbered rounds — pick another.", cls: "warn" }); return; }
-    if (cuts.some((r) => r.version === stem) && !confirm(`A saved cut named “${name}” already exists. Overwrite it?`)) return;
-    const round = cuts[roundIndex];
-    const relPath = `handoffs/${PROJECT_META.slug}/editing-versions/${stem}.json`;
-    const payload = buildCutPayload(round ? round.round_number : cuts.length + 1, name);
-    const ok = await persistCut(relPath, `${stem}.json`, payload, `Saved new cut “${name}”`);
-    if (ok) { setNewCutName(""); refreshDiskCuts(); markRoundSaved(roundIndex, getPendingOps().length); }
-  }
-
-  // Baseline the dirty-dot when a round is first viewed this session, so a page
-  // load (which restores prior tweaks) doesn't open showing "unsaved".
-  useEffect(() => {
-    setSavedMarks((prev) => prev[roundIndex] === undefined
-      ? { ...prev, [roundIndex]: getPendingOps().length }
-      : prev);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roundIndex]);
-  const roundDirty = getPendingOps().length !== (savedMarks[roundIndex] ?? getPendingOps().length);
-
-  // Switch the viewer to a saved cut (Open panel). Disk-only cuts (saved this
-  // session / in another tab / by the pipeline) lazy-load their entries from the
-  // app server on first open. Keeps the unsynced-tweaks guard.
-  async function openCut(nextIndex) {
-    if (nextIndex === roundIndex) { setTopMenu(null); return; }
-    if (getPendingOps().length > 0) {
-      if (!confirm(`You have ${getPendingOps().length} unsynced tweaks on the current cut. Open another cut anyway? Unsynced tweaks stay scoped to their cut.`)) {
-        return;
-      }
-    }
-    const cut = cuts[nextIndex];
-    // Lazy-load a disk-only cut's entries the first time it's opened.
-    if (cut && cut._disk && !workingByRound[nextIndex]) {
-      setSaveStatus({ text: `Opening “${cut.round_label}”…`, cls: "" });
-      let entries = null;
-      try {
-        const res = await fetch(`${SAVE_HELPER_URL}/read?path=${encodeURIComponent(cut._path)}`);
-        const data = res.ok ? await res.json() : null;
-        if (data && data.ok && data.data) entries = data.data.entries || [];
-      } catch (_) { /* fall through to error */ }
-      if (!entries) {
-        setSaveStatus({ text: `Couldn't load “${cut.round_label}” — is the app server running?`, cls: "err" });
-        return;
-      }
-      setWorkingByRound((prev) => ({ ...prev, [nextIndex]: JSON.parse(JSON.stringify(entries)) }));
-      setPendingOpsByRound((prev) => ({ ...prev, [nextIndex]: prev[nextIndex] || [] }));
-      setSaveStatus({ text: "", cls: "" });
-    }
+    const newCut = {
+      slug, name, is_main: false, forked_from: meta.forked_from, created_at: meta.created_at,
+      steps: [{ seq: 1, who: "jeff", label: stepLabel, created_at: step.created_at, entry_count: entries.length, path: stepPath }],
+      timeline: [],
+    };
+    const nextIndex = cuts.length;
+    setCuts((prev) => [...prev, newCut]);
+    setWorkingByRound((prev) => ({ ...prev, [nextIndex]: JSON.parse(JSON.stringify(entries)) }));
+    setPendingOpsByRound((prev) => ({ ...prev, [nextIndex]: [] }));
+    setNewEditName("");
+    setSaveStatus({ text: "", cls: "" });
     setRoundIndex(nextIndex);
     setTopMenu(null);
   }
 
-  // ====== Live autosave → viewer-state.json (M4) ======
+  // ====== History — view / restore / rename a step (v5.15) ======
+  // Viewing is read-only: the step's entries replace the Timeline while the
+  // live working state is stashed; autosave and agent adoption pause. Back
+  // restores the stash. Restore copies the step forward as a NEW step on the
+  // open edit (history is never rewritten) and makes it the working state.
+  const [viewingStep, setViewingStep] = useState(null);  // { seq, who, label, created_at, path }
+  const stashRef = useRef(null);
+  useEffect(() => { viewingStepRef.current = viewingStep; }, [viewingStep]);
 
-  // The single agent-readable snapshot of the viewer's current working state.
-  // Shape is deliberately flat and self-describing so SKILL-edit can read the
-  // whole cut, what is in/out, what Jeff just changed, and where his attention
-  // is — from ONE file, on each of its turns. Membership lives on each entry
-  // (tight = Timeline, loose = Cuts); not-used Library quotes are SOURCE_QUOTES
-  // with no entry, so the agent reconstructs the Library from its baked-in pool
-  // plus `source_act_overrides` (Jeff's Library recategorizations).
+  async function viewStep(step) {
+    if (viewingStep && viewingStep.path === step.path) { setTopMenu(null); return; }
+    let j = null;
+    try { j = await readJson(step.path); } catch (_) { /* handled below */ }
+    if (!j || !Array.isArray(j.entries)) {
+      setSaveStatus({ text: `Couldn't load step ${step.seq} — is the app server running?`, cls: "err" });
+      return;
+    }
+    if (!viewingStep) stashRef.current = { idx: roundIndex, entries: JSON.parse(JSON.stringify(getTimeline())) };
+    setWorkingByRound((prev) => ({ ...prev, [roundIndex]: JSON.parse(JSON.stringify(j.entries)) }));
+    setViewingStep({ ...step, label: j.label || step.label });
+    setTopMenu(null);
+  }
+  function backToNow() {
+    const stash = stashRef.current;
+    if (stash) setWorkingByRound((prev) => ({ ...prev, [stash.idx]: stash.entries }));
+    stashRef.current = null;
+    setViewingStep(null);
+  }
+  async function restoreStep() {
+    if (!viewingStep) return;
+    const cut = cuts[roundIndex];
+    const entries = getTimeline();  // = the viewed step's entries
+    const seq = (cut.steps || []).reduce((m, s) => Math.max(m, s.seq || 0), 0) + 1;
+    const label = `restored step ${viewingStep.seq} (${viewingStep.label})`;
+    const step = {
+      schema_version: 1, kind: "edit-step", project_slug: PROJECT_META.slug, edit: cut.slug, seq, who: "jeff",
+      label, note: null, created_at: nowIso(), target_runtime_seconds: PROJECT_META.target_seconds,
+      entry_count: entries.length, entries,
+    };
+    const stepPath = `${editPathOf(cut)}/steps/${String(seq).padStart(3, "0")}-jeff-${slugifyName(label).slice(0, 60)}.json`;
+    const w = await persistFile(stepPath, JSON.stringify(step, null, 2), { allowDownload: false });
+    if (!w.ok) { setSaveStatus({ text: `Couldn't write the restore step: ${w.detail}`, cls: "err" }); return; }
+    setCuts((prev) => prev.map((c, i) => i === roundIndex
+      ? { ...c, steps: [...(c.steps || []), { seq, who: "jeff", label, created_at: step.created_at, entry_count: entries.length, path: stepPath }] }
+      : c));
+    stashRef.current = null;
+    setViewingStep(null);  // autosave resumes → current.json = the restored entries
+    setLastEditAtByRound((m) => ({ ...m, [roundIndex]: Date.now() }));
+  }
+  async function renameStep(step) {
+    const label = window.prompt("Rename this step", step.label);
+    if (label == null || !label.trim() || label.trim() === step.label) return;
+    let j = null;
+    try { j = await readJson(step.path); } catch (_) { /* handled below */ }
+    if (!j) { setSaveStatus({ text: "Couldn't load the step to rename it.", cls: "err" }); return; }
+    j.label = label.trim();
+    const w = await persistFile(step.path, JSON.stringify(j, null, 2), { allowDownload: false });
+    if (w.ok) {
+      setCuts((prev) => prev.map((c, i) => i === roundIndex
+        ? { ...c, steps: (c.steps || []).map((s) => (s.path === step.path ? { ...s, label: j.label } : s)) }
+        : c));
+    }
+  }
+
+  // Switch to another edit (edit chip). Exits history viewing first. The
+  // edit's on-disk current.json is loaded on every open — it may have moved on
+  // in another tab or under the agent; the baked timeline is the fallback.
+  async function openCut(nextIndex) {
+    if (nextIndex === roundIndex) { setTopMenu(null); return; }
+    if (viewingStep) backToNow();
+    const cut = cuts[nextIndex];
+    if (!cut) return;
+    setSaveStatus({ text: `Opening “${cut.name}”…`, cls: "" });
+    let adopted = null;
+    try { adopted = await adoptCurrent(nextIndex); } catch (_) { /* fallback below */ }
+    if (!adopted && !workingByRound[nextIndex]) {
+      setWorkingByRound((prev) => ({ ...prev, [nextIndex]: JSON.parse(JSON.stringify(cut.timeline || [])) }));
+    }
+    setPendingOpsByRound((prev) => ({ ...prev, [nextIndex]: prev[nextIndex] || [] }));
+    setSaveStatus({ text: "", cls: "" });
+    setRoundIndex(nextIndex);
+    setTopMenu(null);
+  }
+
+  // ====== Live autosave → edits/<edit>/current.json (v5.15) ======
+
+  // The single agent-readable snapshot of the open edit's working state. Flat
+  // and self-describing so SKILL-edit can read the whole cut, what is in/out,
+  // what Jeff just changed, and where his attention is — from ONE file, on
+  // each of its turns. Membership lives on each entry (tight = Timeline,
+  // loose = Cuts); not-used Library quotes are SOURCE_QUOTES with no entry, so
+  // the agent reconstructs the Library from its baked-in pool plus
+  // `source_act_overrides` (Jeff's Library recategorizations).
   function buildLiveState() {
-    const round = cuts[roundIndex];
+    const cut = cuts[roundIndex];
     const tl = getTimeline();
     const ops = getPendingOps();
     return {
       schema_version: 1,
-      kind: "viewer-live-state",
+      kind: "edit-current",
       project_slug: PROJECT_META.slug,
       project_title: PROJECT_TITLE,
+      edit: cut ? cut.slug : "main",
+      edit_name: cut ? cut.name : "Main edit",
       generated_at: new Date().toISOString(),
-      open_cut: round
-        ? { round_number: round.round_number, version: round.version, label: round.round_label || `Round ${round.round_number}`, cut_name: round.cut_name || null }
-        : null,
+      written_by: "viewer",
+      target_runtime_seconds: PROJECT_META.target_seconds,
       focus: { view, mode: timelineMode, act: actFilter, speaker: speakerFilter },
       // Honest staleness for the agent: has Jeff edited since you last read?
       agent_behind: agentBehind,
@@ -1455,29 +1501,33 @@ export default function QuotesView() {
   // Debounced write of the live state on every meaningful change. Best-effort
   // and download-suppressed (never spams the browser): if no writer is reachable
   // the indicator simply shows "offline". The autosaveSeq guard drops a stale
-  // in-flight write if a newer change already superseded it.
+  // in-flight write if a newer change already superseded it. Paused while a
+  // past step is being viewed (read-only) and until the initial on-disk state
+  // has been consulted, so a stale bake can never overwrite live work.
   useEffect(() => {
+    if (viewingStep) return;
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(async () => {
+      if (!initialLoadDone.current) return;
       const seq = ++autosaveSeq.current;
       setPersistState((p) => ({ ...p, state: "saving" }));
-      const relPath = `handoffs/${PROJECT_META.slug}/viewer-state.json`;
+      const relPath = `${editPathOf(cuts[roundIndex])}/current.json`;
       const json = JSON.stringify(buildLiveState(), null, 2);
       const res = await persistFile(relPath, json, { allowDownload: false });
       if (seq !== autosaveSeq.current) return;  // a newer write is already queued
       if (res.ok && (res.method === "cowork" || res.method === "helper")) {
+        lastLocalWriteAt.current = Date.now();
         setPersistState({ state: "saved", at: Date.now(), detail: res.detail || relPath });
       } else {
         setPersistState({ state: "offline", at: Date.now(), detail: res.detail || "app server not running" });
       }
-      // The old clipboard "Send" used to persist the tweak log (the Editing
-      // Coach's training record). With Send gone, fold it into the autosave so
-      // every correction + Jeff's live note still reach disk. Best-effort.
+      // The tweak log (the Editing Coach's training record) rides the autosave
+      // so every correction + Jeff's live note still reach disk. Best-effort.
       writeTweakLog();
     }, 700);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, lastSent, dirtySinceSend, sourceActOverrides, pendingExport]);
+  }, [workingByRound, pendingOpsByRound, roundIndex, view, timelineMode, actFilter, speakerFilter, lastSent, dirtySinceSend, sourceActOverrides, pendingExport, viewingStep]);
 
   // Offline self-heal (v5.13): the indicator latches "offline" when a save
   // fires while the app server is down (it restarts between agent sessions),
@@ -1486,13 +1536,17 @@ export default function QuotesView() {
   useEffect(() => {
     if (persistState.state !== "offline") return;
     const t = setInterval(async () => {
+      if (viewingStepRef.current) return;
       try {
         const res = await fetch(SAVE_HELPER_URL + "/ping");
         if (!res.ok) return;
-        const relPath = `handoffs/${PROJECT_META.slug}/viewer-state.json`;
+        const relPath = `${editPathOf(cutsRef.current[roundIndexRef.current])}/current.json`;
         const json = JSON.stringify(buildLiveState(), null, 2);
         const r = await persistFile(relPath, json, { allowDownload: false });
-        if (r.ok) setPersistState({ state: "saved", at: Date.now(), detail: r.detail || relPath });
+        if (r.ok) {
+          lastLocalWriteAt.current = Date.now();
+          setPersistState({ state: "saved", at: Date.now(), detail: r.detail || relPath });
+        }
       } catch (_) { /* still down — keep waiting */ }
     }, 15000);
     return () => clearInterval(t);
@@ -1523,8 +1577,12 @@ export default function QuotesView() {
     const label = win === "tight" ? "Timeline" : "Full timeline";
     const filtered = win === "tight" ? tl.filter((e) => membershipOf(e) === "tight") : tl;
     const totalSec = filtered.reduce((a, e) => a + entrySeconds(e), 0);
-    const round = cuts[roundIndex];
-    const filename = `trimmed-quotes-v${round.round_number}${win === "tight" ? "-tight" : ""}.json`;
+    const cut = cuts[roundIndex] || { slug: "main", name: "Main edit", steps: [] };
+    const stepCount = (cut.steps || []).length || 1;
+    // Per-edit export files: trimmed-quotes-<edit>[-tight].json. Never matches
+    // the legacy trimmed-quotes-v(\d+) round pattern, so nothing downstream
+    // mistakes an export for a round.
+    const filename = `trimmed-quotes-${cut.slug}${win === "tight" ? "-tight" : ""}.json`;
     const relPath = `handoffs/${PROJECT_META.slug}/${filename}`;
     // Stamp mid-segment (interior) cuts onto the export so the FCPXML
     // handoff/verify can list the affected entries automatically instead of the
@@ -1552,7 +1610,9 @@ export default function QuotesView() {
       }));
     const payload = {
       schema_version: 5,
-      round: round.round_number,
+      round: stepCount,
+      edit: cut.slug,
+      edit_name: cut.name,
       project_slug: PROJECT_META.slug,
       window: win,
       target_runtime_seconds: PROJECT_META.target_seconds,
@@ -1560,7 +1620,7 @@ export default function QuotesView() {
       fidelity_warnings: fidelityWarnings,
     };
     const json = JSON.stringify(payload, null, 2);
-    const outFcpxml = `XML/imports/${PROJECT_META.slug}_${win}_cut_v${round.round_number}.fcpxml`;
+    const outFcpxml = `XML/imports/${PROJECT_META.slug}_${cut.slug}_${win}_cut.fcpxml`;
     const res = await persistFile(relPath, json, { downloadName: filename });
     const wrote = res.method === "download" ? "download"
       : res.ok ? "disk" : "fail";
@@ -1578,8 +1638,9 @@ export default function QuotesView() {
         status: "requested",
         window: win,
         label,
-        round: round.round_number,
-        cut_name: round.cut_name || round.round_label || `Round ${round.round_number}`,
+        round: stepCount,
+        edit: cut.slug,
+        cut_name: cut.name,
         cut_file: relPath,
         out_fcpxml: outFcpxml,
         entry_count: filtered.length,
@@ -1799,7 +1860,7 @@ export default function QuotesView() {
   // Tag an exact entry into the live message to the agent without exposing a
   // visible quote number: speaker + first ~6 kept words + the under-the-hood
   // entry_id (the precise handle). Staged as a chip in the agent panel; it
-  // rides in viewer-state.json's pending_message so the agent knows exactly
+  // rides in edits/<edit>/current.json's pending_message so the agent knows exactly
   // which quote Jeff means on its next read. Opens the panel.
   function pointAtEntry(entry) {
     const src = findSourceQuote(entry.source_quote_id);
@@ -1834,7 +1895,7 @@ export default function QuotesView() {
 
   // ====== Agent read-acknowledgement (M5 live loop) ======
   // The Edit Agent drops handoffs/<slug>/agent-cursor.json each turn after it
-  // reads viewer-state.json (see SKILL-edit). We poll it so the staleness cue
+  // reads edits/<edit>/current.json (see SKILL-edit). We poll it so the staleness cue
   // clears itself the moment the agent catches up — the honest version of
   // "sending a message clears it," with no manual Send.
   useEffect(() => {
@@ -2030,15 +2091,16 @@ export default function QuotesView() {
   async function writeTweakLog() {
     const ops = getPendingOps();
     if (ops.length === 0 && !batchNote.trim()) return { ok: false, reason: "nothing to log" };
-    const round = cuts[roundIndex];
-    if (!round) return { ok: false, reason: "no round" };
+    const cut = cuts[roundIndex];
+    if (!cut) return { ok: false, reason: "no edit" };
     const payload = {
-      schema_version: 3,
+      schema_version: 4,
       project_slug: PROJECT_META.slug,
-      round: round.round_number,
-      round_version: round.version,
+      edit: cut.slug,
+      edit_name: cut.name,
+      round: (cut.steps || []).length || 1,
       generated_at: new Date().toISOString(),
-      baseline: `round ${round.round_number} (${round.version})`,
+      baseline: `edit ${cut.slug} (${(cut.steps || []).length} steps)`,
       // Jeff's current live note + what he's pointing at (the "why" for the Coach).
       working_note: batchNote.trim() || null,
       pointed_at: pointedAt.map((p) => ({ entry_id: p.entry_id, ref: p.label })),
@@ -2054,7 +2116,7 @@ export default function QuotesView() {
         description: o.description,
       })),
     };
-    const relPath = `handoffs/${PROJECT_META.slug}/tweak-log-v${round.round_number}.json`;
+    const relPath = `${editPathOf(cut)}/tweak-log.json`;
     const json = JSON.stringify(payload, null, 2);
     return await persistFile(relPath, json, { allowDownload: false });
   }
@@ -2141,7 +2203,7 @@ export default function QuotesView() {
   const currentCut = cuts[roundIndex] || null;
   const toggleTopMenu = (m) => {
     setSaveStatus({ text: "", cls: "" });
-    if (m === "open") refreshDiskCuts();  // make the Open list reflect disk
+    if (m === "open" || m === "history") refreshEdits();  // reflect disk right now
     setTopMenu((cur) => (cur === m ? null : m));
   };
 
@@ -2149,7 +2211,7 @@ export default function QuotesView() {
   // ([{ label, roadmap }]) and PROJECT_META.premise — both emitted by the build
   // script from the Creative Context handoffs (degrade to "" when absent).
   // M4 persistence indicator. Honest about whether the agent can see edits:
-  // "saved" (green) = viewer-state.json written to disk; "saving" (amber pulse);
+  // "saved" (green) = edits/<edit>/current.json written to disk; "saving" (amber pulse);
   // "offline" (grey) = no app server reachable, so the agent is blind to edits
   // until you start scripts/viewer_save_server.py; "error" (red) = a write tried
   // and failed.
@@ -2166,8 +2228,8 @@ export default function QuotesView() {
     const tip = s === "offline"
       ? "The viewer can't reach the app server, so the Edit Agent can't see your edits. Run: python3 scripts/viewer_save_server.py --serve <built index.html> --root <project root>"
       : s === "saved"
-        ? `Working state autosaved to ${persistState.detail || "viewer-state.json"} — the Edit Agent reads it each turn.`
-        : "Your working state is shared with the Edit Agent via viewer-state.json on disk.";
+        ? `Working state autosaved to ${persistState.detail || "edits/<edit>/current.json"} — the Edit Agent reads it each turn.`
+        : "Your working state is shared with the Edit Agent via edits/<edit>/current.json on disk.";
     return (
       <div className={`persist-ind ${v.cls}`} title={tip}>
         <span className="persist-glyph" aria-hidden="true">{v.glyph}</span>
@@ -2317,29 +2379,35 @@ export default function QuotesView() {
             </div>
           )}
         </div>
-        {/* Hierarchy level 4 — the VERSION chip (the one capsule in the header).
-            Clicking it IS the Open menu; the old Open button is gone. */}
+        {/* Hierarchy level 4 — the EDIT chip (the one capsule in the header):
+            names the edit you are in; clicking it lists every edit of this
+            project (v5.15: Main edit + the Save-as alternatives). */}
         <div className="ver-wrap" data-topbar="1">
           <button
             className={`ver-chip${topMenu === "open" ? " active" : ""}`}
             onClick={() => toggleTopMenu("open")}
+            title="The edit you are working in — click to switch"
           >
-            {currentCut
-              ? (currentCut.cut_name || currentCut.round_label || `Round ${currentCut.round_number}`)
-              : PROJECT_TITLE} <span className="chev">▾</span>
+            {currentCut ? currentCut.name : "Main edit"} <span className="chev">▾</span>
           </button>
           {topMenu === "open" && (
             <div className="tb-panel" data-topbar="1">
-              <div className="tb-panel-title">Versions of {names.edit}</div>
-              {cuts.length === 0 ? (
-                <div className="tb-empty">No saved versions yet.</div>
-              ) : (
-                <ul className="tb-cutlist">
-                  {cuts.map((r, i) => ({ r, i })).filter(({ r }) => !r._checkpoint).map(({ r, i }) => (
-                    <li key={i} className={i === roundIndex ? "current" : ""}>
+              <div className="tb-panel-title">Edits of {names.edit}</div>
+              <ul className="tb-cutlist">
+                {cuts.map((c, i) => {
+                  const n = (c.steps || []).length;
+                  const src = c.forked_from && (cuts.find((x) => x.slug === c.forked_from.edit) || {});
+                  return (
+                    <li key={c.slug} className={i === roundIndex ? "current" : ""}>
                       <span className="tb-cutname">
-                        {r.round_label || `Round ${r.round_number}`}
-                        {i === roundIndex && <span className="tb-current-tag">current</span>}
+                        <span className="tb-cutname-main">
+                          {c.name}
+                          {i === roundIndex && <span className="tb-current-tag">open</span>}
+                        </span>
+                        <span className="tb-cutsub">
+                          {c.forked_from ? `from ${src.name || c.forked_from.edit}${c.forked_from.step ? ` step ${c.forked_from.step}` : ""} · ` : ""}
+                          {n} step{n === 1 ? "" : "s"}
+                        </span>
                       </span>
                       <button
                         className="btn tb-open-btn"
@@ -2347,37 +2415,18 @@ export default function QuotesView() {
                         onClick={() => openCut(i)}
                       >Open</button>
                     </li>
-                  ))}
-                </ul>
-              )}
-              {cuts.some((c) => c._checkpoint) && (
-                <>
-                  <div className="tb-panel-title tb-ckpt-title">Checkpoints (saved automatically)</div>
-                  <ul className="tb-cutlist tb-ckpt-list">
-                    {cuts.map((r, i) => ({ r, i })).filter(({ r }) => r._checkpoint).map(({ r, i }) => (
-                      <li key={i} className={i === roundIndex ? "current" : ""}>
-                        <span className="tb-cutname">
-                          {r.round_label}
-                          {i === roundIndex && <span className="tb-current-tag">current</span>}
-                        </span>
-                        <button
-                          className="btn tb-open-btn"
-                          disabled={i === roundIndex}
-                          onClick={() => openCut(i)}
-                        >Open</button>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              <div className="tb-footnote">Opening a version never deletes another — every save stays on disk.</div>
+                  );
+                })}
+              </ul>
+              <div className="tb-footnote">Opening an edit never changes another. Each saves on its own.</div>
+              {saveStatus.text && <div className={`tb-status ${saveStatus.cls}`}>{saveStatus.text}</div>}
             </div>
           )}
         </div>
         <div className="hdr-grow" aria-hidden="true"></div>
 
-        {/* RIGHT CLUSTER: views · cut metric · Save (with dirty dot) · Export.
-            Save state lives ON the Save button; the version chip replaced Open. */}
+        {/* RIGHT CLUSTER: views · cut metric · History · Save as · Export.
+            No dirty dot: the strip's autosave indicator is the one save state. */}
         <div className="hdr-right">
           <div className="mode-toggle">
             {[
@@ -2399,37 +2448,85 @@ export default function QuotesView() {
           </span>
           <div className="topbar-actions" data-topbar="1">
             <button
-              className={`tb-btn tb-save${roundDirty ? " dirty" : ""}${topMenu === "save" ? " active" : ""}`}
-              title={roundDirty ? "Unsaved changes on this version" : "All changes saved to this version"}
+              className={`tb-btn tb-history${topMenu === "history" ? " active" : ""}`}
+              onClick={() => toggleTopMenu("history")}
+              title="The steps of this edit, written by the agent as you move act to act"
+            >History ▾</button>
+            {topMenu === "history" && (
+              <div className="tb-panel tb-panel-history" data-topbar="1">
+                <div className="tb-panel-title">History of {currentCut ? currentCut.name : "this edit"}</div>
+                <ul className="tb-steps">
+                  <li className={`tb-step now${viewingStep ? "" : " current"}`}>
+                    <span className="tb-who n">●</span>
+                    <span className="tb-step-main">
+                      <span className="tb-step-label">Now · working</span>
+                      <span className="tb-step-meta">
+                        {persistState.state === "saved" ? "Saved" : persistState.state === "offline" ? "Offline — not saving" : persistState.state === "saving" ? "Saving…" : "Live"}
+                        {" · "}{viewingStep && stashRef.current ? stashRef.current.entries.length : getTimeline().length} entries
+                        {" · "}{getPendingOps().length} tweak{getPendingOps().length === 1 ? "" : "s"} logged
+                      </span>
+                    </span>
+                    <span className="tb-step-actions">
+                      {viewingStep && <button className="btn tb-open-btn" onClick={backToNow}>Back to now</button>}
+                    </span>
+                  </li>
+                  {[...((currentCut && currentCut.steps) || [])].reverse().map((st) => (
+                    <li key={st.path || st.seq} className={`tb-step${viewingStep && viewingStep.path === st.path ? " current" : ""}`}>
+                      <span className={`tb-who ${st.who === "claude" ? "c" : st.who === "jeff" ? "j" : "p"}`}>
+                        {st.who === "claude" ? "C" : st.who === "jeff" ? "J" : "P"}
+                      </span>
+                      <span className="tb-step-main">
+                        <span className="tb-step-label">
+                          {whoName(st.who)}: {st.label}
+                          <button className="tb-step-rename" title="Rename this step" onClick={() => renameStep(st)}>✎</button>
+                        </span>
+                        <span className="tb-step-meta">{fmtWhen(st.created_at)} · {st.entry_count} entries</span>
+                      </span>
+                      <span className="tb-step-actions">
+                        <button
+                          className="btn tb-open-btn"
+                          disabled={!!(viewingStep && viewingStep.path === st.path)}
+                          onClick={() => viewStep(st)}
+                        >View</button>
+                      </span>
+                    </li>
+                  ))}
+                  {(!currentCut || !(currentCut.steps || []).length) && (
+                    <li className="tb-empty">No steps yet — the agent writes one each time you hand off an act.</li>
+                  )}
+                </ul>
+                <div className="tb-footnote">View is read-only; Restore (in the banner while viewing) copies a step forward as a new step. History is never rewritten.</div>
+                {saveStatus.text && <div className={`tb-status ${saveStatus.cls}`}>{saveStatus.text}</div>}
+              </div>
+            )}
+          </div>
+          <div className="topbar-actions" data-topbar="1">
+            <button
+              className={`tb-btn tb-saveas${topMenu === "save" ? " active" : ""}`}
+              disabled={!!viewingStep}
               onClick={() => toggleTopMenu("save")}
-            ><span className={`save-dot${roundDirty ? " warn" : ""}`}></span> Save ▾</button>
+              title="Fork the current state into a new edit you iterate on separately"
+            >Save as ▾</button>
             {topMenu === "save" && (
               <div className="tb-panel" data-topbar="1">
-                <div className="tb-panel-title">
-                  Save changes to “{currentCut ? (currentCut.cut_name || currentCut.round_label || `Round ${currentCut.round_number}`) : "—"}”
-                </div>
-                <button
-                  className="btn tb-panel-btn"
-                  disabled={!currentCut}
-                  onClick={saveChangesToCut}
-                >Save changes</button>
-                <div className="tb-panel-divider"><span>or save as a new version</span></div>
+                <div className="tb-panel-title">Save current state as a new edit</div>
                 <div className="tb-saveas">
                   <input
                     className="tb-input"
                     type="text"
-                    placeholder="New version name (e.g. Trying shorter act 1)"
-                    value={newCutName}
-                    onChange={(e) => setNewCutName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") saveAsNamedCut(); }}
+                    placeholder="Name, e.g. Tighter cut"
+                    value={newEditName}
+                    autoFocus
+                    onChange={(e) => setNewEditName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveAsNewEdit(); }}
                   />
                   <button
                     className="btn tb-panel-btn"
-                    disabled={!newCutName.trim()}
-                    onClick={saveAsNamedCut}
-                  >Save new</button>
+                    disabled={!newEditName.trim()}
+                    onClick={saveAsNewEdit}
+                  >Create</button>
                 </div>
-                <div className="tb-footnote">The version you branched from stays untouched — experiment freely.</div>
+                <div className="tb-footnote">Starts from “{currentCut ? currentCut.name : "Main edit"}” as it is now. That edit stays untouched; you will be switched to the new one.</div>
                 {saveStatus.text && <div className={`tb-status ${saveStatus.cls}`}>{saveStatus.text}</div>}
               </div>
             )}
@@ -3974,10 +4071,34 @@ export default function QuotesView() {
     .ver-chip .chev { font-size:8px; }
     .hdr-grow { flex:1; }
     .hdr-meta { font-size:12.5px; color: var(--text-subtle); font-variant-numeric:tabular-nums; white-space:nowrap; }
-    .save-dot { width:7px; height:7px; border-radius:99px; background: var(--must); display:inline-block; margin-right:3px; }
-    .save-dot.warn { background:#d97706; }
-    .tb-btn.tb-save.dirty { border-color: var(--accent); color: var(--accent); }
-    .tb-btn.tb-save.active .save-dot { background:#fff; }
+    .tb-btn:disabled { opacity:.45; cursor:default; }
+    .tb-cutname { flex-direction:column; align-items:flex-start; gap:1px; }
+    .tb-cutname-main { display:inline-flex; align-items:center; gap:7px; font-weight:600; }
+    .tb-cutsub { font-size:11px; color: var(--text-subtle); }
+    /* History panel (v5.15): the open edit's steps, newest first */
+    .tb-panel-history { min-width:440px; }
+    .tb-steps { list-style:none; margin:0; padding:0; max-height:380px; overflow:auto; }
+    .tb-step { display:grid; grid-template-columns:22px 1fr auto; gap:0 10px; padding:7px 8px; border-radius:8px; align-items:start; }
+    .tb-step:hover { background: var(--surface-2); }
+    .tb-step.now { background: var(--must-soft); }
+    .tb-step.current:not(.now) { background: var(--accent-soft, #e0f2fe); }
+    .tb-who { width:22px; height:22px; border-radius:50%; font-size:10px; font-weight:800; display:inline-flex;
+      align-items:center; justify-content:center; color:#fff; background:#78716c; }
+    .tb-who.c { background:#7c3aed; }
+    .tb-who.j { background:#0369a1; }
+    .tb-who.n { background: var(--must); }
+    .tb-step-main { display:flex; flex-direction:column; gap:1px; min-width:0; }
+    .tb-step-label { font-size:12.5px; font-weight:600; color: var(--text); display:inline-flex; align-items:center; gap:6px; }
+    .tb-step-meta { font-size:11px; color: var(--text-subtle); }
+    .tb-step-actions { display:flex; gap:6px; align-items:center; }
+    .tb-step-rename { border:none; background:none; cursor:pointer; font-size:11px; color: var(--text-subtle); padding:0 2px; opacity:0; }
+    .tb-step:hover .tb-step-rename { opacity:1; }
+    .tb-step-rename:hover { color: var(--accent); }
+    /* Read-only history view */
+    .main.readonly { pointer-events:none; opacity:.93; }
+    .view-banner { background:#fef3c7; }
+    .agent-banner { background: var(--probable-soft, #dbeafe); }
+    .restore-banner button.primary { background: var(--accent); color:#fff; border-color: var(--accent); }
     .tb-footnote { font-size:11px; color: var(--text-subtle); padding-top:8px; line-height:1.4; }
     .hdr-right { align-items:center; }
     /* Filters float on the page background, outside the shadowed header */
@@ -4028,25 +4149,32 @@ export default function QuotesView() {
       background:none; border-radius:7px; cursor:pointer; color: var(--accent); }
     .cc-pin-btn:hover { background: var(--accent-soft); }
     @media (max-width: 1100px) { .cc-side { display:none; } }
-    .tb-ckpt-title { margin-top:10px; opacity:.7; }
   `;
 
   return (
     <div className="viewer">
       <style>{m2Styles}</style>
       {renderHeader()}
-      {restoredFrom && (
-        <div className="restore-banner">
+      {viewingStep && (
+        <div className="restore-banner view-banner">
           <span>
-            Restored your unsaved work from {new Date(restoredFrom).toLocaleString()} — newer
-            than this build.
+            Viewing step {viewingStep.seq} · <b>{whoName(viewingStep.who)}: {viewingStep.label}</b>
+            {" · "}{fmtWhen(viewingStep.created_at)} · read-only
           </span>
-          <button onClick={() => setRestoredFrom(null)}>OK</button>
-          <button onClick={revertToBuild}>Revert to built version</button>
+          <span className="hdr-grow"></span>
+          <button onClick={restoreStep}>Restore as new step</button>
+          <button className="primary" onClick={backToNow}>Back to now</button>
+        </div>
+      )}
+      {agentUpdate && !viewingStep && (
+        <div className="restore-banner agent-banner">
+          <span>Claude updated this edit: <b>{agentUpdate.label}</b> — it is now your working state (the step before it is in History).</span>
+          <span className="hdr-grow"></span>
+          <button onClick={() => setAgentUpdate(null)}>OK</button>
         </div>
       )}
       <div className="body-row">
-        <main className="main">
+        <main className={`main${viewingStep ? " readonly" : ""}`}>
           {view === "library" && renderLibrary()}
           {view === "timeline" && renderTimeline()}
           {view === "cuts" && renderCuts()}

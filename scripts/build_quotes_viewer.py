@@ -8,8 +8,9 @@ Reads:
   - One of:
       (a) A pre-assembled project data JSON file (--data option)
       (b) Auto-discovered files in the project handoffs folder
-          (tagged-quotes-v*.json, trimmed-quotes-v*.json,
-          editing-versions/v*.json, pipeline-state.json).
+          (tagged-quotes-v*.json, edits/<edit>/current.json, pipeline-state.json;
+          legacy trimmed-quotes-v*.json + editing-versions/ are migrated into
+          edits/ once — see scripts/edits_store.py).
           Tight-window exports (trimmed-quotes-v[N]-tight.json) are window
           variants, not rounds — round discovery/version counting ignores them.
 
@@ -21,7 +22,7 @@ Writes:
 Architecture:
   - Strips the ES `import` and `export default` from the template
   - Substitutes the DATA BLOCK constants (PROJECT_TITLE, PROJECT_META,
-    SOURCE_QUOTES, ROUNDS, INITIAL_ROUND_INDEX, INITIAL_FOCUS)
+    SOURCE_QUOTES, EDITS, INITIAL_EDIT_INDEX, INITIAL_FOCUS)
   - Migrates timeline entries from the v5.0 segment-based shape to the
     character-range trim shape the new viewer uses
   - Compiles the JSX to plain JS at build time (Node + vendored
@@ -43,6 +44,12 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+# v5.15: the edit/step model (handoffs/<slug>/edits/) lives in the sibling
+# module. The build migrates a legacy editing-versions/ layout on the way in
+# and bakes each edit's current state as the page's offline fallback.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import edits_store  # noqa: E402
 
 
 # ============================================================================
@@ -1004,6 +1011,30 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
             "_raw_entries": entries,
         })
 
+    # v5.15 — the edit/step model. Fold any legacy layout (editing-versions/
+    # rounds + checkpoints + named cuts, viewer-state.json) into
+    # handoffs/<slug>/edits/ ONCE; from then on the edits on disk are the truth
+    # and the legacy round files above are only the migration's fallback. A
+    # project with nothing yet gets an empty Main edit so the viewer has
+    # somewhere to autosave and the agent somewhere to propose.
+    fallback_rounds = [(r["round_label"], r["_raw_entries"], target_seconds) for r in rounds]
+    rep = edits_store.migrate(ssd_root, slug, handoffs_dir=handoffs, fallback_rounds=fallback_rounds)
+    if rep["created"]:
+        print(f"Migrated legacy versions into handoffs/{slug}/edits/: "
+              f"main ({rep['main_steps']} steps)"
+              + (f" + {len(rep['edits'])} alternative edit(s): {', '.join(rep['edits'])}" if rep["edits"] else "")
+              + (f" [{'; '.join(rep['notes'])}]" if rep["notes"] else ""), file=sys.stderr)
+    if not edits_store.read_edit_meta(ssd_root, slug, edits_store.MAIN):
+        edits_store.create_edit(ssd_root, slug, "Main edit", [], is_main=True, who="pipeline",
+                                first_label="created (empty)", target_runtime_seconds=target_seconds)
+        print(f"Created an empty Main edit at handoffs/{slug}/edits/main/", file=sys.stderr)
+    edits = []
+    for e in edits_store.list_edits(ssd_root, slug):
+        cur = edits_store.read_current(ssd_root, slug, e["slug"]) or {}
+        if cur.get("target_runtime_seconds") and e["is_main"]:
+            target_seconds = cur["target_runtime_seconds"]
+        edits.append({**e, "_raw_entries": cur.get("entries", [])})
+
     return {
         "project_name": project_name,
         "client": client_name,
@@ -1016,7 +1047,8 @@ def load_project_data_from_handoffs(slug: str, ssd_root: Path,
         "premise": premise,
         "target_seconds": target_seconds,
         "source_quotes": combined_quotes,
-        "rounds": rounds,
+        "rounds": rounds,   # legacy shape, kept for the --data/unit-test path
+        "edits": edits,     # v5.15: what the page actually bakes
         "seam_flags": seam_flags,
     }
 
@@ -1129,8 +1161,19 @@ def assemble_data_block(data: dict) -> dict:
     shape, and assigns each entry a tight/loose membership stratum.
     """
     by_num = {q["num"]: q for q in data["source_quotes"]}
-    migrated_rounds = []
-    for r in data["rounds"]:
+    # v5.15: bake EDITS. A raw dict that only carries legacy `rounds` (unit
+    # tests, hand-assembled data) is lifted into one edit per round.
+    src_edits = data.get("edits")
+    if src_edits is None:
+        src_edits = [{
+            "slug": r.get("version") or f"v{r.get('round_number', i + 1)}",
+            "name": r.get("cut_name") or r.get("round_label") or f"Round {i + 1}",
+            "is_main": i == len(data["rounds"]) - 1,
+            "forked_from": None, "created_at": None, "steps": [],
+            "current": {}, "_raw_entries": r["_raw_entries"],
+        } for i, r in enumerate(data["rounds"])]
+    migrated_edits = []
+    for r in src_edits:
         migrated_entries = []
         for e in r["_raw_entries"]:
             if e.get("source_quote_id") is None:
@@ -1153,12 +1196,21 @@ def assemble_data_block(data: dict) -> dict:
             if mig:
                 migrated_entries.append(mig)
         migrated_entries = migrate_membership(migrated_entries)
-        migrated_rounds.append({
-            "round_number": r["round_number"],
-            "round_label": r["round_label"],
-            "version": r["version"],
+        migrated_edits.append({
+            "slug": r["slug"],
+            "name": r["name"],
+            "is_main": bool(r.get("is_main")),
+            "forked_from": r.get("forked_from"),
+            "created_at": r.get("created_at"),
+            # Step manifests (no entries — the viewer loads a step on View).
+            "steps": r.get("steps", []),
+            "current_generated_at": (r.get("current") or {}).get("generated_at"),
             "timeline": migrated_entries,
         })
+    if not migrated_edits:
+        migrated_edits.append({"slug": "main", "name": "Main edit", "is_main": True,
+                               "forked_from": None, "created_at": None, "steps": [],
+                               "current_generated_at": None, "timeline": []})
 
     # Display names (handoffs/project-names.json) — Jeff's renamable hierarchy.
     # The file wins over auto-derived values; the viewer also re-reads it live.
@@ -1191,13 +1243,10 @@ def assemble_data_block(data: dict) -> dict:
         "PROJECT_TITLE": data["project_name"],
         "PROJECT_META": project_meta,
         "SOURCE_QUOTES": data["source_quotes"],
-        "ROUNDS": migrated_rounds,
-        # Open on the latest NUMBERED working round, not whatever named cut
-        # happens to sort last (v5.13 — "Narrative 1 - JB" opened by default).
-        "INITIAL_ROUND_INDEX": next(
-            (i for i in range(len(migrated_rounds) - 1, -1, -1)
-             if re.fullmatch(r"v\d+", str(migrated_rounds[i].get("version", "")))),
-            max(0, len(migrated_rounds) - 1)),
+        "EDITS": migrated_edits,
+        # Open on the Main edit (first is_main), else the first edit.
+        "INITIAL_EDIT_INDEX": next(
+            (i for i, e in enumerate(migrated_edits) if e.get("is_main")), 0),
         "INITIAL_FOCUS": None,
         "SEAM_FLAGS": data.get("seam_flags", []),
     }
@@ -1243,19 +1292,35 @@ def substitute_data_block(template_src: str, data_block: dict) -> str:
         flags=re.MULTILINE,
     )
 
-    # ROUNDS: replace empty list
+    # EDITS (v5.15). A pre-assembled data block that still carries the legacy
+    # ROUNDS list is lifted into edits (one per round); an empty list bakes a
+    # single empty Main edit so the page always has an edit to work in.
+    edits = data_block.get("EDITS")
+    if edits is None:
+        rounds = data_block.get("ROUNDS") or []
+        edits = [{
+            "slug": r.get("version") or f"v{r.get('round_number', i + 1)}",
+            "name": r.get("cut_name") or r.get("round_label") or f"Round {i + 1}",
+            "is_main": i == data_block.get("INITIAL_ROUND_INDEX", len(rounds) - 1),
+            "forked_from": None, "created_at": None, "steps": [],
+            "current_generated_at": None, "timeline": r.get("timeline", []),
+        } for i, r in enumerate(rounds)]
+    if not edits:
+        edits = [{"slug": "main", "name": "Main edit", "is_main": True, "forked_from": None,
+                  "created_at": None, "steps": [], "current_generated_at": None, "timeline": []}]
+    initial_edit = data_block.get("INITIAL_EDIT_INDEX")
+    if initial_edit is None:
+        initial_edit = next((i for i, e in enumerate(edits) if e.get("is_main")), 0)
     out = re.sub(
-        r'^const ROUNDS = \[\s*//[^\n]*\n\];',
-        lambda _: f'const ROUNDS = {js_literal(data_block["ROUNDS"])};',
+        r'^const EDITS = \[\s*//[^\n]*\n\];',
+        lambda _: f'const EDITS = {js_literal(edits)};',
         out,
         count=1,
         flags=re.MULTILINE,
     )
-
-    # INITIAL_ROUND_INDEX
     out = re.sub(
-        r'^const INITIAL_ROUND_INDEX = \d+;',
-        lambda _: f'const INITIAL_ROUND_INDEX = {data_block["INITIAL_ROUND_INDEX"]};',
+        r'^const INITIAL_EDIT_INDEX = \d+;',
+        lambda _: f'const INITIAL_EDIT_INDEX = {int(initial_edit)};',
         out,
         count=1,
         flags=re.MULTILINE,
@@ -1282,8 +1347,8 @@ def substitute_data_block(template_src: str, data_block: dict) -> str:
         flags=re.MULTILINE,
     )
 
-    # BUILD_GENERATED_AT (v5.13): stamp the build time so restore-on-load can
-    # tell when the live working state on disk is newer than this page.
+    # BUILD_GENERATED_AT: stamp the build time (shown as the page's bake time;
+    # the on-disk current.json is always preferred over the baked entries).
     import datetime as _dt
     build_ts = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
     out = re.sub(
