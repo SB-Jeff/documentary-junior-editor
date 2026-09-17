@@ -1,5 +1,52 @@
 # Documentary Junior Editor — Changelog
 
+## v5.15 — viewer versioning redesign: one main edit, a step history, Save-as alternatives — 2026-09-17
+
+**Why (Jeff):** the v5.13 system — numbered rounds + named cuts + agent
+checkpoints + `viewer-state.json` + a dirty dot + a restore-on-load banner —
+was overly complicated and it was never clear what the current edit was.
+Approved design: `scripts/mockups/versioning-redesign-mockup-2026-09-17.html`.
+
+**The model.** ONE main edit that is always saved. **Steps** are its
+annotated history, written by the agent as the work moves act to act
+("Claude: Act 1 proposal", "Jeff: Act 1 revision" — Jeff's step closes when he
+says "let's move to Act 2"; no button). **Save as** forks a named alternative
+edit with its own steps. The agent assists on whichever edit is open.
+
+**On disk:** `handoffs/<slug>/edits/<edit>/edit.json` + `current.json` (the
+always-saved working state the viewer autosaves and the agent reads) +
+`steps/NNN-<who>-<label>.json` (append-only). New `scripts/edits_store.py`
+owns the layout and is the agent's CLI: `snapshot` (close Jeff's step),
+`propose` (land a proposal as a step AND make it current — the viewer polls
+`/edits` every 4 s and adopts it with a banner: no rebuild, no reload),
+`new`, `list`, `migrate`. The build migrates a legacy `editing-versions/`
+(rounds → steps of main, checkpoints → steps, named cuts → edits) and
+`viewer-state.json` (→ main's current) once, old files left in place, and
+bakes each edit's current entries only as the offline fallback.
+
+**Viewer:** edit chip (names the open edit; lists every edit) · **History**
+(View = read-only with banner, autosave paused; Restore copies a step forward
+as a new step; hover ✎ renames) · **Save as** (fork). Gone: Save ▾ /
+Save-changes overwrite, the dirty dot, the Open menu's checkpoint group, the
+restore-on-load banner. The strip's autosave indicator is the one save state.
+Exports are per edit (`trimmed-quotes-<edit>[-tight].json`,
+`XML/imports/<slug>_<edit>_<window>_cut.fcpxml`, `export-request.json` gains
+`edit`); the tweak log moves to `edits/<edit>/tweak-log.json` (schema 4).
+Server: `GET /edits?slug=`.
+
+**SKILL-edit:** "Session persistence protocol — edits and steps" replaces
+checkpoint-before-touching + bake-on-read; the cut-seeding mechanics
+(editing-versions JSON + rebuild + "please Open it") are replaced by
+`edits_store.py propose`. Rebuild only for the notes sidecar. Kickoff, session
+guide, SPEC, Coach (tweak-log path) updated; drift linter now flags
+`viewer-state.json` / `editing-versions/` / the checkpoint protocol as retired.
+
+**Not in this release (flagged):** the hosted viewer (storyboard-ops-app)
+still speaks the v5.13 file contract; port the edit/step model there before
+the next browser-first session. Tests: `scripts/test_edits_store.py` (5),
+`scripts/test_viewer_build.py` (9); browser-verified against a throwaway
+project (open/switch, view/back, restore, Save as, live agent adoption).
+
 ## v5.13 — St. Andrews close: checkpoint versioning + tooling hardening — 2026-08-26
 
 **Versioning (agreed with Jeff):** the FCP model — always-saving, named
