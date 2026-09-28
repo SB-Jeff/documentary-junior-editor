@@ -762,3 +762,4 @@ format; (3) Q9 — duplicate-media-ref-ID rule under review (see
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.13: two-clocks guard — TC narrowing auto-disables with a warning when transcript TCs and caption offsets share no origin (§2.3).*
 *v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*
+*v5.16: no changes for this agent — release covers the Valley Outreach 2026 close (editorial posture in SKILL-edit, Intro opt-in, HH:MM:SS:FF canonical, viewer + build fixes; see CHANGELOG).*

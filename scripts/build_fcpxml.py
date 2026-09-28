@@ -739,6 +739,26 @@ def _load_v5(data: dict, source_pool: dict, path: str) -> dict:
             )
         elif entry.get("type") in {"title_card", "interstitial", "context_beat"}:
             non_spoken.append(entry)
+            # Render content cards in the spine (valley-outreach-2026, 2026-09-28):
+            # keep a placeholder in playback order so build_spine() can emit a
+            # gap-with-title for it, exactly like an act-boundary divider.
+            ctype = entry.get("type")
+            text = (entry.get("text") or "").strip() if ctype != "context_beat" \
+                else f"[CONTEXT BEAT: {(entry.get('intent') or 'research needed').strip()}]"
+            seq_counter[0] += 1
+            quotes.append({
+                "num": entry.get("entry_id"),
+                "speaker": "TEXT",
+                "part": entry.get("part", ""),
+                "sequence": seq_counter[0],
+                "original": text,
+                "trimmed": text,
+                "startTC": "",
+                "endTC": "",
+                "notes": f"card={ctype}",
+                "_card": {"type": ctype, "text": text,
+                           "estimated_seconds": entry.get("estimated_seconds") or 3},
+            })
         else:
             print(
                 f"Warning: v5 entry at index {idx} has no source_quote_id "
@@ -753,10 +773,8 @@ def _load_v5(data: dict, source_pool: dict, path: str) -> dict:
         type_counts[e.get("type", "?")] = type_counts.get(e.get("type", "?"), 0) + 1
     if type_counts:
         print(
-            "Warning: v5 non-spoken entries are not yet rendered by "
-            f"build_fcpxml.py (counts: {type_counts}). Spine generated "
-            "without them. Title-card / interstitial / context-beat "
-            "rendering lands in a follow-up step of the v5 schema rewrite.",
+            f"[build_fcpxml] v5 non-spoken entries rendered as title gaps in the spine "
+            f"(counts: {type_counts}).",
             file=sys.stderr,
         )
 
@@ -827,6 +845,26 @@ def parse_act_structure(path: str):
     """
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
+
+    # Preferred (v5.16): the canonical "### Act Labels" bullet list that
+    # SKILL-creative-context emits — the same list build_quotes_viewer reads.
+    # Bold "**Label:**" lines under "### Structure" are NOT headings, so the
+    # heading regex below saw one act in a three-act file (valley-outreach-2026)
+    # and the dividers were right only because labels equalled quote parts.
+    m = re.search(r"^#{2,4}[ \t]*Act Labels[^\n]*\n(.*?)(?=^#{1,4}[ \t]|\Z)",
+                  text, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    if m:
+        labels = []
+        for line in m.group(1).splitlines():
+            line = line.strip()
+            if not line.startswith(("-", "*")):
+                continue
+            label = re.sub(r"^[-*][ \t]*", "", line)
+            label = re.sub(r"\s*\(.*?\)\s*$", "", label).strip().strip("`*")
+            if label and label.lower() != "orphan":
+                labels.append(label)
+        if labels:
+            return labels
 
     # C7: in addition to numbered "Act N"-style headings, standalone act
     # headings like "Intro" / "Prologue" / "Epilogue" are real acts too.
@@ -959,6 +997,9 @@ def adapt_quote(q: dict, fallback_seq: int) -> dict:
         "start_tc": q.get("startTC", ""),
         "end_tc": q.get("endTC", ""),
         "notes": q.get("notes", ""),
+        # Content card placeholder (title_card / interstitial / context_beat);
+        # build_spine() renders it as a gap-with-title and skips caption matching.
+        "card": q.get("_card"),
     }
 
 
@@ -1167,6 +1208,8 @@ def verify_output(output_path: str, paper_cuts: list, params: dict,
     # Expected side, from the trimmed-quotes JSON (paper_cuts):
     entries = {}  # entry_key -> {"speaker", "indices": [paper_cut_index]}
     for idx, pc in enumerate(paper_cuts):
+        if pc.get("card"):
+            continue  # content card placeholder: rendered as a title gap, not a clip
         key = _entry_key(pc, idx)
         ent = entries.setdefault(key, {"speaker": pc.get("speaker", ""),
                                        "indices": []})
@@ -1244,6 +1287,9 @@ def verify_output(output_path: str, paper_cuts: list, params: dict,
     expected_dividers = 0
     cur = None
     for pc in paper_cuts:
+        if pc.get("card"):
+            expected_dividers += 1  # content card = one title gap in the spine
+            continue
         section = pc.get("section", "")
         if act_labels:
             section = _canonicalize_section(section, act_labels)

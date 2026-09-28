@@ -343,13 +343,17 @@ Once Jeff has confirmed your understanding of the material, propose a 3-act stru
 
 ### The Framework
 
-Every Storyboard Films project uses a 3-act structure with an optional intro:
+Every Storyboard Films project uses a 3-act structure:
 
-**[Intro] → Act 1 → Act 2 → Act 3**
+**Act 1 → Act 2 → Act 3**
 
-- **Intro (optional):** Sets the stage — who are we meeting, where are we, what's the
-  context? Not every project needs one. When used, it sits outside the three acts as a
-  preamble.
+- **A separate Intro is NOT a default slot (v5.16, Jeff: "an intro is part of Act 1
+  unless we agree upon it up front").** The welcome / establishing beats are the opening
+  beats of Act 1. Propose a standalone Intro only when the material gives a specific
+  reason for one (a cold-open device, a subject who must be established before the story
+  can start), state the reason, and get Jeff's explicit agreement BEFORE it becomes a
+  label that flows to the Transcript Agents. Otherwise the act labels are three plus
+  Orphan.
 - **Act 1:** Establishes the world and the central tension or question.
 - **Act 2:** Develops the story — the journey, the turning points, the middle.
 - **Act 3:** Resolves — the payoff, the results, the forward look.
@@ -562,7 +566,7 @@ Use exactly these labels for quote tagging:
 - [Label 1]
 - [Label 2]
 - [Label 3]
-- [Label 4, if Intro is used]
+- [Label 4, only if a separate Intro was explicitly agreed up front]
 - Orphan (for quotes that don't fit any act)
 
 ### Editorial Notes
@@ -646,7 +650,8 @@ provides the launch prompt for the Synthesis Agent (sonnet-4.6) per
 
 ---
 
-*Creative Context Agent — documentary-junior-editor v5.12 (August 2026)*
+*Creative Context Agent — documentary-junior-editor v5.16 (September 2026)*
+*v5.16: a separate Intro is opt-in by explicit up-front agreement; three acts by default (Jeff, Valley Outreach 2026).*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.11: narrative roadmap is a clean narrative outline — act label as bucket, ordered
 narrative beats beneath, no summary line, no quotes or quote-like content; bullet order is

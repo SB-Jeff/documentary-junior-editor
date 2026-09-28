@@ -1,5 +1,69 @@
 # Documentary Junior Editor — Changelog
 
+## v5.16 — Valley Outreach 2026 close: editorial posture, viewer fixes, build fixes — 2026-09-28
+
+First project run end-to-end in ONE Claude Code session (Steps 0–4 + FCPXML), on the
+`viewer-versioning` branch — the v5.15 acceptance test passed (21 steps in `edits/main/`,
+live adoption, Save-as untouched). Debriefed serially with Jeff; every change below was
+approved item by item (`handoffs/valley-outreach-2026/edit-agent-lessons-v1.md`).
+
+**Skill text (approved):**
+- SKILL-edit: **two reads tripping on one line is a cut signal** (3rd sighting with
+  Keystone → rule); **edit for the whole film, not the act** and **the roadmap is a
+  hypothesis — adjust it against the material** (posture, replaces flag-only); **a
+  speaker's personal story must be about the organization** (relevance test, universal
+  wording); **two dialogue moments** for project types with no reference example (state
+  what a segment should feel like before the first build; read Jeff's first cut as the
+  calibration); "never ask about a viewer-state change"; **never open the served viewer
+  in the agent's own browser** (hard rule); **session health check** (announce
+  summarization; restate corrections at each hand-off; "health check" on demand);
+  **corrections log** as standing practice.
+- SKILL-creative-context: **three acts by default; a separate Intro only by explicit
+  up-front agreement** with a stated reason.
+- SKILL-transcript / SKILL-transcription: **`HH:MM:SS:FF` is the canonical timecode
+  format for every stage**; `num` is an integer (splits live in rationale); the subject's
+  diarization label is recorded per file; `names.json` maps audio stems to confirmed names.
+- editing-session-guide + kickoff: **one session by default**, export as the natural
+  break; Jeff's Chrome tab is the one viewer instance.
+- Deliberately NOT made rules (Jeff: "restrictive rules butt against judgment"): what a
+  values film's segment should feel like (lived, not a program report) — recorded in the
+  reference example and handled by the dialogue moments.
+
+**Viewer (`quotes_viewer_template.jsx`):**
+- `tcToSeconds()` parses `HH:MM:SS:FF` (runtime showed 0s / "~5s" for a 9-entry act).
+- Cut · Drop moved LEFT of the card header, ✎ Trim stays right, with a divider (mis-clicks).
+- **Reset cuts** commits immediately (it only cleared the panel draft, so Split still
+  showed the old cuts); **Split** is disabled while a trim draft is unsaved.
+- Act-nav pills carry their own Timeline count · runtime; the header keeps the film total.
+- **Step-sequence adoption**: a newer `claude` step is adopted from the immutable step
+  file even when `current.json` has since been autosaved by a viewer; each instance
+  writes an `instance_id` and the strip warns "Another viewer is open" when a different
+  id saves. (Root cause on this project: the agent's preview tab was a second instance.)
+
+**Scripts:**
+- `build_fcpxml.py` + `generate_fcpxml.py`: **content title cards / interstitials /
+  context beats now render** as gap-with-title clips (the act-divider mechanism) with
+  their `estimated_seconds`; verifier counts them as expected title gaps. Closes the
+  W2/C6 item that bit CLC (4 cards), Keystone (4) and Valley Outreach (6).
+- `generate_fcpxml.find_captions_for_sentence`: length-scaled cutoff (0.55 / 0.45 / 0.40
+  for ≥8 / 4–7 / 2–3 words) — a 7-word interior fragment scored 0.535 and dropped a Kris
+  clip; **hole-fill fallback** emits the caption hole between matched neighbours for a
+  sentence that still misses (reported as `fallbacks`, not truncations).
+- `build_fcpxml.parse_act_structure`: reads the canonical `### Act Labels` list first
+  (bold labels under "### Structure" aren't headings — it declared 1 act for a 3-act file).
+- `validate_timecodes._sort_key`: "82a"-style nums sort with their parent number.
+- `transcribe.py`: optional `transcripts/audio/names.json` stem → confirmed-name map.
+- Tests: `test_v516_fixes.py` (cards placeholders, act-labels parser, matcher threshold,
+  validator sort, viewer TC parser via node).
+
+**Reference example:** `reference-examples/valley-outreach-2026/` — new project type
+**Organization Values / Culture Film** (transcripts + lessons-learned; Final_Edit.txt
+lands when Jeff's FCP final is exported).
+
+**Open (filed, not done):** header-tally option chosen (pills); hosted viewer port
+declined for now (Jeff, 2026-09-28); optimistic versioning at the local server skipped.
+
+
 ## v5.15 — viewer versioning redesign: one main edit, a step history, Save-as alternatives — 2026-09-17
 
 **Why (Jeff):** the v5.13 system — numbered rounds + named cuts + agent

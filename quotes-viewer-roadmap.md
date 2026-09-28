@@ -572,8 +572,61 @@ the behavior — surfaced for the skill owners to decide.
    `editing-versions` schema (the build coerces string→int, now regression-tested, but
    the SKILL examples should pick one type). Edit/skill-doc territory.
 
+
+## Open items — valley-outreach-2026 session (filed 2026-09-28)
+
+### Timeline card header — move Cut / Drop away from Trim (mis-click)
+**Filed by:** Edit Agent, on Jeff's request (2026-09-28, valley-outreach-2026 Act 1/Act 2 passes).
+**Problem:** the Timeline card header groups **Cut · Drop · ✎ Trim** as three adjacent
+buttons. Trim is the most-used control and Cut is destructive-feeling (sends the entry
+to the Cuts bin); Jeff repeatedly hits Cut when reaching for Trim.
+**Ask:** separate the affordances — e.g. keep Trim (and Split) on the right where it is
+and move Cut / Drop to the left of the header or into an overflow "···" menu; or put
+visible spacing + a different visual weight between the destructive pair and the edit
+pair. Keep keyboard/hover behavior unchanged.
+**Priority:** small, high-frequency friction — do with the next viewer pass.
+
+### Header entry-count / runtime tally does not follow the act filter
+**Filed by:** Edit Agent on Jeff's observation, 2026-09-28. The strip's "N entries · M:SS" is
+by design the whole working (tight) cut across all acts (`activeEntries = tightEntries`),
+so it doesn't change when Jeff clicks Act 1 vs Act 2; the per-act figure lives in the act
+heading ("What It Takes · 7 entries · ~1:46"). Jeff expected the header to follow the act
+nav. Options: (a) header follows the act filter and a separate "Film: N · M:SS" chip keeps
+the total; (b) put per-act tallies on the act-nav pills (already requested in the CLC 2026
+notes, D2). Jeff to pick.
+
+### BUG: after "Reset cuts", the Split panel still strikes through the trimmed words
+**Filed by:** Edit Agent on Jeff's report, 2026-09-28. Jeff reset the cuts on a quote, then
+opened Split, and the split selector still showed the previously trimmed words as cut.
+**Likely cause (from the template):** the trim panel's **Reset cuts** button only clears the
+panel's local draft (`setEditCuts([])`); the entry's `_editCuts` is not written until
+**Save trim** is clicked. `SplitPanel` reads `entry._editCuts` directly, so if Split is opened
+without saving the trim first (or from a card whose draft was never committed), it strikes
+through the stale cuts. Either a UX trap (Reset needs an explicit Save) or a stale-entry read.
+**Fix options:** make Reset cuts commit immediately (it's already a destructive-styled
+button); or have SplitPanel read the trim panel's live draft when one is open; and disable
+Split while a trim draft is unsaved with a hint ("save or cancel the trim first").
+**Priority:** correctness bug in the two most-used controls — next viewer pass.
+
+### Two viewer instances clobber `edits/<edit>/current.json` (see session notes)
+**Filed by:** Edit Agent, 2026-09-28. Full write-up + brainstorm candidates in the
+project's `handoffs/valley-outreach-2026/drafts/edit-session-corrections.md`. Jeff wants
+a design brainstorm after the session; not to be solved unilaterally by the viewer project.
+
+### Content title cards / interstitials now render in FCPXML (FIXED in-session, needs commit)
+`build_fcpxml.py` keeps non-spoken v5 entries in playback order as card placeholders (speaker
+"TEXT", `card` payload) and `generate_fcpxml.build_spine()` renders each as a gap-with-title via
+`create_section_divider()` with the entry's `estimated_seconds` (frame-quantized). The verifier
+skips placeholders and counts cards as expected title gaps. Backups: `*.py.bak-cards`. Closes the
+W2/C6 item that bit CLC (4 cards), Keystone (4) and Valley Outreach (6). Needs a regression test.
+
+### Viewer runtime estimate returned 0s for HH:MM:SS:FF timecodes (FIXED in-session)
+`tcToSeconds()` in `quotes_viewer_template.jsx` only parsed 2- and 3-part timecodes; the
+pipeline's transcript TCs are 4-part with frames. Patched 2026-09-28 on the SSD copy
+(frames / 23.976); backup at `quotes_viewer_template.jsx.bak-tc`. Needs commit to the repo.
+
 ---
 
 *Maintained as part of the `documentary-junior-editor` skill set. Coach writes here;
 the Claude Code viewer project reads here.*
-*Current as of: 2026-06-09*
+*Current as of: 2026-09-28*

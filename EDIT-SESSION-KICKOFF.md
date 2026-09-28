@@ -75,6 +75,15 @@ Paste this to a new session:
 >
 > Start with the Intro act.
 
+## Standing rules (v5.16)
+- **Never open the served viewer in the agent's own browser.** Jeff's Chrome tab is the
+  one instance; the agent verifies proposals by reading `edits/<edit>/current.json` and
+  the step files. (Two instances alternated overwriting the live file on Valley Outreach.)
+- **Log Jeff's corrections as they happen** to `handoffs/<slug>/drafts/edit-session-
+  corrections.md`; restate them from memory at every act hand-off (health check).
+- **One session** from transcription through the edit is the default; fresh session at the
+  export if the harness has summarized.
+
 ## Notes / known frictions
 - **Live loop:** you edit in the viewer → it autosaves `edits/<edit>/current.json`
   → you message the agent in chat → it reads state + writes `agent-cursor.json`

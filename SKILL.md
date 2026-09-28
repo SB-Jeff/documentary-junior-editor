@@ -13,7 +13,7 @@ description: |
 ---
 
 # Documentary Junior Editor — Master Skill Index
-### Version 5.15 | September 2026
+### Version 5.16 | September 2026
 
 This is the master index for the documentary-junior-editor skill. Read this file first at
 the start of every session. It describes the pipeline, the folder structure, how agents
@@ -871,4 +871,5 @@ reframe that tipped the release into a major version bump.
 *This file is the entry point for the documentary-junior-editor skill. Always read it
 first. Then read the specific agent SKILL file for the session you are starting.*
 *v5.13 (St. Andrews close): checkpoint versioning, canonical editing-versions location, viewer restore-on-load + creative-context side panel, AppleDouble filtering, structured orphans, two-clocks FCPXML guard. See CHANGELOG.*
+*v5.16 (Valley Outreach 2026 close, 2026-09-28): one-session default + health check; cut-signal rule; whole-film / roadmap-as-hypothesis; personal stories must be about the organization; Intro opt-in; HH:MM:SS:FF canonical; content cards render in FCPXML; viewer fixes (TC parser, Cut/Drop placement, Reset+Split, act tallies, step-seq adoption + second-instance warning). See CHANGELOG.*
 *v5.15 (viewer versioning redesign, 2026-09-17): one main edit + agent-written step History + Save-as alternatives (`handoffs/<slug>/edits/`, `scripts/edits_store.py`); retires viewer-state.json / editing-versions / checkpoints. See CHANGELOG.*

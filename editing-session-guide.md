@@ -1,5 +1,5 @@
 # Documentary Junior Editor — Editing Session Guide
-### Version 5.12 | August 2026
+### Version 5.16 | September 2026
 
 ## Overview
 
@@ -149,6 +149,30 @@ Before the editing pipeline can start, the Media Agent (or manual prep) must hav
 6. **Sample XML exported** — one per project, saved to `XML/exports/` (FCPXML Params Agent reads this for format/ID reference and clip_type detection)
 
 ---
+
+## Session model (v5.16 — Jeff, Valley Outreach 2026)
+
+**One Claude Code session by default, from transcription through the edit and the first
+FCPXML export.** Valley Outreach 2026 ran Steps 0–4 plus the export in a single session and
+that worked better than the three-session grouping below: Jeff's corrections accumulated
+and shaped every later act without being repeated. Split sessions only when a project is
+unusually large or spans several days; the natural break is the export, which is mechanical
+and reads only from disk.
+
+What makes one session safe: everything that matters is on disk — the live edit file, the
+step history, the notes sidecar, and `handoffs/<slug>/drafts/edit-session-corrections.md`
+(the agent logs Jeff's corrections as they happen). A fresh session rebuilds from those.
+
+**Health check.** Three signals guard against a long session degrading (SKILL-edit,
+"Session persistence protocol"): the agent announces a context summarization and re-reads
+disk state before proposing; at every act hand-off it restates the standing corrections
+from memory; and Jeff can say "health check" at any time. After a summarization, start
+fresh at the next export.
+
+**Viewer: Jeff's Chrome tab is the ONE instance.** The agent never opens the served viewer
+in its own browser (two instances clobber `current.json`). If Jeff wants the agent to see
+the page, use the Claude-in-Chrome extension read-only on his tab — an experiment for a
+later project, not the built-in browser pane.
 
 ## Pipeline Steps
 
@@ -549,3 +573,5 @@ git pull
 *v5.13 (2026-08-26): checkpoint versioning + canonical editing-versions location + viewer side panel / restore-on-load — see CHANGELOG. Session flow unchanged.*
 
 *v5.15 (2026-09-17): viewer versioning redesign — one main edit + agent-written step History + Save-as alternatives (`edits/`, `scripts/edits_store.py`); replaces viewer-state.json / editing-versions / checkpoints. Session flow unchanged; the agent's proposals now land live without a rebuild.*
+
+*v5.16: one-session default with health check; Chrome as the single viewer instance; export as the natural break (Valley Outreach 2026).*

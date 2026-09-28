@@ -513,3 +513,4 @@ specific adjustments to apply. Read that before your standard inputs.
 *Read `SKILL-edit.md` to understand what you're coaching.*
 *v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*
 *v5.15: the tweak log moved to `handoffs/[slug]/edits/<edit>/tweak-log.json` (one per edit, schema 4) with the viewer's edit/step versioning model (see CHANGELOG).*
+*v5.16: no changes for this agent — release covers the Valley Outreach 2026 close (editorial posture in SKILL-edit, Intro opt-in, HH:MM:SS:FF canonical, viewer + build fixes; see CHANGELOG).*

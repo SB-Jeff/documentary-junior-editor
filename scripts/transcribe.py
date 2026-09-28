@@ -112,6 +112,23 @@ def main():
     # -----------------------------------------------------------------------
     # Find audio files that need transcription
     # -----------------------------------------------------------------------
+    # Optional speaker-name map (v5.16): transcripts/audio/names.json maps an
+    # audio file stem to the CONFIRMED speaker name, e.g.
+    #   {"Jess - Intro": "Jess", "Mia - Equity": "Mia Rosenquist-Snyder"}
+    # so the .txt is named for the speaker (what every downstream agent keys
+    # on) instead of the raw audio stem. Missing map or missing key → stem.
+    names_map = {}
+    names_path = audio_dir / "names.json"
+    if names_path.is_file():
+        try:
+            import json as _json
+            names_map = {str(k): str(v) for k, v in _json.loads(names_path.read_text()).items()}
+            print(f"Using speaker-name map: {names_path} ({len(names_map)} entries)")
+        except Exception as exc:  # noqa: BLE001
+            print(f"Warning: could not read {names_path}: {exc}")
+    def out_stem(af):
+        return names_map.get(af.stem, af.stem)
+
     existing_transcripts = {
         f.stem for f in text_dir.iterdir() if f.suffix == ".txt"
     }
@@ -129,7 +146,7 @@ def main():
     skipped = []
 
     for af in audio_files:
-        if af.stem in existing_transcripts:
+        if out_stem(af) in existing_transcripts:
             skipped.append(af.name)
         else:
             to_transcribe.append(af)
@@ -167,13 +184,13 @@ def main():
                 continue
 
             utterances = transcript.utterances or []
-            formatted = format_transcript(af.name, utterances)
+            formatted = format_transcript(f"{out_stem(af)} ({af.name})", utterances)
 
-            out_path = text_dir / f"{af.stem}.txt"
+            out_path = text_dir / f"{out_stem(af)}.txt"
             out_path.write_text(formatted, encoding="utf-8")
 
             speakers = len({u.speaker for u in utterances})
-            print(f"    Saved: {af.stem}.txt ({len(utterances)} utterances, {speakers} speaker(s))")
+            print(f"    Saved: {out_stem(af)}.txt ({len(utterances)} utterances, {speakers} speaker(s))")
             results["transcribed"].append(af.name)
 
         except Exception as e:

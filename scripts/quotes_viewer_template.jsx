@@ -220,6 +220,9 @@ function buildSpeakerColors(speakers) {
 function tcToSeconds(tc) {
   if (!tc) return 0;
   const parts = String(tc).split(":").map(Number);
+  if (parts.some((n) => Number.isNaN(n))) return 0;
+  // HH:MM:SS:FF — frames at 23.976 fps (the pipeline's transcript/caption TCs).
+  if (parts.length === 4) return parts[0] * 3600 + parts[1] * 60 + parts[2] + parts[3] / 23.976;
   if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
   if (parts.length === 2) return parts[0] * 60 + parts[1];
   return 0;
@@ -607,7 +610,7 @@ async function persistFile(relPath, content, opts) {
 // EditPanel — character-range trim editor (selection + Delete key)
 // ============================================================================
 
-function EditPanel({ entry, editCuts, setEditCuts, onSave, onCancel }) {
+function EditPanel({ entry, editCuts, setEditCuts, onSave, onCancel, onReset }) {
   const textRef = useRef(null);
   const original = fullQuoteText(entry);
 
@@ -670,7 +673,9 @@ function EditPanel({ entry, editCuts, setEditCuts, onSave, onCancel }) {
         <button className="btn btn-primary" onClick={onSave}>Save trim</button>
         <button className="btn" onClick={onCancel}>Cancel</button>
         {editCuts.length > 0 && (
-          <button className="btn btn-danger" onClick={() => setEditCuts([])}>
+          <button className="btn btn-danger"
+            onClick={() => { if (onReset) onReset(); else setEditCuts([]); }}
+            title="Remove every cut on this quote and save immediately">
             Reset cuts
           </button>
         )}
@@ -861,6 +866,13 @@ export default function QuotesView() {
   const editPathOf = (cut) => `handoffs/${PROJECT_META.slug}/edits/${(cut && cut.slug) || "main"}`;
   const lastLocalWriteAt = useRef(0);        // ms of our last successful current.json write
   const lastAdoptedAgentWrite = useRef("");  // generated_at of the last agent write adopted
+  // v5.16: adoption is ALSO keyed on the agent's append-only STEP sequence, so
+  // a viewer autosave (this tab or any other instance) can never mask an
+  // unadopted proposal — steps are never overwritten. Each instance carries an
+  // id in its saves; a newer save from a different id raises a warning.
+  const lastAdoptedClaudeSeq = useRef(-1);
+  const INSTANCE_ID = useRef(`v-${Math.random().toString(36).slice(2, 10)}`);
+  const [otherViewer, setOtherViewer] = useState(null);  // { at } when another instance saved
   const [agentUpdate, setAgentUpdate] = useState(null);  // { label, at } — toast after adopting
   const viewingStepRef = useRef(null);
   const roundIndexRef = useRef(roundIndex);
@@ -926,6 +938,31 @@ export default function QuotesView() {
     const open = cutsRef.current[idx];
     const d = open && data.edits.find((e) => e.slug === open.slug);
     const cur = d && d.current;
+    // Another viewer instance saving over this edit → warn (v5.16).
+    if (cur && cur.written_by === "viewer" && cur.instance_id && cur.instance_id !== INSTANCE_ID.current
+        && (Date.parse(cur.generated_at) || 0) > lastLocalWriteAt.current) {
+      setOtherViewer({ at: Date.now(), id: cur.instance_id });
+    } else if (otherViewer && (Date.now() - otherViewer.at) > 60000) {
+      setOtherViewer(null);
+    }
+    // Step-sequence adoption (v5.16): the latest `claude` step newer than the
+    // one we last adopted is a proposal we haven't seen, whatever current.json
+    // says now. Adopt it from the immutable step file.
+    if (!viewingStepRef.current && d && Array.isArray(d.steps)) {
+      const claudeSteps = d.steps.filter((x) => x.who === "claude" && typeof x.seq === "number");
+      const newest = claudeSteps.reduce((m, x) => (x.seq > (m ? m.seq : -1) ? x : m), null);
+      if (newest && newest.seq > lastAdoptedClaudeSeq.current && lastAdoptedClaudeSeq.current >= 0) {
+        lastAdoptedClaudeSeq.current = newest.seq;
+        let stepJson = null;
+        try { stepJson = await readJson(newest.path || `${editPathOf(open)}/steps/${newest.stem}.json`); } catch (_) {}
+        if (stepJson && Array.isArray(stepJson.entries)) {
+          setWorkingByRound((prev) => ({ ...prev, [idx]: JSON.parse(JSON.stringify(stepJson.entries)) }));
+          setAgentUpdate({ label: newest.label || "a new proposal", at: Date.now() });
+          if (cur && cur.generated_at) lastAdoptedAgentWrite.current = cur.generated_at;
+          return;
+        }
+      }
+    }
     if (!cur || cur.written_by !== "agent" || !cur.generated_at) return;
     if (viewingStepRef.current) return;
     if (cur.generated_at === lastAdoptedAgentWrite.current) return;
@@ -953,6 +990,16 @@ export default function QuotesView() {
         if (st && st.written_by === "agent" && st.generated_at) {
           lastAdoptedAgentWrite.current = st.generated_at;  // no toast for what was already there
         }
+        // v5.16: baseline the step sequence so a fresh load never re-adopts an
+        // old proposal over newer viewer state — current.json is already the truth.
+        try {
+          const res0 = await fetch(`${SAVE_HELPER_URL}/edits?slug=${encodeURIComponent(PROJECT_META.slug)}`);
+          const d0 = res0.ok ? await res0.json() : null;
+          const open0 = cutsRef.current[INITIAL_EDIT_INDEX];
+          const e0 = d0 && d0.ok && Array.isArray(d0.edits) && open0 && d0.edits.find((e) => e.slug === open0.slug);
+          const mx = e0 && Array.isArray(e0.steps) ? e0.steps.filter((x) => x.who === "claude").reduce((m, x) => Math.max(m, x.seq || 0), 0) : 0;
+          lastAdoptedClaudeSeq.current = mx;
+        } catch (_) { lastAdoptedClaudeSeq.current = 0; }
       } catch (_) { /* file:// open or server down — the baked build stands */ }
       initialLoadDone.current = true;
       refreshEdits();
@@ -1465,6 +1512,7 @@ export default function QuotesView() {
       edit_name: cut ? cut.name : "Main edit",
       generated_at: new Date().toISOString(),
       written_by: "viewer",
+      instance_id: INSTANCE_ID.current,  // v5.16: which viewer instance saved
       target_runtime_seconds: PROJECT_META.target_seconds,
       focus: { view, mode: timelineMode, act: actFilter, speaker: speakerFilter },
       // Honest staleness for the agent: has Jeff edited since you last read?
@@ -2224,6 +2272,10 @@ export default function QuotesView() {
       offline: { cls: "offline", glyph: "○", text: "Offline" },
       error:   { cls: "error",   glyph: "▲", text: "Save failed" },
     };
+    if (otherViewer) {
+      map[s] = { ...map[s], cls: "error", glyph: "▲",
+        text: "Another viewer is open — edits may collide" };
+    }
     const v = map[s] || map.idle;
     const tip = s === "offline"
       ? "The viewer can't reach the app server, so the Edit Agent can't see your edits. Run: python3 scripts/viewer_save_server.py --serve <built index.html> --root <project root>"
@@ -2575,16 +2627,23 @@ export default function QuotesView() {
                   same for any future non-act tags. "Orphan" never appears. */}
               {PROJECT_META.act_labels
                 .filter((a) => a !== "Orphan" && !NAV_TAG_LABELS.includes(a))
-                .map((label) => (
+                .map((label) => {
+                  // v5.16 (Jeff): each act pill carries its own Timeline count
+                  // and runtime; the header keeps the whole-film total.
+                  const actTight = getTimeline().filter((e) => membershipOf(e) === "tight" && entryActOf(e) === label);
+                  const actSec = actTight.reduce((a, e) => a + entrySeconds(e), 0);
+                  return (
                 <button
                   key={label}
                   className={`chip${actFilter === label ? " active" : ""}`}
                   onClick={() => setActFilter(label)}
-                  title={label}
+                  title={`${label} — ${actTight.length} in Timeline · ~${fmtSec(actSec)}`}
                 >
                   {label}
+                  <span className="chip-tally">{actTight.length} · {fmtSec(actSec)}</span>
                 </button>
-              ))}
+                  );
+                })}
               {PROJECT_META.act_labels.some((a) => NAV_TAG_LABELS.includes(a)) && (
                 <span className="nav-tag-divider" aria-hidden="true"></span>
               )}
@@ -3170,6 +3229,7 @@ export default function QuotesView() {
             )}            <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             <button
               className="tl-scissors"
+              disabled={editingEntryId === entry.entry_id}
               onClick={() => {
                 if (splittingEntryId === entry.entry_id) {
                   setSplittingEntryId(null);
@@ -3180,7 +3240,7 @@ export default function QuotesView() {
                   setEditingEntryId(null);
                 }
               }}
-              title="Split into sub-quotes"
+              title={editingEntryId === entry.entry_id ? "Save or cancel the trim first, then split" : "Split into sub-quotes"}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" d="M6 4l3 6M18 4l-3 6M9 10c0 3 6 3 6 0M9 10l-4 10M15 10l4 10"/>
@@ -3250,6 +3310,18 @@ export default function QuotesView() {
                 });
               }}
               onCancel={() => { setEditingEntryId(null); setEditCuts([]); }}
+              onReset={() => {
+                // v5.16 (Jeff): Reset used to clear only the panel draft, so
+                // Split (which reads the SAVED cuts) still struck the words
+                // through. Reset now commits [] immediately and closes.
+                const prevCuts = (entry._editCuts || []).map((r) => [...r]);
+                applyLocalEdit("trim",
+                  (tl) => { const e2 = tl.find((x) => x.entry_id === entry.entry_id); if (e2) e2._editCuts = []; },
+                  `Reset trim on ${entry.entry_id}`,
+                  { change_type: "trim", entry_id: entry.entry_id, before: { edit_cuts: prevCuts }, after: { edit_cuts: [] } }
+                );
+                setEditingEntryId(null); setEditCuts([]);
+              }}
             />
           )}
           {isSplitting && (
@@ -3323,8 +3395,11 @@ export default function QuotesView() {
     // so the card stays short — no separate action row. Cut keeps the entry
     // recoverable in Cuts; Drop removes the timeline entry (source stays in the
     // Library); ✎ Trim opens the trim editor in one click.
-    const tools = (
-      <span className="rc-tools">
+    // v5.16 (Jeff): the destructive pair (Cut · Drop) sits LEFT of the
+    // header, the edit control (✎ Trim) stays RIGHT where the hand goes, with
+    // clear space between — Jeff kept hitting Cut when reaching for Trim.
+    const toolsLeft = (
+      <span className="rc-tools rc-tools-destructive">
         {mship === "tight" ? (
           <button className="rc-tool cut" onClick={() => setMembership(entry, "loose")}
             title="Cut to Cuts — stays recoverable">Cut</button>
@@ -3334,6 +3409,10 @@ export default function QuotesView() {
         )}
         <button className="rc-tool drop" onClick={() => dropEntry(entry)}
           title="Drop back to the Library — the source quote stays">Drop</button>
+      </span>
+    );
+    const tools = (
+      <span className="rc-tools rc-tools-edit">
         <button className="rc-tool edit"
           onClick={() => {
             toggleReveal(entry.entry_id);
@@ -3353,6 +3432,7 @@ export default function QuotesView() {
           {dragHandle}
           <div className="rc-head">
             {moveBtns}
+            {toolsLeft}
             <span className="ins-type-badge">{typeLabel}</span>
             <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
             {chip}
@@ -3376,6 +3456,7 @@ export default function QuotesView() {
         {dragHandle}
         <div className="rc-head">
           {moveBtns}
+          {toolsLeft}
           <span className="speaker-tag" style={{ background: speakerC.bg, color: speakerC.fg }}>{speakerLabel}</span>
           <span className="tc">~{fmtSec(entrySeconds(entry))}</span>
           {chip}
@@ -4106,6 +4187,10 @@ export default function QuotesView() {
       display:flex; flex-direction:column; gap:8px; }
     .hdr-filters .filter-group { background: var(--surface); border-radius:10px; }
     .hdr-filters .chip { border-radius:7px; }
+    .chip-tally { display:inline-block; margin-left:6px; font-size:10px; opacity:.65; font-variant-numeric: tabular-nums; }
+    .rc-tools-destructive { margin-right:14px; padding-right:14px; border-right:1px solid rgba(0,0,0,.12); }
+    .rc-tools-edit { margin-left:auto; }
+    .tl-scissors:disabled { opacity:.35; cursor:not-allowed; }
     .hdr-filters .cc-help-btn { border-radius:6px; }
     .speaker-select { font:inherit; font-size:12px; color: var(--text); background: var(--surface);
       border:1px solid var(--border-strong); border-radius:7px; padding:3px 8px; cursor:pointer; }

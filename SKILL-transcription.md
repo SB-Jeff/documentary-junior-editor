@@ -346,13 +346,24 @@ formatted transcript text:
    `endTC` extraction.
 3. **Has speaker labels.** At least one `Speaker A:` / `Speaker B:` (or named
    speaker) marker. Diarization should produce at least one labeled turn.
-4. **Word count plausible for audio duration.** Compute expected word count as
+4. **Subject label (v5.16).** Record which diarization label is the interview SUBJECT
+   in each file (e.g. "Speaker A = Jess; B = interviewer"). It is not stable across
+   files — Mia was Speaker B on valley-outreach-2026 — and the Transcript Agent reads it
+   from this summary instead of assuming A.
+5. **Word count plausible for audio duration.** Compute expected word count as
    `audio_duration_seconds × 2.5` (typical interview speech rate). Flag if
    actual is < 50% or > 200% of expected. Doesn't fail the file — surfaces it
    for Jeff's attention.
 
 If validation flags anomalies, save the transcript anyway (it may still be
 usable) but include the flags in the per-file section of the handoff document.
+
+### Naming (v5.16)
+
+`transcribe.py` names each transcript after the audio file's stem. When the audio
+filenames carry extra tokens (`Jess - Intro.mp3`), write the confirmed names to
+`transcripts/audio/names.json` — `{"Jess - Intro": "Jess", ...}` — before running; the
+script then names the `.txt` (and the skip check) by the confirmed speaker name.
 
 ### Saving the transcript
 
@@ -531,4 +542,5 @@ transcribe, validate, save, emit handoff, update state.
 *AssemblyAI calls delegated to `scripts/transcribe.py` (key path resolved in
 v5.1 — the script reads `ASSEMBLYAI_API_KEY` from `documentary-junior-editor/.env`).*
 *v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*
+*v5.16: record the subject's diarization label per file; `names.json` maps audio stems to confirmed speaker names.*
 *v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*

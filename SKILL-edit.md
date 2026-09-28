@@ -188,7 +188,22 @@ default you'll proceed with if unanswered, so a question never blocks the
 work ("Treating 'Mike' as Michael R. unless you say otherwise"). Small
 uncertainties that don't change the build ride along as flags (a
 low-confidence act tag, an `agent_note`, a proposal-note caveat) rather
-than questions.
+than questions. Never ask about a viewer-state change — a line trimmed and
+then cut, a dropped closer: "trimming a clip and then realizing it may be
+redundant or unnecessary is a natural part of the editing process" (Jeff,
+2026-09-28).
+
+**Two moments to talk instead of build (v5.16, Jeff — unique projects are
+handled by dialogue, not by rules).**
+1. *Before the first assembly, when the project type has no reference
+   example:* say in one or two lines what you think a segment in this film
+   needs to feel like and what counts as proof in it, and let Jeff correct
+   that before you build several of them. (Valley Outreach: "I'm reading each
+   value segment as the person living the value in their own words; program
+   facts go to cards and the vignettes — right?" would have saved an act.)
+2. *After Jeff's first cut of an act, before you build the next:* his cut is
+   the calibration. Read it as the standard, state in one line what it taught
+   you, and build the next act to it. Don't wait to be told.
 
 **Serial presentation applies beyond questions (Jeff, 2026-08-21):**
 recommendations, suggestions, and debrief items also go to Jeff one at a
@@ -408,6 +423,30 @@ button for persistence — the viewer autosaves; **you write the history.**
   (`curl -s http://127.0.0.1:8765/ping`); restart it if dead — background
   servers die with their host session, and a dead server means you are blind
   and the viewer can't save.
+- **Never open the served viewer in your own browser (v5.16 — hard rule).**
+  Every open tab is a full viewer instance that autosaves. On valley-outreach-
+  2026 the agent's preview tab adopted its own proposal within a second and
+  autosaved it back as `written_by: "viewer"` before Jeff's Chrome tab's
+  4-second poll could see the agent write; the two tabs then alternated
+  overwriting `current.json` and the proposal was invisible to Jeff. Jeff's
+  Chrome tab is the ONE instance. Verify a proposal by reading the step file
+  and `current.json`, never by rendering. (v5.16 adds step-sequence adoption
+  and an "another viewer is open" warning as defence in depth — the rule
+  still stands.)
+- **Session health check (v5.16).** One session can run Steps 0–4 (see the
+  guide). Three signals guard against a long session degrading: (a) if the
+  harness summarizes older context, say so in chat and re-read the live
+  file, the steps and the corrections log before proposing anything; (b) at
+  every act hand-off, restate the standing corrections from
+  `drafts/edit-session-corrections.md` in two or three lines from memory —
+  if you have to read the file to do it, say so: that is the degradation
+  signal; (c) Jeff can say "health check" at any time to trigger (a)+(b).
+  After a summarization, recommend a fresh session at the next natural
+  break (the export).
+- **Log Jeff's corrections as they happen** in
+  `handoffs/[project-slug]/drafts/edit-session-corrections.md` (timestamped,
+  verbatim where possible, with a sighting count). It is the Coach's and the
+  Skill Review's raw input and the first thing a fresh session reads.
 - **Close Jeff's step when he hands off.** When Jeff says "let's move to Act
   2", "done with this act", or otherwise hands the act back — and always
   before you land a proposal on top of his work — snapshot his state FIRST:
@@ -551,6 +590,15 @@ Issues that survive the second pass become **open flags** — emit them as
 seam-flags (the notes sidecar) so they render where Jeff reads, and stop
 iterating. Do not chase a clean bill of health; a flagged seam is Jeff's to
 judge.
+
+**Two reads tripping on one line is a cut signal, not a patch list (v5.16,
+Valley Outreach — 3rd sighting with Keystone).** If a line is flagged on the
+first read, gets fixed, and is flagged again on the second read, stop fixing
+it: move it to Cuts with the reason noted. The line, not the bridge, is the
+problem; the editor can restore it in one click. Never reclassify a critic's
+flag as a "production note" in order to keep a line — that is how the
+rejected Intro's orphaned "it" and the Equity parking-lot line both reached
+Jeff.
 
 **The critic's note.** When the proposal is presented, include a brief note:
 what the cold read caught, what you changed in response, and what remains
@@ -1370,6 +1418,16 @@ established.
 One speaker per story. When multiple speakers describe the same experience,
 pick the strongest version and present alternatives to Jeff.
 
+**A speaker's personal story must be about the organization (v5.16, Jeff).**
+An organizational film is about the organization's values and why they
+matter. A speaker's personal story earns a place only when it is about work
+they have done within the organization, or something that happened there. A
+story about the speaker's life outside the organization — family, upbringing,
+personal history — is not relevant, however well it seems to illustrate a
+value, because it is not evidence of the organization living that value.
+Leave such material in the Library, noted as available, and do not assemble
+it.
+
 **Segment selection is structural, not additive.** Choosing which segments
 of a quote to keep is a story-construction decision, not a "could this
 plausibly serve the narrative?" filter. The right test for every segment is:
@@ -1733,9 +1791,23 @@ it like this:
   it explicitly to Jeff with a title-card / interstitial / context-beat
   suggestion rather than stretching a weak quote to cover it.
 
-**When your suggestion conflicts with a roadmap, flag the conflict
-explicitly.** If the material doesn't support what the roadmap calls for,
-tell Jeff rather than silently departing from the plan.
+**Edit for the whole film, not the act (v5.16, Jeff).** A roadmap beat is an
+act-local target, but the film-level plan decides where a beat is spent. A
+beat can be satisfied by a later act — "we can show it" is not a gap in Act 1
+when Act 2 is the proof. Before proposing the first act, sketch the whole
+film's shape and say which beats you are deliberately leaving for later acts.
+
+**The roadmap is a hypothesis; adjust it against the material (v5.16,
+Jeff).** The roadmap was the best guess before anyone had strung two quotes
+together. Assemble against it, then let the quotes argue back: if they work
+better in a different order, or a beat lands better in another act, make that
+the proposal and name the change — don't just flag a conflict and leave the
+better sequence on the table. "Editing documentary-style videos is always a
+dance between putting an intention or narrative outline in place, vetting
+that against the actual material, and then not being afraid to adjust to get
+the best result with what you have." When a change sticks across a round,
+re-emit the act structure so the record matches the film. (Flag-only remains
+right when the material can't support the roadmap at all — then tell Jeff.)
 
 ### Presenting Recommendations
 
@@ -2466,7 +2538,8 @@ still apply.
 
 ---
 
-*Edit Agent — documentary-junior-editor v5.15 (September 2026)*
+*Edit Agent — documentary-junior-editor v5.16 (September 2026)*
+*v5.16 (Valley Outreach 2026 close): cut-signal rule for repeated critic flags; edit for the whole film / roadmap-as-hypothesis; personal stories must be about the organization; two dialogue moments for unique project types; never-render rule; session health check; corrections log. See CHANGELOG.*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.14 (Keystone 2026 close): word-level cuts declared FCP territory (explicit
 Jeff directive — see Trimming Guidelines). Editorial-taste findings from the
@@ -2494,3 +2567,4 @@ alternatives; you assist on whichever edit is open. Retired:
 `viewer-state.json`, `editing-versions/`, checkpoints, bake-on-read (all retired), and the
 viewer's Save/Open/dirty-dot/restore banner. See "Session persistence
 protocol".*
+*v5.16: see the line above — cut-signal rule, whole-film/roadmap posture, relevance test for personal stories, dialogue moments, never-render, health check, corrections log.*

@@ -596,3 +596,4 @@ Check) and frame-rate/tcFormat sourcing from the source format (tracked in
 `skill-review-2026-06-10.md`).*
 *v5.13: speaker keys hardened — must equal the tagged-quotes `speaker` values; joint interviews split into per-speaker rows.*
 *v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*
+*v5.16: no changes for this agent — release covers the Valley Outreach 2026 close (editorial posture in SKILL-edit, Intro opt-in, HH:MM:SS:FF canonical, viewer + build fixes; see CHANGELOG).*

@@ -390,6 +390,21 @@ weight lands — not where the case story is catalogued.
 Include a one-sentence rationale for each tag explaining why this quote belongs in
 that section.
 
+### Timecode format and numbering (v5.16)
+
+- **Timecodes are `HH:MM:SS:FF` at 23.976 fps — canonical for every stage.** Captions
+  carry frames, the FCPXML build parses four parts, and the viewer (v5.16) does too. Do
+  not emit `HH:MM:SS` or `MM:SS`; when a transcript only has `M:SS` utterance times,
+  convert and interpolate within the utterance by word position (never a zero-length
+  span). The `00:12:34` examples in this file are shorthand for `00:12:34:00`.
+- **`num` is an integer.** The Cardinal Rule's "82a / 82b" split convention describes what
+  the EDIT stage does with timeline entries; in the tagged-quotes catalogue every quote
+  gets its own integer `num` (the validator sorts by it). Record any split-from-the-same-
+  answer relationship in `rationale`, not in `num`.
+- **The subject's diarization label is not stable across files** (Mia was Speaker B on
+  valley-outreach-2026). Read the per-file "Subject label" from
+  `transcription-summary-v[N].md` rather than assuming Speaker A.
+
 ### Verbatim Requirement
 Every quote and every segment must be copied verbatim from the transcript. Do not clean
 up grammar, fill in words, or paraphrase. If the speaker said "um" or stumbled, copy it
@@ -658,4 +673,5 @@ outputs.
 *Transcript Agent — documentary-junior-editor v5.12 (August 2026)*
 *Read `SKILL.md` first for pipeline overview and folder structure.*
 *v5.13: no changes for this agent — release covers checkpoint versioning + viewer/FCPXML tooling hardening (see CHANGELOG).*
+*v5.16: timecode format is HH:MM:SS:FF for every stage; `num` is an integer (splits live in rationale); read the subject's diarization label from the transcription summary.*
 *v5.15: no changes for this agent — release covers the viewer's edit/step versioning model (see CHANGELOG).*

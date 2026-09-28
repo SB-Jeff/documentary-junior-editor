@@ -51,6 +51,7 @@ Homes (see the skill docs):
 import argparse
 import glob
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -173,8 +174,15 @@ def _sort_key(quote, file_order_idx):
     for field in ("originalNum", "num"):
         v = quote.get(field)
         if isinstance(v, int):
-            return (0, v, file_order_idx)
-    return (1, 0, file_order_idx)
+            return (0, v, 0, file_order_idx)
+        # v5.16: split sub-quotes ("82a", "82b") sort with their parent number
+        # and keep their letter order, instead of falling to the end and
+        # breaking the monotonic-startTC check.
+        if isinstance(v, str):
+            m = re.match(r"^\s*(\d+)([a-z]?)\s*$", v)
+            if m:
+                return (0, int(m.group(1)), (ord(m.group(2)) if m.group(2) else 0), file_order_idx)
+    return (1, 0, 0, file_order_idx)
 
 
 def validate_quotes(quotes, source_label, run_threshold=3,

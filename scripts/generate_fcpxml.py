@@ -348,7 +348,15 @@ def find_captions_for_sentence(sentence_text: str, captions: List[Caption],
                 best_start = start_idx
                 best_end = end_idx
 
-    if best_score > 0.55:
+    # v5.16 (valley-outreach-2026): short interior fragments carved out by the
+    # viewer's trim editor (e.g. a 7-word kept span) scored 0.535 against a
+    # 0.55 cutoff because the captions split them across two lines with extra
+    # words on each. Scale the cutoff with fragment length: short fragments
+    # are matched inside a TC-narrowed window anyway, so the false-positive
+    # risk is low and a rough cut should err toward emitting the clip.
+    n_words = len(normalized.split())
+    threshold = 0.55 if n_words >= 8 else (0.45 if n_words >= 4 else 0.40)
+    if best_score > threshold:
         return best_start, best_end, best_score
 
     return None, None, best_score
@@ -383,6 +391,7 @@ def find_captions_for_quote(quote_text: str, captions: List[Caption],
                             start_tc: Optional[str] = None,
                             end_tc: Optional[str] = None,
                             unmatched_out: Optional[List[str]] = None,
+                            fallback_out: Optional[List[str]] = None,
                             ) -> List[Tuple[int, int, float]]:
     """
     Match a (possibly trimmed) quote to caption ranges, splitting at gaps.
@@ -458,6 +467,24 @@ def find_captions_for_quote(quote_text: str, captions: List[Caption],
             unmatched_out.extend(local_unmatched if local_unmatched
                                  else [quote_text])
         return []
+
+    # v5.16 hole-fill fallback: a sentence that failed to match but sits
+    # BETWEEN two matched neighbours must live in the caption hole between
+    # them. Emit that hole as its own low-confidence segment (score 0.0) so
+    # the clip plays wider rather than dropping verbatim words; report it via
+    # fallback_out so the build can flag it without calling it a truncation.
+    if local_unmatched and len(sentence_matches) >= 2:
+        holes = []
+        for a, b in zip(sentence_matches, sentence_matches[1:]):
+            if b[0] - a[1] > 1:
+                holes.append((a[1] + 1, b[0] - 1))
+        if holes and len(holes) >= len(local_unmatched):
+            for (hs, he), sent in zip(holes, local_unmatched):
+                sentence_matches.append((hs, he, 0.0))
+                if fallback_out is not None:
+                    fallback_out.append(sent)
+            sentence_matches.sort(key=lambda t: t[0])
+            local_unmatched = [] if fallback_out is not None else local_unmatched
 
     if unmatched_out is not None:
         unmatched_out.extend(local_unmatched)
@@ -799,7 +826,7 @@ def create_section_divider(section_name: str, offset: FractionTime,
     # Offset in the GAP's local timeline — must equal the gap's `start` so
     # the title begins exactly where the gap begins on the project timeline.
     title.set('offset', gap_local_start.to_string())
-    title.set('name', f'{display_name} - Basic Title')
+    title.set('name', f"{display_name.replace(chr(10), ' / ')} - Basic Title")
     # `start` is in the TITLE's own local timeline (where playback of the
     # title generator begins) — the conventional FCP value is fine here.
     title.set('start', '86486400/24000s')
@@ -1001,6 +1028,25 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
             current_section = section
             print(f"\n  --- {section} ---")
 
+        # Content title card / interstitial / context beat (valley-outreach-2026,
+        # 2026-09-28): render as a gap-with-title of the entry's own duration,
+        # same mechanism as the act-boundary divider. No caption matching.
+        card = quote_info.get('card')
+        if card:
+            card_dur = _quantize_to_frame_duration(float(card.get('estimated_seconds') or 3))
+            card_offset = offset
+            gap, offset, text_style_counter = create_section_divider(
+                card.get('text') or '', offset, title_effect_ref, text_style_counter,
+                duration=card_dur,
+            )
+            spine_clips.append(gap)
+            build_report.setdefault('cards', []).append({
+                'type': card.get('type'), 'text': card.get('text'),
+                'offset': card_offset.to_string(), 'duration': gap.get('duration'),
+            })
+            print(f"  Card [{card.get('type')}]: {str(card.get('text'))[:60]!r} ({card_dur.to_string()})")
+            continue
+
         if speaker not in source_fcpxmls:
             print(f"Warning: speaker '{speaker}' not in source FCPXMLs, skipping")
             build_report['speaker_misses'].append({
@@ -1018,12 +1064,23 @@ def build_spine(paper_cuts: List[Dict], source_fcpxmls: Dict[str, Dict],
         # interviews this is the difference between completing in seconds
         # and hitting the shell timeout.
         unmatched_sentences: List[str] = []
+        fallback_sentences: List[str] = []
         segments = find_captions_for_quote(
             quote_text, captions, gap_threshold_secs,
             start_tc=quote_info.get('start_tc') or None,
             end_tc=quote_info.get('end_tc') or None,
             unmatched_out=unmatched_sentences,
+            fallback_out=fallback_sentences,
         )
+        for sent in fallback_sentences:
+            preview = sent if len(sent) <= 60 else sent[:60] + "..."
+            print(f"Note: hole-fill fallback for sentence in quote "
+                  f"#{quote_info.get('quote_num', '?')} for {speaker}: '{preview}' "
+                  f"(clip plays the caption hole between its neighbours; check in FCP)")
+            build_report.setdefault('fallbacks', []).append({
+                'quote_num': quote_info.get('quote_num'), 'speaker': speaker,
+                'entry': quote_info.get('notes', ''), 'text': sent, 'kind': 'hole-fill',
+            })
 
         if not segments:
             print(f"Warning: could not match quote '{quote_text[:50]}...' for {speaker}")
