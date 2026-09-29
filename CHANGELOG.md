@@ -57,8 +57,9 @@ approved item by item (`handoffs/valley-outreach-2026/edit-agent-lessons-v1.md`)
   validator sort, viewer TC parser via node).
 
 **Reference example:** `reference-examples/valley-outreach-2026/` — new project type
-**Organization Values / Culture Film** (transcripts + lessons-learned; Final_Edit.txt
-lands when Jeff's FCP final is exported).
+**Organization Values / Culture Film**: transcripts, lessons-learned, and Final_Edit.txt from
+Jeff's FCP final (4:50; round-1 paper cut 5:38 → −14%, every round-1 quote survived — vs
+−82% Keystone / −76% International Institute).
 
 **Open (filed, not done):** header-tally option chosen (pills); hosted viewer port
 declined for now (Jeff, 2026-09-28); optimistic versioning at the local server skipped.

@@ -1,5 +1,5 @@
 # Lessons Learned — Valley Outreach 2026 Values Video
-## Completed: round 1 locked 2026-09-28 (FCP final pending)
+## Completed: 2026-09-29 (Jeff's FCP final ~4:50; round 1 locked 2026-09-28)
 ## Project Type: Organization Values / Culture Film (first of this type in the knowledge base)
 ## Subjects: 6 — Jess (Director of Communications & Development; frames the film), Russ (volunteer — Kindness), Kris (Client Support Services, 17 yrs — Connection), Mia (food shelf coordinator — Equity), Eurell (StyleXchange program manager — Collaboration), Mirella (donor + board member — Trust)
 
@@ -24,6 +24,22 @@ we agree upon it up front"). Act 1 became Jess alone: welcome → "always a cris
 → five-values card → "our values aren't just words". Act 2 = five mini-acts, each opened by a
 card, one speaker each, in the approved order Kindness → Connection → Equity → Collaboration →
 Trust. Act 3 = two Jess lines, ending forward on "they can thrive".
+
+### The FCP final vs. the round-1 paper cut (the number that matters)
+**Round-1 tight cut ~5:38 of speech → FCP final ~4:50 (−14%). Every source quote in the round-1
+Timeline survives in the final, in the same order; nothing was restored from Cuts and nothing was
+added from the pool.** Compare Keystone (24:36 rough → 4:26, −82%) and International Institute
+(20:47 → 5:12, −76%). The act-by-act loop with Jeff cutting each act as it landed produced a paper
+cut that was structurally final; the FCP pass was word-level economy only (explicitly FCP territory
+per SKILL-edit), plus one finishing device:
+- **Value cards over b-roll with the speaker's first line starting under the card** (a J-cut
+  lead-in) for all five mini-acts — e.g. Eurell's "Our mission is to serve the community. Well, you
+  can't do that alone" and Mirella's "most important value a team could have is trust" play under
+  their cards. The cards no longer cost runtime.
+- The five-values card became two cards ("Five values guide everything Valley Outreach does." /
+  the list).
+Data point for runtime planning, not a rule: with Jeff in the loop act by act, expect the paper cut
+to land within ~15% of the final.
 
 ### What Worked Well
 - **Act-by-act live partner loop on v5.15**: 21 steps, every proposal adopted live (once the
@@ -78,8 +94,9 @@ on-camera name is rendered "Mireya Rangel" by ASR — spelling to confirm before
   agent's assemblies per act on average).
 
 ### Files
-- `transcripts/` — the six raw transcripts. `Final_Edit.txt` — pending Jeff's FCP final
-  (export the finished XML; derive verbatim-as-played from its captions, as Keystone did).
+- `transcripts/` — the six raw transcripts. `Final_Edit.txt` — derived 2026-09-29 from Jeff's
+  final (`xml/finals/Narrative Final.fcpxmld` on the project SSD), caption text as played, each
+  beat mapped to its source quote.
 - Project SSD: `handoffs/valley-outreach-2026/` (all handoffs, 21 edit steps,
   `edit-agent-lessons-v1.md` = the debrief agenda with decisions, `drafts/edit-session-
   corrections.md` = the timestamped raw log).

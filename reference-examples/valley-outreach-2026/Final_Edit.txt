@@ -1,0 +1,150 @@
+# Valley Outreach 2026 Values Video — Final Edit
+# Completed: 2026-09-29 (Jeff's FCP final: xml/finals/Narrative Final.fcpxmld, project 'Narrative 3')
+## Video type: Organization Values / Culture Film (premiere; evergreen; no ask)
+# 6 interview subjects: Jess (frame), Russ (Kindness), Kris (Connection), Mia (Equity), Eurell (Collaboration), Mirella (Trust)
+# Final runtime: ~4:50 · 51 interview clips · 5 b-roll clips carrying the value cards · 9 titles
+# NOTE: quote text is caption-derived from the final FCPXML (verbatim as played). '#N' = source quote in
+# handoffs/valley-outreach-2026/tagged-quotes-v2.json; TCs are that source quote's transcript window.
+# '…' joins consecutive clips cut from the same source quote (word-level FCP cuts between them).
+
+--- TITLE CARD ---
+"The Community We Want to Create"
+
+1. Jess  (source #1)
+"The 1st thing I hope people feel is that they're welcome. … Whether they're a volunteer donor, staff member, most importantly, a community member in need of our services."
+TC: 00:01:11:00 - 00:01:34:00
+
+2. Jess  (source #2)
+"The reality is there is always a crisis for someone. … And so while I might not be in crisis right now, there have been periods of my life where I've experienced that, and that's true for everyone. … There are core things that matter to people, and that they value, and that they bring with them every day, and we want to be a good reflection of that for the community."
+TC: 00:01:59:00 - 00:02:57:00
+
+--- TITLE CARD ---
+"Five values guide everything Valley Outreach does."
+
+--- TITLE CARD ---
+"Collaboration · Connection · Kindness · Equity · Trust"
+
+3. Jess  (source #3)
+"And it's a true reflection of every person that is here. So it's really meaningful. Our values aren't just words. There's something we truly live every day."
+TC: 00:03:19:00 - 00:05:04:00
+
+[B-ROLL C0389 3.0s — speaker audio under: "Kindness."]
+
+--- TITLE CARD over b-roll ---
+"Kindness"
+
+4. Russ  (source #16)
+"It kind of permeates this place. … From the staff, the volunteers. … A lot of smiling faces. … You can tell that people come here who've got a good heart."
+TC: 00:03:28:00 - 00:04:32:00
+
+5. Russ  (source #21)
+"I'm out there in society doing stuff, I probably put the blinders on just like everybody else. … This is a safe place to not do that."
+TC: 00:09:20:00 - 00:10:23:00
+
+6. Russ  (source #19)
+"I realize there's this chasm, right? … You're trying to cross this divide. You're doing something."
+TC: 00:08:00:00 - 00:08:54:13
+
+7. Russ  (source #18 — captions hear "This is real, it's very real"; transcript: "This is really like very real")
+"This is real, it's very real. … And you're like, yeah, it's humbling."
+
+8. Russ  (uncaptioned clip, 0.8s — b-roll-covered pause or reaction)
+
+9. Russ  (source #18)
+"People struggle. … The need is great."
+TC: 00:06:26:00 - 00:07:30:00
+
+10. Russ  (source #21)
+"This is a place where you can interact with every single person and it comes from that place. It comes from a place of kindness."
+TC: 00:09:20:00 - 00:10:23:00
+
+[B-ROLL C0482 3.5s — speaker audio under: "It's not just about some people belonging."]
+
+--- TITLE CARD over b-roll ---
+"Connection"
+
+11. Kris  (source #28)
+"It's about every single person belonging. … It's powerful to work and live in a community where I get to be a part of that connection in my own community."
+TC: 00:05:40:00 - 00:06:35:00
+
+12. Kris  (source #30)
+"I've never felt the pressure around. rushing meetings or hurry up, get that done."
+TC: 00:07:57:00 - 00:08:29:12
+
+13. Kris  (uncaptioned clip, 4.0s — b-roll-covered pause or reaction)
+
+14. Kris  (source #30)
+"People matter and their stories matter and taking the time to listen matters. And I think that's been valued here, and I think that's what builds connection."
+TC: 00:07:57:00 - 00:08:29:12
+
+15. Kris  (source #29)
+"I reflect on really like some of the classmates I've had over the years and have had to walk in here and see me. And how hard it would be to walk into LA outreach and see someone you went to elementary school with or high school with. … And it's not easy to ask for help, but connection. … Matters along with getting your physical needs met, feeling like you're not judged, feeling like you belong like you matter."
+TC: 00:06:44:07 - 00:07:43:00
+
+[B-ROLL C0446 3.4s — speaker audio under: "We are an organization that puts people 1st and really"]
+
+--- TITLE CARD over b-roll ---
+"Equity"
+
+16. Mia  (source #37)
+"cares about our clients."
+TC: 00:03:34:00 - 00:04:43:00
+
+17. Mia  (source #38)
+"Equity is doing the work to understand what barriers are affecting people."
+TC: 00:04:54:00 - 00:05:14:00
+
+18. Mia  (source #37)
+"We have a lot of people that come in that are vulnerable. … Everyone has a very different background. And by acknowledging that and using that information … and how we work with clients,"
+TC: 00:03:34:00 - 00:04:43:00
+
+19. Mia  (uncaptioned clip, 3.3s — b-roll-covered pause or reaction)
+
+20. Mia  (source #44)
+"We all have a lot of the same basic needs and also just things that we would like out of our own lives. Your race, your gender, your sexuality, anything like … that shouldn't put you behind someone else who also has the same goal."
+TC: 00:11:19:00 - 00:12:29:00
+
+[B-ROLL C0490 4.4s — speaker audio under: "Our mission is to serve the community. Well, you can't do that alone."]
+
+--- TITLE CARD over b-roll ---
+"Collaboration"
+
+21. Eurell  (source #55)
+"The key to being good at collaboration is listening. … We listen to the community. We listen to the people who come through these doors. … and express their needs and we find out what's the best way that we can that we can help these people."
+TC: 00:06:39:14 - 00:07:25:13
+
+22. Eurell  (source #56)
+"Ego is probably going to be the the one downfall, I think, for collaboration. … You know you just have to be able to check that ego. … We're always open to learning something from someone else for sure."
+TC: 00:07:37:13 - 00:08:26:05
+
+[B-ROLL C0412 4.3s — speaker audio under: "most important value a team could have is trust."]
+
+--- TITLE CARD over b-roll ---
+"Trust"
+
+23. Mirella  (source #65)
+"I understand that a lot of organizations or people may be reticent about folks who are providing support for basic needs in our state."
+TC: 00:06:20:00 - 00:06:58:00
+
+24. Mirella  (source #66)
+"I have full trust in the organization. … because I've both seen it here on the ground. I've met the staff members and I've seen the financial reports and know that they are doing the most with very little."
+TC: 00:07:04:00 - 00:07:23:00
+
+25. Mirella  (source #68)
+"During moments of crisis, it's really important for people to know who to go to."
+TC: 00:09:02:21 - 00:09:54:00
+
+26. Mirella  (source #63)
+"Valley outreach always goes above and beyond what I've expected or what I've thought was possible for an organization."
+TC: 00:04:30:09 - 00:05:17:00
+
+--- TITLE CARD ---
+"The Future We Create Together"
+
+27. Jess  (source #8)
+"Collaboration, connection, kindness, equity, and trust, those 5 things can make the world a better place. … When you invite people in to be a part of creating something and you can explain what the future could look like if we work together, people want to be a part of that."
+TC: 00:09:48:00 - 00:11:07:00
+
+28. Jess  (source #9)
+"I'd love to see a place where … Everyone has what they need. They're not worried about food. They're not worried about their healthcare. They're not worried about their housing situation or status because when people don't have to worry about their basic necessities. They can thrive."
+TC: 00:11:14:00 - 00:11:33:17
